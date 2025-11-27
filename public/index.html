@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <meta name="referrer" content="no-referrer">
+ <title>MyCharacterList</title>
+ <link rel="stylesheet" href="style.css">
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body class="dark-theme">
+
+ <nav class="navbar">
+  <div class="logo">MyCharacterList</div>
+  <div class="nav-controls">
+   <span id="userDisplay" style="margin-right:15px; font-size:0.9rem;"></span>
+   <button id="authBtnNav">Login</button>
+   <button id="shareBtn"><i class="fas fa-share-alt"></i> Share</button>
+   <button id="themeToggle"><i class="fas fa-moon"></i></button>
+  </div>
+ </nav>
+
+ <div class="container" id="appContainer">
+  <aside class="sidebar">
+   <div class="sidebar-header">
+    <h3>My Lists</h3>
+    <button id="createListBtn"><i class="fas fa-plus"></i></button>
+   </div>
+   <ul id="listNav"></ul>
+  </aside>
+
+  <main class="main-content">
+   <header class="list-header">
+   
+    <h2 id="currentListTitle">Select a List</h2>
+      <select id="filterSelect">
+       <option value="all">Show All</option>
+       <option value="Anime">Anime</option>
+       <option value="VN">VN</option>
+       <option value="Game">Game</option>
+       <option value="TV Show">TV Shows</option>
+       <option value="Movie">Movies</option>
+       <option value="Manga">Manga</option>
+       <option value="Book">Books</option>
+       <option value="Other">Other</option>
+      </select>
+    <div class="search-bar-container">
+     <input type="text" id="searchInput" placeholder="Search Characters...">
+     <div id="searchResults" class="search-dropdown hidden"></div>
+    </div>
+   </header>
+
+   <div id="characterGrid" class="grid"></div>
+  </main>
+ </div>
+
+ <!-- Login Modal -->
+ <div id="authModal" class="modal hidden">
+  <div class="modal-content small-modal">
+   <span class="close-modal">&times;</span>
+   <h3 id="authTitle">Login</h3>
+   <div class="form-group">
+    <input type="text" id="authUsername" placeholder="Username">
+    <input type="password" id="authPassword" placeholder="Password">
+   </div>
+   <button id="authSubmitBtn" class="btn-primary">Login</button>
+   <p id="authSwitch" style="margin-top:10px; cursor:pointer; color:#888;">Need an account? Register.</p>
+  </div>
+ </div>
+
+ <!-- Character Details Modal -->
+ <div id="charModal" class="modal hidden">
+  <div class="modal-content">
+   <span class="close-modal">&times;</span>
+   <div class="modal-body">
+    <img id="modalImg" src="" alt="Source">
+    <div class="modal-info">
+
+     <!-- Cast Selection for Movies/TV -->
+     <div id="castSelector"></div>
+
+     <div class="form-group">
+      <label>Character Name:</label>
+      <input type="text" id="charNameInput" placeholder="e.g., Walter White">
+     </div>
+
+     <!-- Editable Source & Type -->
+     <div class="row-group">
+      <div class="form-group" style="flex: 2;">
+       <label>Source Title:</label>
+       <input type="text" id="sourceTitleInput" placeholder="e.g. Breaking Bad">
+      </div>
+      <div class="form-group" style="flex: 1;">
+       <label>Type:</label>
+       <select id="sourceTypeInput">
+        <option value="Anime">Anime</option>
+        <option value="Manga">Manga</option>
+        <option value="VN">VN</option>
+        <option value="Game">Game</option>
+        <option value="TV Show">TV Show</option>
+        <option value="Movie">Movie</option>
+        <option value="Book">Book</option>
+        <option value="Comic">Comic</option>
+        <option value="Other">Other</option>
+       </select>
+      </div>
+     </div>
+
+     <div class="form-group">
+      <label>Custom Image URL (Optional):</label>
+      <input type="text" id="customImgInput" placeholder="Paste image link...">
+     </div>
+
+     <div class="form-group">
+      <label>Rating (0-10):</label>
+      <input type="number" id="ratingInput" min="0" max="10" step="0.5" value="5">
+     </div>
+
+     <button id="saveCharBtn" class="btn-primary">Add to List</button>
+    </div>
+   </div>
+  </div>
+ </div>
+
+ <!-- Create List Modal -->
+ <div id="listModal" class="modal hidden">
+  <div class="modal-content small-modal">
+   <span class="close-modal">&times;</span>
+   <h3>Create New List</h3>
+   <input type="text" id="newListName" placeholder="List Name">
+   <button id="saveListBtn" class="btn-primary">Create</button>
+  </div>
+ </div>
+
+ <script src="app.js"></script>
+</body>
+
+</html>
