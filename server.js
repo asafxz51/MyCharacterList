@@ -59,12 +59,32 @@ const verifyToken = (req, res, next) => {
 
 // --- AUTH ROUTES ---
 app.post('/api/auth/register', async (req, res) => {
- try {
-  const hashedPassword = await bcrypt.hash(req.body.password, 10);
-  const user = new User({ username: req.body.username, password: hashedPassword });
-  await user.save();
-  res.json({ message: 'User created' });
- } catch (err) { res.status(400).json({ error: 'Username taken' }); }
+  try {
+    const { username, password } = req.body;
+
+    // 1. Basic Validation
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and Password are required' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({ username, password: hashedPassword });
+    await user.save();
+
+    res.json({ message: 'User created' });
+  } catch (err) {
+    console.error("Registration Error:", err); 
+
+    if (err.code === 11000) {
+      return res.status(400).json({ error: 'Username already taken' });
+    }
+
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ error: err.message });
+    }
+
+    res.status(500).json({ error: 'Server Error: ' + err.message });
+  }
 });
 
 app.post('/api/auth/login', async (req, res) => {
