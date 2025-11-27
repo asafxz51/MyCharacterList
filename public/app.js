@@ -7,19 +7,29 @@ async function init() {
 }
 
 async function checkLoginStatus() {
- try {
-  const res = await fetch('/api/auth/check');
-  if (res.ok) {
-   const data = await res.json();
-   state.user = data.username;
-   document.getElementById('userDisplay').textContent = `Hi, ${state.user}`;
-   document.getElementById('authBtnNav').textContent = "Logout";
-   fetchLists();
-  } else {
-   document.getElementById('authBtnNav').textContent = "Login";
-   document.getElementById('characterGrid').innerHTML = '<p style="padding:20px; color:var(--text-main)">Please Login to create lists.</p>';
-  }
- } catch (e) { console.error(e); }
+    const createBtn = document.getElementById('createListBtn');
+
+    try {
+        const res = await fetch('/api/auth/check');
+        if (res.ok) {
+            const data = await res.json();
+            state.user = data.username;
+            document.getElementById('userDisplay').textContent = `Hi, ${state.user}`;
+            document.getElementById('authBtnNav').textContent = "Logout";
+
+            createBtn.style.display = 'block';
+
+            fetchLists();
+        } else {
+            document.getElementById('authBtnNav').textContent = "Login";
+            document.getElementById('characterGrid').innerHTML = '<p style="padding:20px; color:var(--text-main); text-align:center;">Please Login to view and manage lists.</p>';
+
+            createBtn.style.display = 'none';
+        }
+    } catch (e) {
+        console.error(e);
+        createBtn.style.display = 'none';
+    }
 }
 
 // --- LISTS ---

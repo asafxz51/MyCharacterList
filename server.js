@@ -19,10 +19,25 @@ app.use(express.static('public'));
 const PORT = process.env.PORT || 3000;
 
 // --- DB Connection ---
-mongoose.connect(process.env.MONGO_URI)
- .then(() => console.log('MongoDB Connected'))
- .catch(err => console.error('MongoDB Error:', err));
+// --- DATABASE CONNECTION (Serverless Safe) ---
+let isConnected = false;
 
+const connectDB = async () => {
+  if (isConnected) return;
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    isConnected = true;
+    console.log("MongoDB Connected");
+  } catch (err) {
+    console.error("MongoDB Connection Error:", err);
+  }
+};
+
+// IMPORTANT: Add this middleware to ensure DB connects on EVERY request
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
 // --- Rate Limit Middleware ---
 let lastRequestTime = 0;
 const checkRateLimit = (req, res, next) => {
@@ -245,23 +260,23 @@ app.get('/api/search/fandom', async (req, res) => {
     }
 
     // FIX IMAGE: Route it through our local proxy
-    let rawImageUrl = p.thumbnail ? p.thumbnail.source : (p.original ? p.original.source : null);
-    let proxyUrl = null;
+     let rawImageUrl = p.thumbnail ? p.thumbnail.source : (p.original ? p.original.source : null);
+     let proxyUrl = null;
 
-    if (rawImageUrl) {
-     // Encode the URL safely
-     proxyUrl = `/api/image-proxy?url=${encodeURIComponent(rawImageUrl)}`;
-    }
+     if (rawImageUrl) {
+       // This service caches images and fixes CORS/Hotlink issues automatically
+       proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(rawImageUrl)}`;
+     }
 
-    return {
-     id: p.pageid,
-     title: p.title,
-     image: proxyUrl, // <--- SEND THE PROXY URL, NOT THE FANDOM URL
-     type: 'wiki_character',
-     sourceTitle: detectedSource,
-     description: p.extract || '',
-     wiki: subdomain
-    };
+     return {
+       id: p.pageid,
+       title: p.title,
+       image: proxyUrl, // <--- Use the external proxy link
+       type: 'wiki_character',
+       sourceTitle: detectedSource,
+       description: p.extract || '',
+       wiki: subdomain
+     };
    });
   };
 
