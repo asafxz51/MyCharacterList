@@ -1,6 +1,7 @@
-let state = { user: null, lists: [], activeListId: null, tempSearchItem: null, editingIndex: -1 };
+let state = {
+    user: null, lists: [], activeListId: null, tempSearchItem: null, editingIndex: -1, pendingDeleteIndex: null, pendingDeleteIndex: null,
+    pendingDeleteListId: null, isReordering: false, isRenamingList: false };
 
-// --- INIT ---
 async function init() {
  await checkLoginStatus();
  setupEvents();
@@ -32,7 +33,6 @@ async function checkLoginStatus() {
     }
 }
 
-// --- LISTS ---
 async function fetchLists() {
  const res = await fetch('/api/lists');
  state.lists = await res.json();
@@ -56,13 +56,21 @@ async function createList(name) {
 }
 
 async function deleteList(id) {
- if (!confirm("Delete list?")) return;
- await fetch(`/api/lists/${id}`, { method: 'DELETE' });
- state.lists = state.lists.filter(l => l._id !== id);
- if (state.activeListId === id) state.activeListId = state.lists[0]?._id || null;
- renderSidebar();
- renderCurrentList();
+    await fetch(`/api/lists/${id}`, { method: 'DELETE' });
+    state.lists = state.lists.filter(l => l._id !== id);
+    if (state.activeListId === id) state.activeListId = state.lists[0]?._id || null;
+    renderSidebar();
+    renderCurrentList();
 }
+
+document.getElementById('confirmDeleteListBtn').addEventListener('click', async () => {
+    if (state.pendingDeleteListId) {
+        await deleteList(state.pendingDeleteListId);
+        state.pendingDeleteListId = null;
+        closeModal('deleteListModal');
+    }
+});
+
 
 async function updateCurrentList() {
  const list = state.lists.find(l => l._id === state.activeListId);
@@ -75,78 +83,186 @@ async function updateCurrentList() {
  renderCurrentList();
 }
 
-// --- RENDER ---
 function renderSidebar() {
- const nav = document.getElementById('listNav');
- nav.innerHTML = '';
- state.lists.forEach(list => {
-  const li = document.createElement('li');
-  li.className = list._id === state.activeListId ? 'active' : '';
-  li.innerHTML = `<span>${list.name}</span>`;
-  li.onclick = () => { state.activeListId = list._id; renderSidebar(); renderCurrentList(); };
-  const delBtn = document.createElement('button');
-  delBtn.className = 'delete-list-btn';
-  delBtn.innerHTML = '<i class="fas fa-trash"></i>';
-  delBtn.onclick = (e) => { e.stopPropagation(); deleteList(list._id); };
-  li.appendChild(delBtn);
-  nav.appendChild(li);
+    const nav = document.getElementById('listNav');
+    nav.innerHTML = '';
+    state.lists.forEach(list => {
+        const li = document.createElement('li');
+        li.className = list._id === state.activeListId ? 'active' : '';
+        li.innerHTML = `<span>${list.name}</span>`;
+
+        li.onclick = () => {
+            state.activeListId = list._id;
+            renderSidebar();
+            renderCurrentList();
+
+            if (window.innerWidth <= 768) closeMobileMenu();
+        };
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'delete-list-btn';
+        delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+        delBtn.onclick = (e) => { e.stopPropagation(); deleteList(list._id); };
+        delBtn.onclick = (e) => {
+            e.stopPropagation();
+            state.pendingDeleteListId = list._id; 
+            document.getElementById('deleteListModal').classList.remove('hidden'); 
+        };
+        li.appendChild(delBtn);
+        nav.appendChild(li);
  });
 }
 
+function toggleReorderMode() {
+    state.isReordering = !state.isReordering;
+
+    const reorderBtn = document.getElementById('reorderBtn');
+    const saveBtn = document.getElementById('saveOrderBtn');
+    const grid = document.getElementById('characterGrid');
+
+    if (state.isReordering) {
+        reorderBtn.classList.add('hidden');
+        saveBtn.classList.remove('hidden');
+        grid.classList.add('reorder-mode');
+        // Disable filtering/search while reordering to avoid bugs
+        document.getElementById('filterSelect').disabled = true;
+        document.getElementById('searchInput').disabled = true;
+    } else {
+        reorderBtn.classList.remove('hidden');
+        saveBtn.classList.add('hidden');
+        grid.classList.remove('reorder-mode');
+        document.getElementById('filterSelect').disabled = false;
+        document.getElementById('searchInput').disabled = false;
+    }
+
+    renderCurrentList();
+}
+
+async function saveOrder() {
+    toggleReorderMode();
+
+    const list = state.lists.find(l => l._id === state.activeListId);
+    await updateCurrentList();
+    alert("Order Saved!");
+}
+
+let dragSrcEl = null;
+
+function handleDragStart(e) {
+    this.style.opacity = '0.4';
+    dragSrcEl = this;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', this.innerHTML);
+    e.dataTransfer.setData('index', this.dataset.index);
+}
+
+function handleDragOver(e) {
+    if (e.preventDefault) e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleDragEnter(e) {
+    this.classList.add('over');
+}
+
+function handleDragLeave(e) {
+    this.classList.remove('over');
+}
+
+function handleDrop(e) {
+    if (e.stopPropagation) e.stopPropagation();
+
+    if (dragSrcEl !== this) {
+        const list = state.lists.find(l => l._id === state.activeListId);
+
+        const fromIndex = parseInt(dragSrcEl.dataset.index);
+        const toIndex = parseInt(this.dataset.index);
+
+        const itemToMove = list.items[fromIndex];
+        list.items.splice(fromIndex, 1); 
+        list.items.splice(toIndex, 0, itemToMove); 
+
+      
+        renderCurrentList();
+    }
+    return false;
+}
+
+function handleDragEnd(e) {
+    this.style.opacity = '1';
+    document.querySelectorAll('.char-card').forEach(item => {
+        item.classList.remove('over');
+    });
+}
+
 function renderCurrentList() {
- const grid = document.getElementById('characterGrid');
- grid.innerHTML = '';
- const list = state.lists.find(l => l._id === state.activeListId);
+    const grid = document.getElementById('characterGrid');
+    grid.innerHTML = '';
+    const list = state.lists.find(l => l._id === state.activeListId);
 
- if (!list) return;
- document.getElementById('currentListTitle').textContent = list.name;
+    const editTitleBtn = document.getElementById('editListTitleBtn');
 
- // --- 1. FILTER LOGIC ---
- const filterType = document.getElementById('filterSelect').value;
+    if (!list) {
+        if (editTitleBtn) editTitleBtn.classList.add('hidden'); 
+        return;
+    }
 
- // Start with all items
- let displayItems = list.items;
+    if (editTitleBtn) editTitleBtn.classList.remove('hidden'); 
+    document.getElementById('currentListTitle').textContent = list.name;
 
- // If a specific type is selected, filter the array
- if (filterType !== 'all') {
-  displayItems = list.items.filter(item => item.sourceType === filterType);
- }
+    const filterType = document.getElementById('filterSelect').value;
 
- // --- 2. SORT LOGIC (Always by Rating) ---
- displayItems.sort((a, b) => b.rating - a.rating);
+    let displayItems = list.items.map((item, index) => ({ ...item, originalIndex: index }));
 
- // --- 3. RENDER ---
- if (displayItems.length === 0) {
-  grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888;">No characters found for this category.</p>';
-  return;
- }
+    if (filterType !== 'all') {
+        displayItems = displayItems.filter(item => item.sourceType === filterType);
+    }
 
- displayItems.forEach((item) => {
-  // IMPORTANT: We need the index from the ORIGINAL list to edit/delete correctly
-  const realIndex = list.items.indexOf(item);
+    displayItems.sort((a, b) => b.rating - a.rating);
 
-  const div = document.createElement('div');
-  div.className = 'char-card';
-  div.innerHTML = `
+    if (displayItems.length === 0) {
+        grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888;">No characters found.</p>';
+        return;
+    }
+
+    displayItems.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'char-card';
+        div.dataset.index = item.originalIndex; // Store real index for drag logic
+
+        let rankClass = 'rank-other';
+        if (index === 0) rankClass = 'rank-1';
+        if (index === 1) rankClass = 'rank-2';
+        if (index === 2) rankClass = 'rank-3';
+
+        div.innerHTML = `
+            <div class="rank-badge ${rankClass}">#${index + 1}</div>
             <div class="char-rating">${item.rating}</div>
             <img src="${item.image}" class="char-img">
             <div class="char-info">
                 <div class="char-name">${item.characterName}</div>
-                
                 <div class="source-row">
                     <span class="source-title" title="${item.sourceTitle}">${item.sourceTitle}</span>
                     <span class="red-type">${item.sourceType}</span>
                 </div>
-
                 <div class="card-actions">
-                    <!-- Use realIndex here so we delete the right person -->
-                    <button class="icon-btn edit-btn" onclick="editItem(${realIndex})"><i class="fas fa-edit"></i></button>
-                    <button class="icon-btn delete-btn" onclick="removeItem(${realIndex})"><i class="fas fa-trash"></i></button>
+                    <button class="icon-btn edit-btn" onclick="editItem(${item.originalIndex})"><i class="fas fa-edit"></i></button>
+                    <button class="icon-btn delete-btn" onclick="removeItem(${item.originalIndex})"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
         `;
-  grid.appendChild(div);
- });
+
+        if (state.isReordering) {
+            div.setAttribute('draggable', 'true');
+            div.addEventListener('dragstart', handleDragStart);
+            div.addEventListener('dragover', handleDragOver);
+            div.addEventListener('drop', handleDrop);
+            div.addEventListener('dragend', handleDragEnd);
+        }
+
+        grid.appendChild(div);
+    });
 }
 
 window.editItem = function (index) {
@@ -159,7 +275,7 @@ window.editItem = function (index) {
  document.getElementById('customImgInput').value = item.image;
  document.getElementById('ratingInput').value = item.rating;
 
- // Pre-fill Source Inputs
+
  document.getElementById('sourceTitleInput').value = item.sourceTitle;
  document.getElementById('sourceTypeInput').value = normalizeType(item.sourceType);
 
@@ -169,12 +285,20 @@ window.editItem = function (index) {
 }
 
 window.removeItem = function (index) {
- const list = state.lists.find(l => l._id === state.activeListId);
- list.items.splice(index, 1);
- updateCurrentList();
+    state.pendingDeleteIndex = index; 
+    document.getElementById('deleteModal').classList.remove('hidden'); 
 }
 
-// --- SEARCH ---
+document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
+    if (state.pendingDeleteIndex === null) return;
+    const list = state.lists.find(l => l._id === state.activeListId);
+    list.items.splice(state.pendingDeleteIndex, 1);
+    updateCurrentList();
+    state.pendingDeleteIndex = null;
+    closeModal('deleteModal');
+});
+
+
 let debounce;
 document.getElementById('searchInput').addEventListener('input', (e) => {
  clearTimeout(debounce);
@@ -199,33 +323,29 @@ async function doSearch(query) {
   safeFetch(`/api/search/books?query=${query}`)
  ]);
 
- // 1. Combine all results
+
  let combined = [...anime, ...igdb, ...tmdb, ...persons, ...fandom, ...rawg, ...books];
 
- // 2. NEW: SORT BY RELEVANCE
- // This moves "Walter White" to the top and pushes "Waiter" to the bottom
+
  combined.sort((a, b) => {
   const q = query.toLowerCase();
   const titleA = a.title.toLowerCase();
   const titleB = b.title.toLowerCase();
 
-  // Priority 1: Exact Match (e.g. "Walter White" == "Walter White")
   if (titleA === q && titleB !== q) return -1;
   if (titleB === q && titleA !== q) return 1;
 
-  // Priority 2: Starts With (e.g. "Walter White..." vs "The Walter...")
   const startA = titleA.startsWith(q);
   const startB = titleB.startsWith(q);
   if (startA && !startB) return -1;
   if (startB && !startA) return 1;
 
-  // Priority 3: Contains the word (e.g. "Mr. Walter White")
   const hasA = titleA.includes(q);
   const hasB = titleB.includes(q);
   if (hasA && !hasB) return -1;
   if (hasB && !hasA) return 1;
 
-  return 0; // If both are equal quality, keep original order
+  return 0; 
  });
 
  resultsDiv.innerHTML = '';
@@ -252,7 +372,6 @@ async function doSearch(query) {
 
   const displayType = typeMap[item.type] || item.type;
 
-  // Show Source Title if available, otherwise Show Type
   let subText = item.sourceTitle ? item.sourceTitle : displayType;
 
   if (item.type === 'movie' || item.type === 'tv') {
@@ -294,7 +413,6 @@ async function openCharModal(item) {
  const castDiv = document.getElementById('castSelector');
  castDiv.innerHTML = '';
 
- // --- 2. LOGIC: ANIME CHARACTERS ---
  if (item.type === 'character') {
   titleInput.value = "Fetching info...";
   typeInput.value = 'Anime';
@@ -305,7 +423,6 @@ async function openCharModal(item) {
    typeInput.value = data.sourceType || "Anime";
   } catch (e) { titleInput.value = ""; }
  }
- // --- 3. LOGIC: GAME CHARACTERS (NEW!) ---
  else if (item.type === 'game_character') {
   titleInput.value = "Fetching game...";
   typeInput.value = 'Game';
@@ -409,12 +526,12 @@ function normalizeType(apiType) {
  return 'Other';
 }
 
-// --- AUTH / UI ---
 let isRegisterMode = false;
 document.getElementById('authBtnNav').addEventListener('click', async () => {
  if (state.user) { await fetch('/api/auth/logout', { method: 'POST' }); window.location.reload(); }
  else { document.getElementById('authModal').classList.remove('hidden'); }
 });
+
 document.getElementById('authSubmitBtn').addEventListener('click', async () => {
  const u = document.getElementById('authUsername').value, p = document.getElementById('authPassword').value;
  const url = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
@@ -422,24 +539,100 @@ document.getElementById('authSubmitBtn').addEventListener('click', async () => {
  if (res.ok) { isRegisterMode ? (alert("Registered!"), isRegisterMode = false, updateAuthUI()) : window.location.reload(); }
  else { alert((await res.json()).error); }
 });
+
 document.getElementById('authSwitch').addEventListener('click', () => { isRegisterMode = !isRegisterMode; updateAuthUI(); });
 function updateAuthUI() {
  const t = document.getElementById('authTitle'), b = document.getElementById('authSubmitBtn'), s = document.getElementById('authSwitch');
  t.textContent = isRegisterMode ? "Register" : "Login"; b.textContent = isRegisterMode ? "Register" : "Login";
  s.textContent = isRegisterMode ? "Have an account? Login." : "Need an account? Register.";
 }
+
 document.getElementById('shareBtn').addEventListener('click', () => {
  if (!state.activeListId) return alert("Select a list");
  const url = `${window.location.origin}/share.html?id=${state.activeListId}`;
  navigator.clipboard.writeText(url);
  alert("Copied: " + url);
 });
-document.getElementById('createListBtn').addEventListener('click', () => document.getElementById('listModal').classList.remove('hidden'));
-document.getElementById('saveListBtn').addEventListener('click', () => { const n = document.getElementById('newListName').value; if (n) createList(n); });
+
+document.getElementById('createListBtn').addEventListener('click', () => {
+    state.isRenamingList = false; 
+
+    document.getElementById('listModalTitle').textContent = "Create New List";
+    document.getElementById('newListName').value = '';
+    document.getElementById('saveListBtn').textContent = "Create";
+
+    document.getElementById('listModal').classList.remove('hidden');
+});
+
+document.getElementById('editListTitleBtn').addEventListener('click', () => {
+    const list = state.lists.find(l => l._id === state.activeListId);
+    if (!list) return;
+
+    state.isRenamingList = true; 
+
+    document.getElementById('listModalTitle').textContent = "Rename List";
+    document.getElementById('newListName').value = list.name;
+    document.getElementById('saveListBtn').textContent = "Save Name";
+
+    document.getElementById('listModal').classList.remove('hidden');
+    document.getElementById('newListName').focus();
+});
+
+document.getElementById('saveListBtn').addEventListener('click', async () => {
+    const name = document.getElementById('newListName').value;
+    if (!name) return;
+
+    if (state.isRenamingList) {
+        const list = state.lists.find(l => l._id === state.activeListId);
+        list.name = name; 
+
+        await updateCurrentList(); 
+
+        renderSidebar();     
+        renderCurrentList();  
+    } else {
+        createList(name);
+    }
+
+    closeModal('listModal');
+});
+
 document.querySelectorAll('.close-modal').forEach(b => b.onclick = (e) => e.target.closest('.modal').classList.add('hidden'));
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light-theme');
-function setupEvents() { /* Helpers */ }
+
+function setupEvents() {
+    document.getElementById('themeToggle').onclick = () => {
+        document.body.classList.toggle('light-theme');
+    };
+
+    document.getElementById('reorderBtn').addEventListener('click', toggleReorderMode);
+    document.getElementById('saveOrderBtn').addEventListener('click', saveOrder);
+
+
+    const menuBtn = document.getElementById('mobileMenuBtn');
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('mobileOverlay');
+
+    if (menuBtn) {
+        menuBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        });
+    }
+
+    if (overlay) {
+        overlay.addEventListener('click', closeMobileMenu);
+    }
+ }
+
+function closeMobileMenu() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('mobileOverlay');
+
+    if (sidebar) sidebar.classList.remove('open');
+    if (overlay) overlay.classList.remove('active');
+}
 
 document.getElementById('filterSelect').addEventListener('change', renderCurrentList);
 

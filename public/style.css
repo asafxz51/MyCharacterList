@@ -61,14 +61,13 @@ body {
  margin-left: 5px;
 }
 
-/* Header Layout */
 .list-header {
- display: flex;
- justify-content: space-between;
- align-items: center;
- margin-bottom: 20px;
- flex-wrap: wrap;
- gap: 10px;
+display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
 .list-header, .grid {
@@ -76,14 +75,13 @@ body {
    max-width: 1400px;
 }
 
-/* Grouping the Filter and Search */
 .header-controls {
- display: flex;
- align-items: center;
- gap: 10px;
+  display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
-/* Style the Filter Dropdown */
 #filterSelect {
  padding: 0 10px;
  border-radius: 5px;
@@ -96,7 +94,27 @@ body {
  font-weight: bold;
 }
 
-/* Ensure search bar matches height */
+#filterSelect,
+#searchInput,
+#reorderBtn,
+#saveOrderBtn {
+  height: 40px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .header-controls {
+    flex-direction: column;
+    width: 100%;
+    align-items: stretch;
+  }
+
+  #reorderBtn,
+  #saveOrderBtn {
+    width: 100% !important;
+  }
+}
+
 #searchInput {
  height: 40px;
 }
@@ -218,7 +236,7 @@ body {
 .char-card {
  background: var(--card-bg);
  border-radius: 8px;
- overflow: hidden;
+ overflow: visible;
  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
  position: relative;
  transition: transform 0.2s;
@@ -229,9 +247,11 @@ body {
 }
 
 .char-img {
- width: 100%;
- height: 250px;
- object-fit: cover;
+  width: 100%;
+    height: 250px;
+    object-fit: cover;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
 }
 
 .char-info {
@@ -242,11 +262,14 @@ body {
  position: absolute;
  top: 10px;
  right: 10px;
- background: var(--accent);
+ background: rgb(249, 83, 28);
  color: white;
  padding: 5px 8px;
  border-radius: 4px;
  font-weight: bold;
+box-shadow: 0px 0px 26px 7px rgba(0, 0, 0, 0.69);
+  -webkit-box-shadow: 0px 0px 26px 7px rgba(0, 0, 0, 0.69);
+  -moz-box-shadow: 0px 0px 26px 7px rgba(0, 0, 0, 0.69);
 }
 
 .char-name {
@@ -258,7 +281,6 @@ body {
 .source-row {
  display: flex;
  justify-content: space-between;
- /* Pushes items to edges */
  align-items: center;
  width: 100%;
  margin-top: 2px;
@@ -270,7 +292,6 @@ body {
  white-space: nowrap;
  overflow: hidden;
  text-overflow: ellipsis;
- /* Adds "..." if title is too long */
 }
 
 .card-actions {
@@ -279,7 +300,6 @@ body {
  justify-content: flex-end;
 }
 
-/* ICONS */
 .icon-btn {
  background: none;
  border: none;
@@ -302,7 +322,6 @@ body {
  color: #55aaff;
 }
 
-/* MODALS */
 .modal {
  position: fixed;
  top: 0;
@@ -315,6 +334,15 @@ body {
  align-items: center;
  z-index: 2000;
 }
+
+#listModalTitle {
+  margin-bottom: 10px;
+}
+
+#saveListBtn {
+  margin-top: 20px;
+}
+
 
 .modal-content {
  background: var(--card-bg);
@@ -331,6 +359,10 @@ body {
  max-width: 350px;
  text-align: center;
  z-index: 2010;
+}
+
+#authTitle {
+  margin-bottom: 13px;
 }
 
 .close-modal {
@@ -393,7 +425,6 @@ input {
  width: 100%;
 }
 
-/* INPUT ROW & SELECT */
 .row-group {
  display: flex;
  gap: 10px;
@@ -410,7 +441,6 @@ select {
  cursor: pointer;
 }
 
-/* CAST GRID */
 .cast-grid {
  display: flex;
  gap: 10px;
@@ -433,4 +463,191 @@ select {
 .cast-grid img:hover {
  transform: scale(1.1);
  border-color: var(--accent);
+}
+
+
+.mobile-only,
+.mobile-overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+
+  .mobile-only {
+    display: block;
+    color: var(--text-main);
+    font-size: 1.2rem;
+  }
+
+  .nav-controls #shareBtn {
+    font-size: 1.2rem;
+  }
+
+  #userDisplay {
+    display: none;
+  }
+  .container {
+    position: relative;
+  }
+
+
+  .sidebar {
+    position: fixed;
+    top: 60px;
+    left: -260px;
+    width: 250px;
+    height: calc(100vh - 60px);
+    z-index: 1000;
+    transition: left 0.3s ease;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+
+  .mobile-overlay {
+    display: none;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 900;
+    backdrop-filter: blur(2px);
+  }
+
+  .mobile-overlay.active {
+    display: block;
+  }
+
+  .list-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  #filterSelect,
+  .search-bar-container {
+    width: 100%;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+  }
+
+  .char-img {
+    height: 200px;
+  }
+
+
+  .modal-content {
+    width: 95%;
+    max-height: 85vh;
+    padding: 15px;
+  }
+
+  .modal-body {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #modalImg {
+    width: 120px;
+    height: 180px;
+  }
+
+  .row-group {
+    flex-direction: column;
+  }
+
+}
+
+#deleteModal .btn-primary {
+  width: auto;
+  padding: 10px 20px;
+}
+
+.modal-content .btn-primary {
+  width: auto;
+  padding: 10px 20px;
+}
+
+.rank-badge {
+  position: absolute;
+  top: -15px;
+  left: -15px;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 900;
+  font-size: 1.4rem;
+  color: #000;
+  border-radius: 50%;
+  box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  border: 3px solid #fff;
+}
+
+.rank-1 {
+  background: linear-gradient(135deg, #FFD700, #ffaa00);
+  transform: scale(1.1);
+  z-index: 101;
+}
+
+.rank-2 {
+  background: linear-gradient(135deg, #E0E0E0, #BDBDBD);
+}
+
+.rank-3 {
+  background: linear-gradient(135deg, #f0a263, #A0522D);
+}
+
+@media (max-width: 1200px) {
+  .rank-1, .rank-2, .rank-3 {
+      border: 2px solid #555;
+      font-size: 1rem;
+      width: 40px;
+      height: 40px;
+      top: -10px;
+      left: -10px;
+  }
+}
+
+.rank-other {
+  background: #333;
+  color: #fff;
+  border: 2px solid #555;
+  font-size: 1rem;
+  width: 40px;
+  height: 40px;
+  top: -10px;
+  left: -10px;
+}
+.reorder-mode .char-card {
+  cursor: grab;
+  border: 2px dashed var(--accent);
+  transform: scale(0.95);
+  opacity: 0.9;
+}
+
+.reorder-mode .char-card:hover {
+  background-color: var(--sidebar-bg);
+}
+
+.reorder-mode .card-actions {
+  display: none;
+}
+
+.dragging {
+  opacity: 0.5;
+  border-color: #fff;
 }

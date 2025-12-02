@@ -12,15 +12,22 @@
 
 <body class="dark-theme">
 
- <nav class="navbar">
-  <div class="logo">MyCharacterList</div>
-  <div class="nav-controls">
-   <span id="userDisplay" style="margin-right:15px; font-size:0.9rem;"></span>
-   <button id="authBtnNav">Login</button>
-   <button id="shareBtn"><i class="fas fa-share-alt"></i> Share</button>
-   <button id="themeToggle"><i class="fas fa-moon"></i></button>
+<nav class="navbar">
+  <div style="display: flex; align-items: center; gap: 10px;">
+    <button id="mobileMenuBtn" class="icon-btn mobile-only">
+      <i class="fas fa-bars"></i>
+    </button>
+    <div class="logo">MyCharacterList</div>
   </div>
- </nav>
+
+  <div class="nav-controls">
+    <span id="userDisplay" style="margin-right:15px; font-size:0.9rem;"></span>
+    <button id="authBtnNav">Login</button>
+    <button id="shareBtn"><i class="fas fa-share-alt"></i></button> 
+    <button id="themeToggle"><i class="fas fa-moon"></i></button>
+  </div>
+</nav>
+
 
  <div class="container" id="appContainer">
   <aside class="sidebar">
@@ -32,31 +39,48 @@
   </aside>
 
   <main class="main-content">
-   <header class="list-header">
-   
+<header class="list-header">
+  <div style="display: flex; align-items: center; gap: 10px;">
     <h2 id="currentListTitle">Select a List</h2>
-      <select id="filterSelect">
-       <option value="all">Show All</option>
-       <option value="Anime">Anime</option>
-       <option value="VN">VN</option>
-       <option value="Game">Game</option>
-       <option value="TV Show">TV Shows</option>
-       <option value="Movie">Movies</option>
-       <option value="Manga">Manga</option>
-       <option value="Book">Books</option>
-       <option value="Other">Other</option>
-      </select>
+    <button id="editListTitleBtn" class="icon-btn hidden" style="font-size: 1rem; color: var(--text-muted);">
+      <i class="fas fa-pen"></i>
+    </button>
+  </div>
+
+  <div class="header-controls">
+
+    <button id="reorderBtn" class="btn-primary" style="width: auto; padding: 0 15px;">
+      <i class="fas fa-sort"></i> Reorder
+    </button>
+    <button id="saveOrderBtn" class="btn-primary hidden"
+      style="width: auto; padding: 0 15px; background-color: #4CAF50;">
+      <i class="fas fa-save"></i> Save Order
+    </button>
+
+    <select id="filterSelect">
+      <option value="all">Show All</option>
+      <option value="Anime">Anime</option>
+      <option value="Game">Game</option>
+      <option value="Visual Novel">Visual Novel</option>
+      <option value="TV Show">TV Shows</option>
+      <option value="Movie">Movies</option>
+      <option value="Manga">Manga</option>
+      <option value="Book">Books</option>
+      <option value="Actor">Actors</option>
+      <option value="Other">Other</option>
+    </select>
+
     <div class="search-bar-container">
-     <input type="text" id="searchInput" placeholder="Search Characters...">
-     <div id="searchResults" class="search-dropdown hidden"></div>
+      <input type="text" id="searchInput" placeholder="Search...">
+      <div id="searchResults" class="search-dropdown hidden"></div>
     </div>
-   </header>
+  </div>
+</header>
 
    <div id="characterGrid" class="grid"></div>
   </main>
  </div>
 
- <!-- Login Modal -->
  <div id="authModal" class="modal hidden">
   <div class="modal-content small-modal">
    <span class="close-modal">&times;</span>
@@ -70,7 +94,6 @@
   </div>
  </div>
 
- <!-- Character Details Modal -->
  <div id="charModal" class="modal hidden">
   <div class="modal-content">
    <span class="close-modal">&times;</span>
@@ -78,7 +101,6 @@
     <img id="modalImg" src="" alt="Source">
     <div class="modal-info">
 
-     <!-- Cast Selection for Movies/TV -->
      <div id="castSelector"></div>
 
      <div class="form-group">
@@ -86,7 +108,6 @@
       <input type="text" id="charNameInput" placeholder="e.g., Walter White">
      </div>
 
-     <!-- Editable Source & Type -->
      <div class="row-group">
       <div class="form-group" style="flex: 2;">
        <label>Source Title:</label>
@@ -124,15 +145,45 @@
   </div>
  </div>
 
- <!-- Create List Modal -->
  <div id="listModal" class="modal hidden">
-  <div class="modal-content small-modal">
-   <span class="close-modal">&times;</span>
-   <h3>Create New List</h3>
-   <input type="text" id="newListName" placeholder="List Name">
-   <button id="saveListBtn" class="btn-primary">Create</button>
-  </div>
+<div class="modal-content small-modal">
+  <span class="close-modal">&times;</span>
+  <h3 id="listModalTitle">Create New List</h3>
+  <input type="text" id="newListName" placeholder="List Name">
+  <button id="saveListBtn" class="btn-primary">Create</button>
+</div>
  </div>
+
+<div id="mobileOverlay" class="mobile-overlay hidden"></div>
+
+<div id="deleteModal" class="modal hidden">
+  <div class="modal-content small-modal" style="text-align: center;">
+    <span class="close-modal">&times;</span>
+    <h3 style="margin-bottom: 10px;">Remove Character?</h3>
+    <p style="color: var(--text-muted); margin-bottom: 20px;">Are you sure you want to remove this character from your
+      list?</p>
+
+    <div style="display: flex; gap: 10px; justify-content: center;">
+      <button class="btn-primary" onclick="closeModal('deleteModal')" style="background: #555;">Cancel</button>
+      <button id="confirmDeleteBtn" class="btn-primary" style="background: #ff4444;">Yes, Remove</button>
+    </div>
+  </div>
+</div>
+
+<div id="deleteListModal" class="modal hidden">
+  <div class="modal-content small-modal" style="text-align: center;">
+    <span class="close-modal">&times;</span>
+    <h3 style="margin-bottom: 10px;">Delete List?</h3>
+    <p style="color: var(--text-muted); margin-bottom: 20px;">This will permanently delete this list and all characters
+      inside it.</p>
+
+    <div style="display: flex; gap: 10px; justify-content: center;">
+      <button class="btn-primary" onclick="closeModal('deleteListModal')" style="background: #555;">Cancel</button>
+      <button id="confirmDeleteListBtn" class="btn-primary" style="background: #ff4444;">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
 
  <script src="app.js"></script>
 </body>
