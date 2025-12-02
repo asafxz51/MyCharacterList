@@ -127,28 +127,37 @@
 
         document.getElementById('filterSelect').addEventListener('change', renderList);
 
-        function renderList() {
-            const grid = document.getElementById('grid');
-            grid.innerHTML = '';
+            function renderList() {
+                const grid = document.getElementById('grid');
+                grid.innerHTML = '';
 
-            const filterType = document.getElementById('filterSelect').value;
+                const filterType = document.getElementById('filterSelect').value;
 
-            let displayItems = allItems;
-            if (filterType !== 'all') {
-                displayItems = allItems.filter(item => item.sourceType === filterType);
-            }
+                let displayItems = allItems;
+                if (filterType !== 'all') {
+                    displayItems = allItems.filter(item => item.sourceType === filterType);
+                }
 
-            displayItems.sort((a, b) => b.rating - a.rating);
+                displayItems.sort((a, b) => b.rating - a.rating);
 
-            if (displayItems.length === 0) {
-                grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888; font-size:1.2rem;">No characters found for this category.</p>';
-                return;
-            }
+                if (displayItems.length === 0) {
+                    grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888; font-size:1.2rem;">No characters found for this category.</p>';
+                    return;
+                }
 
-            displayItems.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'char-card';
-                div.innerHTML = `
+                displayItems.forEach((item, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'char-card';
+
+                    let rankClass = 'rank-other';
+                    if (index === 0) rankClass = 'rank-1';
+                    if (index === 1) rankClass = 'rank-2';
+                    if (index === 2) rankClass = 'rank-3';
+
+                    div.innerHTML = `
+                    <!-- ADDED RANK BADGE HERE -->
+                    <div class="rank-badge ${rankClass}">#${index + 1}</div>
+
                     <div class="char-rating">${item.rating}</div>
                     <img src="${item.image}" class="char-img">
                     <div class="char-info">
@@ -160,9 +169,9 @@
                         </div>
                     </div>
                 `;
-                grid.appendChild(div);
-            });
-        }
+                    grid.appendChild(div);
+                });
+            }
     </script>
 </body>
 

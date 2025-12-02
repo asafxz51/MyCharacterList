@@ -143,7 +143,6 @@ async function saveOrder() {
 
     const list = state.lists.find(l => l._id === state.activeListId);
     await updateCurrentList();
-    alert("Order Saved!");
 }
 
 let dragSrcEl = null;
