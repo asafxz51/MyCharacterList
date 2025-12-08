@@ -523,6 +523,8 @@ function normalizeType(apiType) {
  if (lower === 'anime' || lower === 'character') return 'Anime';
  if (lower === 'manga') return 'Manga';
  if (lower === 'vn') return 'VN';
+ if (lower === 'comic') return 'Comic';
+
 
  return 'Other';
 }
