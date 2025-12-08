@@ -516,12 +516,14 @@ document.getElementById('saveCharBtn').addEventListener('click', () => {
 function normalizeType(apiType) {
  if (!apiType) return 'Other';
  const lower = apiType.toLowerCase();
- if (lower === 'tv') return 'TV Show';
+ if (lower === 'tv' || lower === 'tv show') return 'TV Show';
  if (lower === 'movie') return 'Movie';
  if (lower === 'game') return 'Game';
  if (lower === 'book') return 'Book';
  if (lower === 'anime' || lower === 'character') return 'Anime';
  if (lower === 'manga') return 'Manga';
+ if (lower === 'vn') return 'VN';
+
  return 'Other';
 }
 
