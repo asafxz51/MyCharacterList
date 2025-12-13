@@ -96,6 +96,25 @@ app.get('/api/auth/check', verifyToken, async (req, res) => {
  res.json({ username: user.username });
 });
 
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await User.find({}, 'username');
+    res.json(users);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/users/:userId/lists', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const lists = await List.find({ userId: userId });
+    res.json(lists);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/lists', verifyToken, async (req, res) => {
  res.json(await List.find({ userId: req.user._id }));
 });
@@ -357,6 +376,7 @@ app.get('/api/igdb/details/:id', async (req, res) => {
     }
    }
   );
+
 
   const data = response.data[0];
   let sourceTitle = '';

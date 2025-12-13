@@ -639,4 +639,87 @@ function closeMobileMenu() {
 
 document.getElementById('filterSelect').addEventListener('change', renderCurrentList);
 
+// --- COMMUNITY LOGIC ---
+
+// 1. Event Listeners
+document.getElementById('communityBtn').addEventListener('click', openCommunityModal);
+document.getElementById('commBackBtn').addEventListener('click', openCommunityModal); // Back goes to main view
+
+// 2. Fetch and Show All Users
+async function openCommunityModal() {
+    const grid = document.getElementById('communityGrid');
+    const title = document.getElementById('communityTitle');
+    const backBtn = document.getElementById('commBackBtn');
+
+    grid.innerHTML = '<p style="text-align:center;">Loading users...</p>';
+    title.textContent = "Community Users";
+    backBtn.classList.add('hidden'); // Hide back button
+    document.getElementById('communityModal').classList.remove('hidden');
+
+    try {
+        const res = await fetch('/api/users');
+        const users = await res.json();
+
+        grid.innerHTML = '';
+        if (users.length === 0) {
+            grid.innerHTML = '<p>No users found.</p>';
+            return;
+        }
+
+        users.forEach(u => {
+            const div = document.createElement('div');
+            div.className = 'user-card';
+            div.innerHTML = `
+                <i class="fas fa-user-circle user-icon"></i>
+                <div style="font-weight:bold; word-break:break-word;">${u.username}</div>
+            `;
+            // Click User -> Show their lists
+            div.onclick = () => showUserLists(u._id, u.username);
+            grid.appendChild(div);
+        });
+
+    } catch (e) {
+        grid.innerHTML = '<p>Error loading users.</p>';
+    }
+}
+
+// 3. Fetch and Show Specific User's Lists
+async function showUserLists(userId, username) {
+    const grid = document.getElementById('communityGrid');
+    const title = document.getElementById('communityTitle');
+    const backBtn = document.getElementById('commBackBtn');
+
+    grid.innerHTML = '<p style="text-align:center;">Loading lists...</p>';
+    title.textContent = `${username}'s Lists`;
+    backBtn.classList.remove('hidden'); // Show back button
+
+    try {
+        const res = await fetch(`/api/users/${userId}/lists`);
+        const lists = await res.json();
+
+        grid.innerHTML = '';
+        if (lists.length === 0) {
+            grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center;">This user has no lists.</p>';
+            return;
+        }
+
+        lists.forEach(list => {
+            const div = document.createElement('div');
+            div.className = 'comm-list-card';
+            div.innerHTML = `
+                <h4 style="margin-bottom:5px; color:var(--accent);">${list.name}</h4>
+                <p style="font-size:0.8rem; color:var(--text-muted);">${list.items.length} items</p>
+            `;
+            // Click List -> Open Share Page in new tab
+            div.onclick = () => {
+                window.open(`/share.html?id=${list._id}`, '_blank');
+            };
+            grid.appendChild(div);
+        });
+
+    } catch (e) {
+        grid.innerHTML = '<p>Error loading lists.</p>';
+    }
+}
+
 init();

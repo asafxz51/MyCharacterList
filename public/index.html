@@ -23,6 +23,7 @@
   <div class="nav-controls">
     <span id="userDisplay" style="margin-right:15px; font-size:0.9rem;"></span>
     <button id="authBtnNav">Login</button>
+    <button id="communityBtn" title="View Users"><i class="fas fa-users"></i></button>
     <button id="shareBtn"><i class="fas fa-share-alt"></i></button> 
     <button id="themeToggle"><i class="fas fa-moon"></i></button>
   </div>
@@ -183,6 +184,22 @@
     </div>
   </div>
 </div>
+
+<div id="communityModal" class="modal hidden">
+  <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
+    <span class="close-modal">&times;</span>
+
+    <h3 id="communityTitle" style="margin-bottom: 20px; text-align: center;">Community</h3>
+
+    <button id="commBackBtn" class="btn-primary hidden" style="margin-bottom: 15px; width: auto; background: #555;">
+      <i class="fas fa-arrow-left"></i> Back to Users
+    </button>
+
+    <div id="communityGrid" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
+    </div>
+  </div>
+</div>
+
 
 
  <script src="app.js"></script>
