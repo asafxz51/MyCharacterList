@@ -96,10 +96,51 @@ app.get('/api/auth/check', verifyToken, async (req, res) => {
  res.json({ username: user.username });
 });
 
-app.get('/api/users', async (req, res) => {
+app.get('/api/users', verifyToken, async (req, res) => {
   try {
-    const users = await User.find({}, 'username');
-    res.json(users);
+    const { search, onlyFollowing } = req.query;
+    const currentUser = await User.findById(req.user._id);
+
+    let query = {};
+
+    if (search) {
+      query.username = { $regex: search, $options: 'i' };
+    }
+
+    if (onlyFollowing === 'true') {
+      query._id = { $in: currentUser.following };
+    }
+
+    const users = await User.find(query, 'username');
+
+    const usersWithStatus = users.map(u => ({
+      _id: u._id,
+      username: u.username,
+      isFollowing: currentUser.following.includes(u._id),
+      isMe: u._id.equals(currentUser._id) // Flag if it's yourself
+    }));
+
+    res.json(usersWithStatus);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/users/follow/:id', verifyToken, async (req, res) => {
+  try {
+    const targetId = req.params.id;
+    const currentUser = await User.findById(req.user._id);
+
+    if (currentUser.following.includes(targetId)) {
+      // Unfollow
+      currentUser.following.pull(targetId);
+    } else {
+      // Follow
+      currentUser.following.push(targetId);
+    }
+
+    await currentUser.save();
+    res.json({ following: currentUser.following });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

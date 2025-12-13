@@ -641,65 +641,155 @@ document.getElementById('filterSelect').addEventListener('change', renderCurrent
 
 // --- COMMUNITY LOGIC ---
 
-// 1. Event Listeners
-document.getElementById('communityBtn').addEventListener('click', openCommunityModal);
-document.getElementById('commBackBtn').addEventListener('click', openCommunityModal); // Back goes to main view
+// --- COMMUNITY LOGIC ---
+let commState = { view: 'all', search: '' }; // 'all' or 'saved'
 
-// 2. Fetch and Show All Users
-async function openCommunityModal() {
+document.getElementById('communityBtn').addEventListener('click', () => {
+    commState = { view: 'all', search: '' };
+    document.getElementById('userSearchInput').value = '';
+    loadCommunityUsers();
+});
+
+document.getElementById('commBackBtn').addEventListener('click', loadCommunityUsers);
+
+// Tabs
+document.getElementById('tabAllUsers').addEventListener('click', () => switchCommTab('all'));
+document.getElementById('tabSavedUsers').addEventListener('click', () => switchCommTab('saved'));
+
+// Search Listener (Debounced)
+let userSearchDebounce;
+document.getElementById('userSearchInput').addEventListener('input', (e) => {
+    clearTimeout(userSearchDebounce);
+    userSearchDebounce = setTimeout(() => {
+        commState.search = e.target.value;
+        loadCommunityUsers();
+    }, 500);
+});
+
+function switchCommTab(view) {
+    commState.view = view;
+
+    const btnAll = document.getElementById('tabAllUsers');
+    const btnSaved = document.getElementById('tabSavedUsers');
+
+    if (view === 'all') {
+        btnAll.classList.add('active-tab');
+        btnAll.classList.remove('inactive-tab');
+
+        btnSaved.classList.remove('active-tab');
+        btnSaved.classList.add('inactive-tab');
+    } else {
+        btnAll.classList.remove('active-tab');
+        btnAll.classList.add('inactive-tab');
+
+        btnSaved.classList.add('active-tab');
+        btnSaved.classList.remove('inactive-tab');
+    }
+
+    document.getElementById('userSearchInput').value = '';
+    commState.search = '';
+
+    loadCommunityUsers();
+}
+
+
+async function loadCommunityUsers() {
     const grid = document.getElementById('communityGrid');
-    const title = document.getElementById('communityTitle');
+    const controls = document.getElementById('commControls');
     const backBtn = document.getElementById('commBackBtn');
+    const title = document.getElementById('communityTitle');
 
-    grid.innerHTML = '<p style="text-align:center;">Loading users...</p>';
-    title.textContent = "Community Users";
-    backBtn.classList.add('hidden'); // Hide back button
     document.getElementById('communityModal').classList.remove('hidden');
+    controls.classList.remove('hidden'); // Show Search/Tabs
+    backBtn.classList.add('hidden');
+    title.textContent = commState.view === 'all' ? "Community Users" : "Following";
+
+    grid.innerHTML = '<p style="text-align:center;">Loading...</p>';
 
     try {
-        const res = await fetch('/api/users');
+        const onlyFollowing = commState.view === 'saved';
+        const res = await fetch(`/api/users?search=${commState.search}&onlyFollowing=${onlyFollowing}`);
         const users = await res.json();
 
         grid.innerHTML = '';
         if (users.length === 0) {
-            grid.innerHTML = '<p>No users found.</p>';
+            grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center;">No users found.</p>';
             return;
         }
 
         users.forEach(u => {
+            if (u.isMe) return; // Don't show myself
+
             const div = document.createElement('div');
             div.className = 'user-card';
+
+            // Follow Icon Class (Solid if following, Regular if not)
+            const starClass = u.isFollowing ? 'fas fa-star active' : 'far fa-star';
+
             div.innerHTML = `
+                <button class="follow-btn" onclick="toggleFollow(event, '${u._id}')">
+                    <i class="${starClass}"></i>
+                </button>
                 <i class="fas fa-user-circle user-icon"></i>
-                <div style="font-weight:bold; word-break:break-word;">${u.username}</div>
+                <div style="font-weight:bold;">${u.username}</div>
             `;
-            // Click User -> Show their lists
-            div.onclick = () => showUserLists(u._id, u.username);
+
+            // Clicking card body opens lists
+            div.onclick = (e) => {
+                if (!e.target.closest('.follow-btn')) showUserLists(u._id, u.username);
+            };
+
             grid.appendChild(div);
         });
 
     } catch (e) {
+        console.error(e);
         grid.innerHTML = '<p>Error loading users.</p>';
     }
 }
 
-// 3. Fetch and Show Specific User's Lists
+// Toggle Follow
+window.toggleFollow = async function (e, userId) {
+    e.stopPropagation(); // Don't open the user's lists
+    const btn = e.currentTarget.querySelector('i');
+
+    // UI Update immediately (Optimistic)
+    const isFollowing = btn.classList.contains('fas');
+    if (isFollowing) {
+        btn.className = 'far fa-star'; // Unfollow visually
+    } else {
+        btn.className = 'fas fa-star active'; // Follow visually
+    }
+
+    try {
+        await fetch(`/api/users/follow/${userId}`, { method: 'POST' });
+        // If we are in "Following" tab and we unfollow, reload to remove item
+        if (commState.view === 'saved' && isFollowing) {
+            loadCommunityUsers();
+        }
+    } catch (err) {
+        console.error("Follow error", err);
+    }
+}
+
 async function showUserLists(userId, username) {
     const grid = document.getElementById('communityGrid');
-    const title = document.getElementById('communityTitle');
+    const controls = document.getElementById('commControls');
     const backBtn = document.getElementById('commBackBtn');
+    const title = document.getElementById('communityTitle');
 
-    grid.innerHTML = '<p style="text-align:center;">Loading lists...</p>';
+    controls.classList.add('hidden'); // Hide Search/Tabs
+    backBtn.classList.remove('hidden');
     title.textContent = `${username}'s Lists`;
-    backBtn.classList.remove('hidden'); // Show back button
+    grid.innerHTML = '<p>Loading lists...</p>';
 
     try {
         const res = await fetch(`/api/users/${userId}/lists`);
         const lists = await res.json();
-
         grid.innerHTML = '';
+
         if (lists.length === 0) {
-            grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center;">This user has no lists.</p>';
+            grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center;">No public lists.</p>';
             return;
         }
 
@@ -707,19 +797,13 @@ async function showUserLists(userId, username) {
             const div = document.createElement('div');
             div.className = 'comm-list-card';
             div.innerHTML = `
-                <h4 style="margin-bottom:5px; color:var(--accent);">${list.name}</h4>
-                <p style="font-size:0.8rem; color:var(--text-muted);">${list.items.length} items</p>
+                <h4 style="color:var(--accent);">${list.name}</h4>
+                <p style="color:var(--text-muted);">${list.items.length} items</p>
             `;
-            // Click List -> Open Share Page in new tab
-            div.onclick = () => {
-                window.open(`/share.html?id=${list._id}`, '_blank');
-            };
+            div.onclick = () => window.open(`/share.html?id=${list._id}`, '_blank');
             grid.appendChild(div);
         });
-
-    } catch (e) {
-        grid.innerHTML = '<p>Error loading lists.</p>';
-    }
+    } catch (e) { grid.innerHTML = '<p>Error.</p>'; }
 }
 
 init();

@@ -652,7 +652,6 @@ select {
   border-color: #fff;
 }
 
-/* Community User Card */
 .user-card {
   background: var(--card-bg);
   padding: 20px;
@@ -679,7 +678,6 @@ select {
   color: white;
 }
 
-/* Community List Card (Reusing char-card slightly) */
 .comm-list-card {
   background: var(--card-bg);
   padding: 15px;
@@ -691,4 +689,42 @@ select {
 
 .comm-list-card:hover {
   border-color: var(--accent);
+}
+
+.follow-btn {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 1.2rem;
+  cursor: pointer;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+  transition: transform 0.2s;
+}
+
+.follow-btn:hover {
+  transform: scale(1.2);
+}
+
+.follow-btn i.active {
+  color: #ffd700 !important;
+  text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+}
+
+.user-card {
+  position: relative;
+
+}
+
+.active-tab {
+  background-color: var(--accent) !important;
+  color: white !important;
+}
+
+.inactive-tab {
+  background-color: #333 !important;
+  color: #b3b3b3 !important;
+  border: 1px solid var(--border);
 }
