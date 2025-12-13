@@ -161,15 +161,22 @@ app.get('/api/lists', verifyToken, async (req, res) => {
 });
 
 app.post('/api/lists', verifyToken, async (req, res) => {
- const { _id, name, items } = req.body;
- if (_id) {
-  await List.findByIdAndUpdate(_id, { name, items });
-  res.json({ _id, name, items });
- } else {
-  const newList = new List({ userId: req.user._id, name, items });
-  await newList.save();
-  res.json(newList);
- }
+  const { _id, name, items, rankingType } = req.body;
+
+  if (_id) {
+  
+    await List.findByIdAndUpdate(_id, { name, items });
+    res.json({ _id, name, items, rankingType });
+  } else {
+    const newList = new List({
+      userId: req.user._id,
+      name,
+      items,
+      rankingType: rankingType || 'numbers' 
+    });
+    await newList.save();
+    res.json(newList);
+  }
 });
 
 app.delete('/api/lists/:id', verifyToken, async (req, res) => {

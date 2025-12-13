@@ -98,65 +98,87 @@
   </div>
  </div>
 
- <div id="charModal" class="modal hidden">
+<div id="charModal" class="modal hidden">
   <div class="modal-content">
-   <span class="close-modal">&times;</span>
-   <div class="modal-body">
-    <img id="modalImg" src="" alt="Source">
-    <div class="modal-info">
+    <span class="close-modal">&times;</span>
+    <div class="modal-body">
+      <img id="modalImg" src="" alt="Source">
+      <div class="modal-info">
 
-     <div id="castSelector"></div>
+        <div id="castSelector"></div>
 
-     <div class="form-group">
-      <label>Character Name:</label>
-      <input type="text" id="charNameInput" placeholder="e.g., Walter White">
-     </div>
+        <div class="form-group">
+          <label>Character Name:</label>
+          <input type="text" id="charNameInput" placeholder="e.g., Walter White">
+        </div>
 
-     <div class="row-group">
-      <div class="form-group" style="flex: 2;">
-       <label>Source Title:</label>
-       <input type="text" id="sourceTitleInput" placeholder="e.g. Breaking Bad">
-      </div>
-      <div class="form-group" style="flex: 1;">
-       <label>Type:</label>
-       <select id="sourceTypeInput">
-        <option value="Anime">Anime</option>
-        <option value="Manga">Manga</option>
-        <option value="VN">Visual Novel</option>
-        <option value="Game">Game</option>
-        <option value="TV Show">TV Show</option>
-        <option value="Movie">Movie</option>
-        <option value="Book">Book</option>
-        <option value="Comic">Comic</option>
-        <option value="Other">Other</option>
-       </select>
-      </div>
-     </div>
+        <div class="row-group">
+          <div class="form-group" style="flex: 2;">
+            <label>Source Title:</label>
+            <input type="text" id="sourceTitleInput" placeholder="e.g. Breaking Bad">
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label>Type:</label>
+            <select id="sourceTypeInput">
+              <option value="Anime">Anime</option>
+              <option value="Manga">Manga</option>
+              <option value="VN">Visual Novel</option>
+              <option value="Game">Game</option>
+              <option value="TV Show">TV Show</option>
+              <option value="Movie">Movie</option>
+              <option value="Book">Book</option>
+              <option value="Comic">Comic</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
 
-     <div class="form-group">
-      <label>Custom Image URL (Optional):</label>
-      <input type="text" id="customImgInput" placeholder="Paste image link...">
-     </div>
+        <div class="form-group">
+          <label>Custom Image URL (Optional):</label>
+          <input type="text" id="customImgInput" placeholder="Paste image link...">
+        </div>
+<div class="form-group">
+  <label>Rating:</label>
 
-     <div class="form-group">
-      <label>Rating (0-10):</label>
-      <input type="number" id="ratingInput" min="0" max="10" step="0.5" value="5">
-     </div>
+  <input type="number" id="ratingInput" min="0" max="10" step="0.5" value="5">
 
-     <button id="saveCharBtn" class="btn-primary">Add to List</button>
-    </div>
-   </div>
-  </div>
- </div>
-
- <div id="listModal" class="modal hidden">
-<div class="modal-content small-modal">
-  <span class="close-modal">&times;</span>
-  <h3 id="listModalTitle">Create New List</h3>
-  <input type="text" id="newListName" placeholder="List Name">
-  <button id="saveListBtn" class="btn-primary">Create</button>
+  <select id="ratingLetterInput" class="hidden"
+    style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border); border-radius: 4px;">
+    <option value="12">SS</option>
+    <option value="11">S</option>
+    <option value="10">A</option>
+    <option value="9">B</option>
+    <option value="8">C</option>
+    <option value="7">D</option>
+    <option value="6">E</option>
+    <option value="5">F</option>
+  </select>
 </div>
- </div>
+
+
+        <button id="saveCharBtn" class="btn-primary">Add to List</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="listModal" class="modal hidden">
+  <div class="modal-content small-modal">
+    <span class="close-modal">&times;</span>
+    <h3 id="listModalTitle">Create New List</h3>
+    <input type="text" id="newListName" placeholder="List Name">
+
+    <div style="margin-top: 10px; text-align: left;">
+      <label style="font-size: 0.9rem; color: var(--text-muted);">Ranking Style:</label>
+      <select id="rankingTypeSelect" style="width: 100%; margin-top: 5px;">
+        <option value="numbers">Numbers (0-10)</option>
+        <option value="letters">Letters (SS - F)</option>
+      </select>
+    </div>
+
+    <button id="saveListBtn" class="btn-primary" style="margin-top: 20px;">Create</button>
+  </div>
+</div>
 
 <div id="mobileOverlay" class="mobile-overlay hidden"></div>
 

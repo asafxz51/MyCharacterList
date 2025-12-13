@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const ListSchema = new mongoose.Schema({
  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
  name: { type: String, required: true },
+ rankingType: { type: String, default: 'numbers' }, 
  items: [{
   characterName: String,
   sourceTitle: String,

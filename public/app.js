@@ -42,17 +42,21 @@ async function fetchLists() {
 }
 
 async function createList(name) {
- const res = await fetch('/api/lists', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ name: name, items: [] })
- });
- const newList = await res.json();
- state.lists.push(newList);
- state.activeListId = newList._id;
- renderSidebar();
- renderCurrentList();
- closeModal('listModal');
+    const rType = document.getElementById('rankingTypeSelect').value;
+    console.log("Creating list with type:", rType); 
+
+    const res = await fetch('/api/lists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, rankingType: rType, items: [] })
+    });
+
+    const newList = await res.json();
+    state.lists.push(newList);
+    state.activeListId = newList._id;
+    renderSidebar();
+    renderCurrentList();
+    closeModal('listModal');
 }
 
 async function deleteList(id) {
@@ -201,13 +205,11 @@ function renderCurrentList() {
     const list = state.lists.find(l => l._id === state.activeListId);
 
     const editTitleBtn = document.getElementById('editListTitleBtn');
-
     if (!list) {
-        if (editTitleBtn) editTitleBtn.classList.add('hidden'); 
+        if (editTitleBtn) editTitleBtn.classList.add('hidden');
         return;
     }
-
-    if (editTitleBtn) editTitleBtn.classList.remove('hidden'); 
+    if (editTitleBtn) editTitleBtn.classList.remove('hidden');
     document.getElementById('currentListTitle').textContent = list.name;
 
     const filterType = document.getElementById('filterSelect').value;
@@ -217,34 +219,42 @@ function renderCurrentList() {
     if (filterType !== 'all') {
         displayItems = displayItems.filter(item => item.sourceType === filterType);
     }
-
     displayItems.sort((a, b) => b.rating - a.rating);
 
     if (displayItems.length === 0) {
-        grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888;">No characters found.</p>';
+        grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888;">No characters found for this category.</p>';
         return;
     }
 
     displayItems.forEach((item, index) => {
         const div = document.createElement('div');
         div.className = 'char-card';
-        div.dataset.index = item.originalIndex; // Store real index for drag logic
+        div.dataset.index = item.originalIndex; 
 
         let rankClass = 'rank-other';
         if (index === 0) rankClass = 'rank-1';
         if (index === 1) rankClass = 'rank-2';
         if (index === 2) rankClass = 'rank-3';
 
+     
+        const listType = list.rankingType || 'numbers';
+        const displayRating = getRatingDisplay(item.rating, listType);
+
         div.innerHTML = `
             <div class="rank-badge ${rankClass}">#${index + 1}</div>
-            <div class="char-rating">${item.rating}</div>
+            
+            <!-- Use the formatted rating here -->
+            <div class="char-rating">${displayRating}</div>
+            
             <img src="${item.image}" class="char-img">
             <div class="char-info">
                 <div class="char-name">${item.characterName}</div>
+                
                 <div class="source-row">
                     <span class="source-title" title="${item.sourceTitle}">${item.sourceTitle}</span>
                     <span class="red-type">${item.sourceType}</span>
                 </div>
+
                 <div class="card-actions">
                     <button class="icon-btn edit-btn" onclick="editItem(${item.originalIndex})"><i class="fas fa-edit"></i></button>
                     <button class="icon-btn delete-btn" onclick="removeItem(${item.originalIndex})"><i class="fas fa-trash"></i></button>
@@ -267,6 +277,8 @@ function renderCurrentList() {
 window.editItem = function (index) {
  const list = state.lists.find(l => l._id === state.activeListId);
  const item = list.items[index];
+ const isLetters = list.rankingType === 'letters';
+
  state.editingIndex = index;
 
  document.getElementById('modalImg').src = item.image;
@@ -281,6 +293,16 @@ window.editItem = function (index) {
  document.getElementById('castSelector').innerHTML = '';
  document.getElementById('saveCharBtn').textContent = "Update Character";
  document.getElementById('charModal').classList.remove('hidden');
+
+    if (isLetters) {
+        document.getElementById('ratingLetterInput').value = item.rating;
+        document.getElementById('ratingInput').classList.add('hidden');
+        document.getElementById('ratingLetterInput').classList.remove('hidden');
+    } else {
+        document.getElementById('ratingInput').value = item.rating;
+        document.getElementById('ratingInput').classList.remove('hidden');
+        document.getElementById('ratingLetterInput').classList.add('hidden');
+    }
 }
 
 window.removeItem = function (index) {
@@ -407,10 +429,26 @@ async function openCharModal(item) {
   document.getElementById('charNameInput').value = '';
  }
 
+    const list = state.lists.find(l => l._id === state.activeListId);
+    const isLetters = list && list.rankingType === 'letters';
+
+    const numInput = document.getElementById('ratingInput');
+    const letInput = document.getElementById('ratingLetterInput');
  const titleInput = document.getElementById('sourceTitleInput');
  const typeInput = document.getElementById('sourceTypeInput');
  const castDiv = document.getElementById('castSelector');
  castDiv.innerHTML = '';
+
+    if (isLetters) {
+        numInput.classList.add('hidden');
+        letInput.classList.remove('hidden');
+        // If editing, set the value
+        letInput.value = (item && item.rating) ? item.rating : "10";
+    } else {
+        numInput.classList.remove('hidden');
+        letInput.classList.add('hidden');
+        numInput.value = (item && item.rating) ? item.rating : 5;
+    }
 
  if (item.type === 'character') {
   titleInput.value = "Fetching info...";
@@ -486,7 +524,6 @@ document.getElementById('saveCharBtn').addEventListener('click', () => {
  const customImg = document.getElementById('customImgInput').value;
  const rating = document.getElementById('ratingInput').value;
 
- // Read new inputs
  const sourceTitle = document.getElementById('sourceTitleInput').value;
  const sourceType = document.getElementById('sourceTypeInput').value;
 
@@ -494,12 +531,21 @@ document.getElementById('saveCharBtn').addEventListener('click', () => {
  if (!sourceTitle) return alert("Source Title required");
 
  const list = state.lists.find(l => l._id === state.activeListId);
+    const isLetters = list.rankingType === 'letters';
 
+    let ratingVal;
+    if (isLetters) {
+        ratingVal = parseInt(document.getElementById('ratingLetterInput').value);
+    } else {
+        ratingVal = parseFloat(document.getElementById('ratingInput').value);
+    }
  const itemData = {
   characterName: name,
   sourceTitle: sourceTitle,
   sourceType: sourceType,
   rating: rating,
+     rating: ratingVal, 
+
   image: customImg ? customImg : (state.tempSearchItem?.image || 'https://via.placeholder.com/200')
  };
 
@@ -639,10 +685,8 @@ function closeMobileMenu() {
 
 document.getElementById('filterSelect').addEventListener('change', renderCurrentList);
 
-// --- COMMUNITY LOGIC ---
 
-// --- COMMUNITY LOGIC ---
-let commState = { view: 'all', search: '' }; // 'all' or 'saved'
+let commState = { view: 'all', search: '' }; 
 
 document.getElementById('communityBtn').addEventListener('click', () => {
     commState = { view: 'all', search: '' };
@@ -804,6 +848,19 @@ async function showUserLists(userId, username) {
             grid.appendChild(div);
         });
     } catch (e) { grid.innerHTML = '<p>Error.</p>'; }
+}
+
+function getRatingDisplay(rating, type) {
+    if (type !== 'letters') return rating; 
+
+    if (rating >= 12) return 'SS';
+    if (rating >= 11) return 'S';
+    if (rating >= 10) return 'A';
+    if (rating >= 9) return 'B';
+    if (rating >= 8) return 'C';
+    if (rating >= 7) return 'D';
+    if (rating >= 6) return 'E';
+    return 'F';
 }
 
 init();
