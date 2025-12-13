@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer">
+        <link rel="icon" type="image/png" href="/icon.png">
+
     <title>Shared List</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -60,13 +62,14 @@
 
     <nav class="navbar">
         <div style="display: flex; align-items: center; gap: 10px;">
-            <button id="mobileMenuBtn" class="icon-btn mobile-only">
-                <i class="fas fa-bars"></i>
-            </button>
+             <a href="/" style="text-decoration: none;">
             <div class="logo">MyCharacterList</div>
+            </a>
         </div>
 
         <div class="nav-controls">
+            <button id="communityBtn" title="View Users"><i class="fas fa-users"></i></button>
+
             <a href="/" style="text-decoration: none;">
                 <button id="authBtnNav" style="cursor:pointer;">Login / Create</button>
             </a>
@@ -75,7 +78,6 @@
     </nav>
 
     <div class="share-wrapper">
-
         <div class="share-header">
             <h1 id="listTitle" style="font-size: 2.5rem; margin-bottom: 10px;">Loading...</h1>
             <p id="listAuthor" style="color:var(--text-muted); font-size: 1.1rem;"></p>
@@ -84,14 +86,14 @@
         <div class="controls">
             <select id="filterSelect">
                 <option value="all">Show All</option>
-                <option value="Anime">Animes</option>
-                <option value="Game">Games</option>
-                <option value="VN">Visual Novels</option>
+                <option value="Anime">Anime</option>
+                <option value="Game">Game</option>
+                <option value="Visual Novel">Visual Novel</option>
                 <option value="TV Show">TV Shows</option>
                 <option value="Movie">Movies</option>
-                <option value="Manga">Mangas</option>
+                <option value="Manga">Manga</option>
                 <option value="Book">Books</option>
-                <option value="Comic">Comics</option>
+                <option value="Actor">Actors</option>
                 <option value="Other">Other</option>
             </select>
         </div>
@@ -99,11 +101,40 @@
         <div id="grid" class="grid"></div>
     </div>
 
+    <!-- COMMUNITY MODAL (Copied from index.html) -->
+    <div id="communityModal" class="modal hidden">
+        <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
+            <span class="close-modal" id="closeCommModal">&times;</span>
+
+            <h3 id="communityTitle" style="margin-bottom: 15px; text-align: center;">Community</h3>
+
+            <button id="commBackBtn" class="btn-primary hidden"
+                style="margin-bottom: 15px; width: auto; background: #555;">
+                <i class="fas fa-arrow-left"></i> Back
+            </button>
+
+            <div id="commControls">
+                <div class="search-bar-container" style="width: 100%; margin-bottom: 15px;">
+                    <input type="text" id="userSearchInput" placeholder="Search for users...">
+                </div>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button id="tabAllUsers" class="btn-primary active-tab" style="flex:1;">All Users</button>
+                    <button id="tabSavedUsers" class="btn-primary inactive-tab" style="flex:1;">Following</button>
+                </div>
+            </div>
+
+            <div id="communityGrid" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
+            </div>
+        </div>
+    </div>
+
     <script>
+        // --- Dark Mode ---
         document.getElementById('themeToggle').addEventListener('click', () => {
             document.body.classList.toggle('light-theme');
         });
 
+        // --- List Data Logic ---
         const params = new URLSearchParams(window.location.search);
         const id = params.get('id');
         let allItems = [];
@@ -115,11 +146,9 @@
                     document.querySelector('.share-wrapper').innerHTML = "<h1 style='text-align:center; margin-top:50px;'>List not found</h1>";
                     return;
                 }
-
                 document.title = data.name;
                 document.getElementById('listTitle').textContent = data.name;
                 document.getElementById('listAuthor').textContent = `Created by: ${data.author}`;
-
                 allItems = data.items;
                 renderList();
             })
@@ -127,51 +156,187 @@
 
         document.getElementById('filterSelect').addEventListener('change', renderList);
 
-            function renderList() {
-                const grid = document.getElementById('grid');
-                grid.innerHTML = '';
+        function renderList() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            const filterType = document.getElementById('filterSelect').value;
 
-                const filterType = document.getElementById('filterSelect').value;
+            let displayItems = allItems;
+            if (filterType !== 'all') {
+                displayItems = allItems.filter(item => item.sourceType === filterType);
+            }
+            displayItems.sort((a, b) => b.rating - a.rating);
 
-                let displayItems = allItems;
-                if (filterType !== 'all') {
-                    displayItems = allItems.filter(item => item.sourceType === filterType);
-                }
+            if (displayItems.length === 0) {
+                grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888; font-size:1.2rem;">No characters found.</p>';
+                return;
+            }
 
-                displayItems.sort((a, b) => b.rating - a.rating);
+            displayItems.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'char-card';
 
-                if (displayItems.length === 0) {
-                    grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888; font-size:1.2rem;">No characters found for this category.</p>';
-                    return;
-                }
+                let rankClass = 'rank-other';
+                if (index === 0) rankClass = 'rank-1';
+                if (index === 1) rankClass = 'rank-2';
+                if (index === 2) rankClass = 'rank-3';
 
-                displayItems.forEach((item, index) => {
-                    const div = document.createElement('div');
-                    div.className = 'char-card';
-
-                    let rankClass = 'rank-other';
-                    if (index === 0) rankClass = 'rank-1';
-                    if (index === 1) rankClass = 'rank-2';
-                    if (index === 2) rankClass = 'rank-3';
-
-                    div.innerHTML = `
-                    <!-- ADDED RANK BADGE HERE -->
+                div.innerHTML = `
                     <div class="rank-badge ${rankClass}">#${index + 1}</div>
-
                     <div class="char-rating">${item.rating}</div>
                     <img src="${item.image}" class="char-img">
                     <div class="char-info">
                         <div class="char-name">${item.characterName}</div>
-                        
                         <div class="source-row">
                             <span class="source-title" title="${item.sourceTitle}">${item.sourceTitle}</span>
                             <span class="red-type">${item.sourceType}</span>
                         </div>
                     </div>
                 `;
+                grid.appendChild(div);
+            });
+        }
+
+        // --- COMMUNITY LOGIC (Same as App.js) ---
+        let commState = { view: 'all', search: '' };
+
+        document.getElementById('communityBtn').addEventListener('click', () => {
+            commState = { view: 'all', search: '' };
+            document.getElementById('userSearchInput').value = '';
+            loadCommunityUsers();
+        });
+
+        document.getElementById('closeCommModal').onclick = () => document.getElementById('communityModal').classList.add('hidden');
+        document.getElementById('commBackBtn').onclick = loadCommunityUsers;
+
+        // Tabs
+        const btnAll = document.getElementById('tabAllUsers');
+        const btnSaved = document.getElementById('tabSavedUsers');
+
+        btnAll.onclick = () => switchCommTab('all');
+        btnSaved.onclick = () => switchCommTab('saved');
+
+        function switchCommTab(view) {
+            commState.view = view;
+            if (view === 'all') {
+                btnAll.classList.add('active-tab'); btnAll.classList.remove('inactive-tab');
+                btnSaved.classList.remove('active-tab'); btnSaved.classList.add('inactive-tab');
+            } else {
+                btnAll.classList.remove('active-tab'); btnAll.classList.add('inactive-tab');
+                btnSaved.classList.add('active-tab'); btnSaved.classList.remove('inactive-tab');
+            }
+            document.getElementById('userSearchInput').value = '';
+            commState.search = '';
+            loadCommunityUsers();
+        }
+
+        let userSearchDebounce;
+        document.getElementById('userSearchInput').addEventListener('input', (e) => {
+            clearTimeout(userSearchDebounce);
+            userSearchDebounce = setTimeout(() => { commState.search = e.target.value; loadCommunityUsers(); }, 500);
+        });
+
+        async function loadCommunityUsers() {
+            const grid = document.getElementById('communityGrid');
+            const controls = document.getElementById('commControls');
+            const backBtn = document.getElementById('commBackBtn');
+            const title = document.getElementById('communityTitle');
+
+            document.getElementById('communityModal').classList.remove('hidden');
+            controls.classList.remove('hidden');
+            backBtn.classList.add('hidden');
+            title.textContent = commState.view === 'all' ? "Community Users" : "Following";
+
+            grid.innerHTML = '<p style="text-align:center;">Loading...</p>';
+
+            try {
+                const onlyFollowing = commState.view === 'saved';
+                const res = await fetch(`/api/users?search=${commState.search}&onlyFollowing=${onlyFollowing}`);
+
+                // If not logged in, the API returns 401
+                if (res.status === 401) {
+                    grid.innerHTML = `
+                        <div style="grid-column: 1/-1; text-align:center; padding: 20px;">
+                            <p style="margin-bottom:10px;">Please login to view the community.</p>
+                            <a href="/"><button class="btn-primary" style="width:auto;">Go to Login</button></a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const users = await res.json();
+                grid.innerHTML = '';
+
+                if (users.length === 0) {
+                    grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center;">No users found.</p>';
+                    return;
+                }
+
+                users.forEach(u => {
+                    if (u.isMe) return;
+                    const div = document.createElement('div');
+                    div.className = 'user-card';
+                    const starClass = u.isFollowing ? 'fas fa-star active' : 'far fa-star';
+                    div.innerHTML = `
+                        <button class="follow-btn" onclick="toggleFollow(event, '${u._id}')"><i class="${starClass}"></i></button>
+                        <i class="fas fa-user-circle user-icon"></i>
+                        <div style="font-weight:bold;">${u.username}</div>
+                    `;
+                    div.onclick = (e) => { if (!e.target.closest('.follow-btn')) showUserLists(u._id, u.username); };
                     grid.appendChild(div);
                 });
-            }
+            } catch (e) { grid.innerHTML = '<p style="text-align:center;">Error loading users.</p>'; }
+        }
+
+        async function toggleFollow(e, userId) {
+            e.stopPropagation();
+            const btn = e.currentTarget.querySelector('i');
+
+            // If user is not logged in (and somehow saw the list), this will fail
+            try {
+                const res = await fetch(`/api/users/follow/${userId}`, { method: 'POST' });
+                if (res.status === 401) return alert("Please login to follow users.");
+
+                const isFollowing = btn.classList.contains('fas');
+                btn.className = isFollowing ? 'far fa-star' : 'fas fa-star active';
+                if (commState.view === 'saved' && isFollowing) loadCommunityUsers();
+            } catch (err) { console.error(err); }
+        }
+
+        async function showUserLists(userId, username) {
+            const grid = document.getElementById('communityGrid');
+            const controls = document.getElementById('commControls');
+            const backBtn = document.getElementById('commBackBtn');
+            const title = document.getElementById('communityTitle');
+
+            controls.classList.add('hidden');
+            backBtn.classList.remove('hidden');
+            title.textContent = `${username}'s Lists`;
+            grid.innerHTML = '<p>Loading lists...</p>';
+
+            try {
+                const res = await fetch(`/api/users/${userId}/lists`);
+                const lists = await res.json();
+                grid.innerHTML = '';
+
+                if (lists.length === 0) {
+                    grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center;">No public lists.</p>';
+                    return;
+                }
+
+                lists.forEach(list => {
+                    const div = document.createElement('div');
+                    div.className = 'comm-list-card';
+                    div.innerHTML = `
+                        <h4 style="color:var(--accent); margin:0 0 5px 0;">${list.name}</h4>
+                        <p style="color:var(--text-muted); font-size:0.9rem;">${list.items.length} items</p>
+                    `;
+                    // On share page, clicking a list just reloads the current page with new ID
+                    div.onclick = () => window.location.href = `/share.html?id=${list._id}`;
+                    grid.appendChild(div);
+                });
+            } catch (e) { grid.innerHTML = '<p>Error.</p>'; }
+        }
     </script>
 </body>
 
