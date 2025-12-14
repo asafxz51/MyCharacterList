@@ -148,8 +148,10 @@ app.post('/api/users/follow/:id', verifyToken, async (req, res) => {
 
 app.get('/api/users/:userId/lists', async (req, res) => {
   try {
-    const { userId } = req.params;
-    const lists = await List.find({ userId: userId });
+    const lists = await List.find({
+      userId: req.params.userId,
+      isPrivate: { $ne: true } 
+    });
     res.json(lists);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -161,18 +163,19 @@ app.get('/api/lists', verifyToken, async (req, res) => {
 });
 
 app.post('/api/lists', verifyToken, async (req, res) => {
-  const { _id, name, items, rankingType } = req.body;
+  const { _id, name, items, rankingType, isPrivate } = req.body;
 
   if (_id) {
   
-    await List.findByIdAndUpdate(_id, { name, items });
-    res.json({ _id, name, items, rankingType });
+    await List.findByIdAndUpdate(_id, { name, items, isPrivate });
+    res.json({ _id, name, items, rankingType, isPrivate });
   } else {
     const newList = new List({
       userId: req.user._id,
       name,
       items,
-      rankingType: rankingType || 'numbers' 
+      rankingType: rankingType || 'numbers',
+      isPrivate: isPrivate || false 
     });
     await newList.save();
     res.json(newList);

@@ -43,12 +43,12 @@ async function fetchLists() {
 
 async function createList(name) {
     const rType = document.getElementById('rankingTypeSelect').value;
-    console.log("Creating list with type:", rType); 
+    const isPrivate = document.getElementById('isPrivateInput').checked;
 
     const res = await fetch('/api/lists', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name, rankingType: rType, items: [] })
+        body: JSON.stringify({ name: name, rankingType: rType,isPrivate, items: [] })
     });
 
     const newList = await res.json();
@@ -93,6 +93,8 @@ function renderSidebar() {
     state.lists.forEach(list => {
         const li = document.createElement('li');
         li.className = list._id === state.activeListId ? 'active' : '';
+        const lockIcon = list.isPrivate ? '<i class="fas fa-lock" style="font-size:0.8rem; margin-right:8px; color:#aaa;"></i>' : '';
+
         li.innerHTML = `<span>${list.name}</span>`;
 
         li.onclick = () => {
@@ -604,41 +606,53 @@ document.getElementById('shareBtn').addEventListener('click', () => {
 });
 
 document.getElementById('createListBtn').addEventListener('click', () => {
-    state.isRenamingList = false; 
+    state.isRenamingList = false;
 
     document.getElementById('listModalTitle').textContent = "Create New List";
     document.getElementById('newListName').value = '';
-    document.getElementById('saveListBtn').textContent = "Create";
 
+    document.getElementById('isPrivateInput').checked = false;
+    document.getElementById('rankingTypeSelect').disabled = false;
+    document.getElementById('rankingTypeSelect').value = 'numbers';
+
+    document.getElementById('saveListBtn').textContent = "Create";
     document.getElementById('listModal').classList.remove('hidden');
 });
+
 
 document.getElementById('editListTitleBtn').addEventListener('click', () => {
     const list = state.lists.find(l => l._id === state.activeListId);
     if (!list) return;
 
-    state.isRenamingList = true; 
+    state.isRenamingList = true;
 
-    document.getElementById('listModalTitle').textContent = "Rename List";
+    document.getElementById('listModalTitle').textContent = "List Settings";
     document.getElementById('newListName').value = list.name;
-    document.getElementById('saveListBtn').textContent = "Save Name";
 
+    document.getElementById('isPrivateInput').checked = list.isPrivate || false;
+
+    document.getElementById('rankingTypeSelect').value = list.rankingType || 'numbers';
+    document.getElementById('rankingTypeSelect').disabled = true;
+
+    document.getElementById('saveListBtn').textContent = "Save Changes";
     document.getElementById('listModal').classList.remove('hidden');
-    document.getElementById('newListName').focus();
 });
 
 document.getElementById('saveListBtn').addEventListener('click', async () => {
     const name = document.getElementById('newListName').value;
     if (!name) return;
 
+    const isPrivate = document.getElementById('isPrivateInput').checked;
+
     if (state.isRenamingList) {
         const list = state.lists.find(l => l._id === state.activeListId);
-        list.name = name; 
+        list.name = name;
+        list.isPrivate = isPrivate; 
 
-        await updateCurrentList(); 
+        await updateCurrentList();
 
-        renderSidebar();     
-        renderCurrentList();  
+        renderSidebar();
+        renderCurrentList();
     } else {
         createList(name);
     }
