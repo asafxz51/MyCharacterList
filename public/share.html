@@ -11,13 +11,13 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow-y: auto;
-            display: block;
-            background-color: var(--bg-color);
-        }
+         body { 
+        margin: 0; 
+        padding: 0; 
+        overflow-y: auto; 
+        display: block !important; 
+        background-color: var(--bg-color); 
+    }
 
         #mobileMenuBtn {
             display: none !important;
@@ -49,12 +49,6 @@
             padding: 10px;
         }
 
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 25px;
-            padding-bottom: 50px;
-        }
     </style>
 </head>
 
@@ -70,9 +64,6 @@
         <div class="nav-controls">
             <button id="communityBtn" title="View Users"><i class="fas fa-users"></i></button>
 
-            <a href="/" style="text-decoration: none;">
-                <button id="authBtnNav" style="cursor:pointer;">Login / Create</button>
-            </a>
             <button id="themeToggle"><i class="fas fa-moon"></i></button>
         </div>
     </nav>
@@ -101,7 +92,6 @@
         <div id="grid" class="grid"></div>
     </div>
 
-    <!-- COMMUNITY MODAL (Copied from index.html) -->
     <div id="communityModal" class="modal hidden">
         <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
             <span class="close-modal" id="closeCommModal">&times;</span>
@@ -141,12 +131,10 @@
                 if (rating >= 6) return 'E';
                 return 'F';
             }
-        // --- Dark Mode ---
         document.getElementById('themeToggle').addEventListener('click', () => {
             document.body.classList.toggle('light-theme');
         });
 
-        // --- List Data Logic ---
         const params = new URLSearchParams(window.location.search);
         const id = params.get('id');
         let allItems = [];
