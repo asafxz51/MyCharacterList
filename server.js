@@ -159,7 +159,23 @@ app.get('/api/users/:userId/lists', async (req, res) => {
 });
 
 app.get('/api/lists', verifyToken, async (req, res) => {
- res.json(await List.find({ userId: req.user._id }));
+  const lists = await List.find({ userId: req.user._id }).sort({ order: 1 });
+  res.json(lists);
+});
+
+app.put('/api/lists/reorder', verifyToken, async (req, res) => {
+  try {
+    const { orderedIds } = req.body; // Array of IDs in new order
+
+    const updates = orderedIds.map((id, index) => {
+      return List.updateOne({ _id: id, userId: req.user._id }, { order: index });
+    });
+
+    await Promise.all(updates);
+    res.json({ message: 'Order updated' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.post('/api/lists', verifyToken, async (req, res) => {
@@ -445,6 +461,7 @@ app.get('/api/igdb/details/:id', async (req, res) => {
 });
 
 if (process.env.NODE_ENV !== 'production') {
+  connectDB();
   app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
 }
 

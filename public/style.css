@@ -669,6 +669,17 @@ select {
   cursor: pointer;
   border: 1px solid var(--border);
   transition: all 0.2s;
+  position: relative;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.user-card div {
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 5px;
 }
 
 .user-card:hover {
@@ -722,10 +733,6 @@ select {
   text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
 }
 
-.user-card {
-  position: relative;
-
-}
 
 .active-tab {
   background-color: var(--accent) !important;

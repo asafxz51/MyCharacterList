@@ -90,33 +90,48 @@ async function updateCurrentList() {
 function renderSidebar() {
     const nav = document.getElementById('listNav');
     nav.innerHTML = '';
-    state.lists.forEach(list => {
+
+    state.lists.forEach((list, index) => {
         const li = document.createElement('li');
         li.className = list._id === state.activeListId ? 'active' : '';
-        const lockIcon = list.isPrivate ? '<i class="fas fa-lock" style="font-size:0.8rem; margin-right:8px; color:#aaa;"></i>' : '';
-
-        li.innerHTML = `<span>${list.name}</span>`;
 
         li.onclick = () => {
-            state.activeListId = list._id;
-            renderSidebar();
-            renderCurrentList();
-
-            if (window.innerWidth <= 768) closeMobileMenu();
+            selectList(list._id);
         };
+
+        li.draggable = true;
+        li.dataset.index = index;
+
+        li.addEventListener('dragstart', handleSidebarDragStart);
+        li.addEventListener('dragover', handleSidebarDragOver);
+        li.addEventListener('drop', handleSidebarDrop);
+        li.addEventListener('dragend', handleSidebarDragEnd);
+
+        const lockIcon = list.isPrivate ? '<i class="fas fa-lock" style="font-size:0.8rem; margin-right:8px; color:#aaa;"></i>' : '';
+        li.innerHTML = `
+            <span>${lockIcon}${list.name}</span>
+        `;
 
         const delBtn = document.createElement('button');
         delBtn.className = 'delete-list-btn';
         delBtn.innerHTML = '<i class="fas fa-trash"></i>';
-        delBtn.onclick = (e) => { e.stopPropagation(); deleteList(list._id); };
+
         delBtn.onclick = (e) => {
-            e.stopPropagation();
-            state.pendingDeleteListId = list._id; 
-            document.getElementById('deleteListModal').classList.remove('hidden'); 
+            e.stopPropagation(); 
+            state.pendingDeleteListId = list._id;
+            document.getElementById('deleteListModal').classList.remove('hidden');
         };
+
         li.appendChild(delBtn);
         nav.appendChild(li);
- });
+    });
+}
+
+window.selectList = function (id) {
+    state.activeListId = id;
+    renderSidebar();
+    renderCurrentList();
+    if (window.innerWidth <= 768) closeMobileMenu();
 }
 
 function toggleReorderMode() {
@@ -231,32 +246,30 @@ function renderCurrentList() {
     displayItems.forEach((item, index) => {
         const div = document.createElement('div');
         div.className = 'char-card';
-        div.dataset.index = item.originalIndex; 
+        div.dataset.index = item.originalIndex;
 
         let rankClass = 'rank-other';
         if (index === 0) rankClass = 'rank-1';
         if (index === 1) rankClass = 'rank-2';
         if (index === 2) rankClass = 'rank-3';
 
-     
         const listType = list.rankingType || 'numbers';
         const displayRating = getRatingDisplay(item.rating, listType);
 
+        let displayType = item.sourceType;
+        if (displayType === 'TV Show') displayType = 'TV';
+
         div.innerHTML = `
             <div class="rank-badge ${rankClass}">#${index + 1}</div>
-            
-            <!-- Use the formatted rating here -->
             <div class="char-rating">${displayRating}</div>
-            
             <img src="${item.image}" class="char-img">
             <div class="char-info">
                 <div class="char-name">${item.characterName}</div>
-                
                 <div class="source-row">
                     <span class="source-title" title="${item.sourceTitle}">${item.sourceTitle}</span>
-                    <span class="red-type">${item.sourceType}</span>
+                    <!-- שימוש במשתנה המקוצר -->
+                    <span class="red-type">${displayType}</span>
                 </div>
-
                 <div class="card-actions">
                     <button class="icon-btn edit-btn" onclick="editItem(${item.originalIndex})"><i class="fas fa-edit"></i></button>
                     <button class="icon-btn delete-btn" onclick="removeItem(${item.originalIndex})"><i class="fas fa-trash"></i></button>
@@ -867,6 +880,7 @@ async function showUserLists(userId, username) {
 function getRatingDisplay(rating, type) {
     if (type !== 'letters') return rating; 
 
+    if (rating >= 13) return 'SSS';
     if (rating >= 12) return 'SS';
     if (rating >= 11) return 'S';
     if (rating >= 10) return 'A';
@@ -875,6 +889,51 @@ function getRatingDisplay(rating, type) {
     if (rating >= 7) return 'D';
     if (rating >= 6) return 'E';
     return 'F';
+}
+
+let sidebarDragSrc = null;
+
+function handleSidebarDragStart(e) {
+    this.style.opacity = '0.4';
+    sidebarDragSrc = this;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', this.innerHTML);
+}
+
+function handleSidebarDragOver(e) {
+    if (e.preventDefault) e.preventDefault();
+    return false;
+}
+
+async function handleSidebarDrop(e) {
+    if (e.stopPropagation) e.stopPropagation();
+
+    if (sidebarDragSrc !== this) {
+        const fromIndex = parseInt(sidebarDragSrc.dataset.index);
+        const toIndex = parseInt(this.dataset.index);
+
+        const itemToMove = state.lists[fromIndex];
+        state.lists.splice(fromIndex, 1);
+        state.lists.splice(toIndex, 0, itemToMove);
+
+        renderSidebar();
+
+        const orderedIds = state.lists.map(l => l._id);
+        try {
+            await fetch('/api/lists/reorder', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderedIds })
+            });
+        } catch (err) {
+            console.error("Failed to save order", err);
+        }
+    }
+    return false;
+}
+
+function handleSidebarDragEnd(e) {
+    this.style.opacity = '1';
 }
 
 init();
