@@ -533,6 +533,40 @@ async function openCharModal(item) {
  document.getElementById('charModal').classList.remove('hidden');
 }
 
+function openCustomCharModal() {
+    if (!state.activeListId) return alert("Please select a list first");
+
+    state.tempSearchItem = null;
+    state.editingIndex = -1;
+
+    document.getElementById('searchResults').classList.add('hidden');
+    document.getElementById('searchInput').value = '';
+
+    document.getElementById('modalImg').classList.add('hidden');
+    document.getElementById('charNameInput').value = '';
+    document.getElementById('sourceTitleInput').value = '';
+    document.getElementById('customImgInput').value = '';
+    document.getElementById('castSelector').innerHTML = '';
+
+    document.getElementById('sourceTypeInput').value = 'Other';
+    document.getElementById('saveCharBtn').textContent = "Add Custom Character";
+
+    const list = state.lists.find(l => l._id === state.activeListId);
+    const isLetters = list && list.rankingType === 'letters';
+
+    if (isLetters) {
+        document.getElementById('ratingInput').classList.add('hidden');
+        document.getElementById('ratingLetterInput').classList.remove('hidden');
+        document.getElementById('ratingLetterInput').value = "10";
+    } else {
+        document.getElementById('ratingInput').classList.remove('hidden');
+        document.getElementById('ratingLetterInput').classList.add('hidden');
+        document.getElementById('ratingInput').value = 5;
+    }
+
+    document.getElementById('charModal').classList.remove('hidden');
+}
+
 document.getElementById('saveCharBtn').addEventListener('click', () => {
  if (!state.activeListId) return alert("Select a list first");
  const name = document.getElementById('charNameInput').value;
@@ -684,6 +718,7 @@ function setupEvents() {
 
     document.getElementById('reorderBtn').addEventListener('click', toggleReorderMode);
     document.getElementById('saveOrderBtn').addEventListener('click', saveOrder);
+    document.getElementById('addCustomCharBtn').addEventListener('click', openCustomCharModal);
 
 
     const menuBtn = document.getElementById('mobileMenuBtn');

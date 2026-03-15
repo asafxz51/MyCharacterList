@@ -98,7 +98,8 @@ body {
 #filterSelect,
 #searchInput,
 #reorderBtn,
-#saveOrderBtn {
+#saveOrderBtn,
+#addCustomCharBtn {
   height: 40px;
   box-sizing: border-box;
 }

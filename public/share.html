@@ -122,6 +122,7 @@
         function getRatingDisplay(rating, type) {
                 if (type !== 'letters') return rating; // If numbers, return as is
 
+                if (rating >= 13) return 'SSS';
                 if (rating >= 12) return 'SS';
                 if (rating >= 11) return 'S';
                 if (rating >= 10) return 'A';
