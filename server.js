@@ -82,12 +82,23 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 app.post('/api/auth/login', async (req, res) => {
- const user = await User.findOne({ username: req.body.username });
- if (!user || !(await bcrypt.compare(req.body.password, user.password))) {
-  return res.status(400).json({ error: 'Invalid credentials' });
- }
- const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET);
- res.cookie('token', token, { httpOnly: true }).json({ message: 'Logged in', username: user.username });
+  const user = await User.findOne({ username: req.body.username });
+  if (!user || !(await bcrypt.compare(req.body.password, user.password))) {
+    return res.status(400).json({ error: 'Invalid credentials' });
+  }
+
+  const token = jwt.sign(
+    { _id: user._id },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' } 
+  );
+
+  const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+
+  res.cookie('token', token, {
+    httpOnly: true,
+    maxAge: sevenDaysInMs 
+  }).json({ message: 'Logged in', username: user.username });
 });
 
 app.post('/api/auth/logout', (req, res) => res.clearCookie('token').json({ message: 'Logged out' }));

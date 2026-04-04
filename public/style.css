@@ -111,6 +111,12 @@ body {
     align-items: stretch;
   }
 
+    .logo {
+      font-weight: bold;
+      font-size: 1rem;
+      color: var(--accent);
+    }
+
   #reorderBtn,
   #saveOrderBtn {
     width: 100% !important;

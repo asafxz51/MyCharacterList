@@ -9,28 +9,69 @@ async function init() {
 
 async function checkLoginStatus() {
     const createBtn = document.getElementById('createListBtn');
+    const listHeader = document.querySelector('.list-header'); // אזור החיפוש והפילטרים
 
     try {
         const res = await fetch('/api/auth/check');
         if (res.ok) {
             const data = await res.json();
             state.user = data.username;
+
+            // --- מצב מחובר (Logged In) ---
             document.getElementById('userDisplay').textContent = `Hi, ${state.user}`;
             document.getElementById('authBtnNav').textContent = "Logout";
-
             createBtn.style.display = 'block';
+            listHeader.style.display = 'flex'; // מציג חזרה את שורת החיפוש
 
             fetchLists();
         } else {
-            document.getElementById('authBtnNav').textContent = "Login";
-            document.getElementById('characterGrid').innerHTML = '<p style="padding:20px; color:var(--text-main); text-align:center;">Please Login to view and manage lists.</p>';
-
-            createBtn.style.display = 'none';
+            // --- מצב מנותק (Logged Out) ---
+            showLoggedOutState();
         }
     } catch (e) {
         console.error(e);
-        createBtn.style.display = 'none';
+        showLoggedOutState();
     }
+}
+
+// פונקציית עזר שמציירת את מסך הפתיחה
+function showLoggedOutState() {
+    document.getElementById('authBtnNav').textContent = "Login";
+    document.getElementById('createListBtn').style.display = 'none';
+    document.querySelector('.list-header').style.display = 'none'; 
+    document.querySelector('.sidebar').style.display = 'none'; 
+    document.getElementById('mobileMenuBtn').style.display = 'none';
+    document.getElementById('listNav').innerHTML = ''; 
+
+    document.getElementById('characterGrid').innerHTML = `
+        <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; max-width: 600px; margin: 40px auto; background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid var(--border);">
+            <i class="fas fa-star" style="font-size: 4rem; color: var(--accent); margin-bottom: 20px;"></i>
+            <h2 style="margin-bottom: 15px; font-size: 2.2rem; color: var(--text-main);">Welcome to MyCharacterList</h2>
+            <p style="color: var(--text-muted); margin-bottom: 30px; font-size: 1.1rem; line-height: 1.6;">
+                
+
+We sincerely apologize for a major service disruption caused by the recent physical attacks on data centers in Bahrain (AWS Middle East).
+
+Unfortunately, despite our efforts, your previous account data and lists could not be recovered. <br> <br>
+
+What you need to do: <br>
+
+Re-register: Please create a new account to continue using the service. <br>
+
+New Lists: You will need to recreate your saved lists from scratch. <br> <br>
+
+We know how frustrating this is and deeply regret the loss of your data. We are already moving to a multi-region setup to ensure this never happens again.
+
+Thank you for your patience and for sticking with us as we rebuild. <br> <br>
+
+Best regards, Asafsuf
+
+            </p>
+            <button onclick="document.getElementById('authModal').classList.remove('hidden')" class="btn-primary" style="width: auto; padding: 12px 30px; font-size: 1.1rem; border-radius: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.4);">
+                <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i> Login or Register to Start
+            </button>
+        </div>
+    `;
 }
 
 async function fetchLists() {
