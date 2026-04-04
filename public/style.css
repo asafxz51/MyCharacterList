@@ -111,6 +111,10 @@ body {
     align-items: stretch;
   }
 
+  .navbar {
+      padding: 0 10px;
+  }
+
     .logo {
       font-weight: bold;
       font-size: 1rem;
