@@ -118,14 +118,29 @@ document.getElementById('confirmDeleteListBtn').addEventListener('click', async 
 
 
 async function updateCurrentList() {
- const list = state.lists.find(l => l._id === state.activeListId);
- if (!list) return;
- await fetch('/api/lists', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(list)
- });
- renderCurrentList();
+    const list = state.lists.find(l => l._id === state.activeListId);
+    if (!list) return;
+
+    try {
+        const response = await fetch('/api/lists', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(list)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            alert("Error saving to database: " + (errorData.error || response.statusText));
+            console.error("Save Error:", errorData);
+            window.location.reload();
+            return;
+        }
+
+        renderCurrentList();
+    } catch (e) {
+        alert("Network error: Could not connect to the database.");
+        console.error(e);
+    }
 }
 
 function renderSidebar() {
