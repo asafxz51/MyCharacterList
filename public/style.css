@@ -244,6 +244,10 @@ body {
   align-self: center;
 }
 
+#characterGrid {
+  margin-bottom: 10px;
+}
+
 
 .char-card {
   background: var(--card-bg);

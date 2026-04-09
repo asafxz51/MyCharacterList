@@ -292,7 +292,6 @@ function renderCurrentList() {
     if (filterType !== 'all') {
         displayItems = displayItems.filter(item => item.sourceType === filterType);
     }
-    displayItems.sort((a, b) => b.rating - a.rating);
 
     if (displayItems.length === 0) {
         grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888;">No characters found for this category.</p>';
@@ -654,12 +653,17 @@ document.getElementById('saveCharBtn').addEventListener('click', () => {
   image: customImg ? customImg : (state.tempSearchItem?.image || 'https://via.placeholder.com/200')
  };
 
- if (state.editingIndex > -1) {
-  Object.assign(list.items[state.editingIndex], itemData);
-  state.editingIndex = -1;
- } else {
-  list.items.push(itemData);
- }
+    if (state.editingIndex > -1) {
+        Object.assign(list.items[state.editingIndex], itemData);
+        state.editingIndex = -1;
+    } else {
+        // --- הכנסה חכמה ---
+        // מחפש איפה להכניס את הדמות החדשה כדי שלא תופיע בסוף הרשימה בטעות
+        let insertIndex = list.items.findIndex(i => i.rating < itemData.rating);
+        if (insertIndex === -1) insertIndex = list.items.length; // אם הציון הכי נמוך, דחוף לסוף
+
+        list.items.splice(insertIndex, 0, itemData);
+    }
  updateCurrentList();
  closeModal('charModal');
 });
@@ -708,6 +712,7 @@ document.getElementById('shareBtn').addEventListener('click', () => {
  alert("Copied: " + url);
 });
 
+// כפתור יצירת רשימה
 document.getElementById('createListBtn').addEventListener('click', () => {
     state.isRenamingList = false;
 
@@ -718,11 +723,12 @@ document.getElementById('createListBtn').addEventListener('click', () => {
     document.getElementById('rankingTypeSelect').disabled = false;
     document.getElementById('rankingTypeSelect').value = 'numbers';
 
+    document.getElementById('duplicateListBtn').classList.add('hidden'); // הסתרת כפתור שכפול
     document.getElementById('saveListBtn').textContent = "Create";
     document.getElementById('listModal').classList.remove('hidden');
 });
 
-
+// כפתור עריכת רשימה (גלגל שיניים/עיפרון)
 document.getElementById('editListTitleBtn').addEventListener('click', () => {
     const list = state.lists.find(l => l._id === state.activeListId);
     if (!list) return;
@@ -731,36 +737,56 @@ document.getElementById('editListTitleBtn').addEventListener('click', () => {
 
     document.getElementById('listModalTitle').textContent = "List Settings";
     document.getElementById('newListName').value = list.name;
-
     document.getElementById('isPrivateInput').checked = list.isPrivate || false;
 
+    // עכשיו נאפשר למשתמש לשנות את הסוג גם אחרי שהרשימה נוצרה!
     document.getElementById('rankingTypeSelect').value = list.rankingType || 'numbers';
-    document.getElementById('rankingTypeSelect').disabled = true;
+    document.getElementById('rankingTypeSelect').disabled = false;
 
+    document.getElementById('duplicateListBtn').classList.remove('hidden'); // הצגת כפתור שכפול
     document.getElementById('saveListBtn').textContent = "Save Changes";
     document.getElementById('listModal').classList.remove('hidden');
 });
 
+// כפתור השמירה של הרשימה (Save)
 document.getElementById('saveListBtn').addEventListener('click', async () => {
     const name = document.getElementById('newListName').value;
     if (!name) return;
 
     const isPrivate = document.getElementById('isPrivateInput').checked;
+    const rType = document.getElementById('rankingTypeSelect').value;
 
     if (state.isRenamingList) {
         const list = state.lists.find(l => l._id === state.activeListId);
         list.name = name;
-        list.isPrivate = isPrivate; 
+        list.isPrivate = isPrivate;
+        list.rankingType = rType; // שמירת סוג הדירוג החדש!
 
         await updateCurrentList();
-
         renderSidebar();
         renderCurrentList();
     } else {
         createList(name);
     }
-
     closeModal('listModal');
+});
+
+// כפתור השכפול (Duplicate)
+document.getElementById('duplicateListBtn').addEventListener('click', async () => {
+    if (!state.activeListId) return;
+    try {
+        const res = await fetch(`/api/lists/${state.activeListId}/duplicate`, { method: 'POST' });
+        const newList = await res.json();
+
+        state.lists.push(newList);
+        state.activeListId = newList._id; // מעביר אותך לרשימה החדשה אוטומטית
+
+        renderSidebar();
+        renderCurrentList();
+        closeModal('listModal');
+    } catch (err) {
+        console.error(err);
+    }
 });
 
 document.querySelectorAll('.close-modal').forEach(b => b.onclick = (e) => e.target.closest('.modal').classList.add('hidden'));

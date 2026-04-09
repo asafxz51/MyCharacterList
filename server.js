@@ -194,8 +194,7 @@ app.post('/api/lists', verifyToken, async (req, res) => {
   const { _id, name, items, rankingType, isPrivate } = req.body;
 
   if (_id) {
-  
-    await List.findByIdAndUpdate(_id, { name, items, isPrivate });
+    await List.findByIdAndUpdate(_id, { name, items, isPrivate, rankingType });
     res.json({ _id, name, items, rankingType, isPrivate });
   } else {
     const newList = new List({
@@ -203,10 +202,30 @@ app.post('/api/lists', verifyToken, async (req, res) => {
       name,
       items,
       rankingType: rankingType || 'numbers',
-      isPrivate: isPrivate || false 
+      isPrivate: isPrivate || false
     });
     await newList.save();
     res.json(newList);
+  }
+});
+
+app.post('/api/lists/:id/duplicate', verifyToken, async (req, res) => {
+  try {
+    const originalList = await List.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!originalList) return res.status(404).json({ error: 'List not found' });
+
+    const newList = new List({
+      userId: req.user._id,
+      name: originalList.name + " (Copy)",
+      rankingType: originalList.rankingType,
+      isPrivate: originalList.isPrivate,
+      items: originalList.items 
+    });
+
+    await newList.save();
+    res.json(newList);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 

@@ -170,7 +170,6 @@
                     displayItems = allItems.filter(item => item.sourceType === filterType);
                 }
 
-                displayItems.sort((a, b) => b.rating - a.rating);
 
                 if (displayItems.length === 0) {
                     grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888; font-size:1.2rem;">No characters found for this category.</p>';
