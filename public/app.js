@@ -117,9 +117,14 @@ document.getElementById('confirmDeleteListBtn').addEventListener('click', async 
 });
 
 
-async function updateCurrentList() {
+async function updateCurrentList(forceSort = false) {
     const list = state.lists.find(l => l._id === state.activeListId);
     if (!list) return;
+
+    // אם התבקש מיון (למשל אחרי עריכת ציון), נסדר לפי הציון מהגבוה לנמוך
+    if (forceSort) {
+        list.items.sort((a, b) => b.rating - a.rating);
+    }
 
     try {
         const response = await fetch('/api/lists', {
@@ -130,15 +135,13 @@ async function updateCurrentList() {
 
         if (!response.ok) {
             const errorData = await response.json();
-            alert("Error saving to database: " + (errorData.error || response.statusText));
-            console.error("Save Error:", errorData);
+            alert("Error saving: " + (errorData.error || response.statusText));
             window.location.reload();
             return;
         }
 
         renderCurrentList();
     } catch (e) {
-        alert("Network error: Could not connect to the database.");
         console.error(e);
     }
 }
@@ -219,7 +222,7 @@ async function saveOrder() {
     toggleReorderMode();
 
     const list = state.lists.find(l => l._id === state.activeListId);
-    await updateCurrentList();
+    await updateCurrentList(false);
 }
 
 let dragSrcEl = null;
@@ -384,7 +387,7 @@ document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
     if (state.pendingDeleteIndex === null) return;
     const list = state.lists.find(l => l._id === state.activeListId);
     list.items.splice(state.pendingDeleteIndex, 1);
-    updateCurrentList();
+    updateCurrentList(false);
     state.pendingDeleteIndex = null;
     closeModal('deleteModal');
 });
@@ -664,7 +667,7 @@ document.getElementById('saveCharBtn').addEventListener('click', () => {
 
         list.items.splice(insertIndex, 0, itemData);
     }
- updateCurrentList();
+ updateCurrentList(true);
  closeModal('charModal');
 });
 
