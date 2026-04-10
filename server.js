@@ -191,18 +191,19 @@ app.put('/api/lists/reorder', verifyToken, async (req, res) => {
 });
 
 app.post('/api/lists', verifyToken, async (req, res) => {
-  const { _id, name, items, rankingType, isPrivate } = req.body;
+  const { _id, name, items, rankingType, isPrivate, isFreeOrder } = req.body;
 
   if (_id) {
-    await List.findByIdAndUpdate(_id, { name, items, isPrivate, rankingType });
-    res.json({ _id, name, items, rankingType, isPrivate });
+    await List.findByIdAndUpdate(_id, { name, items, isPrivate, rankingType, isFreeOrder });
+    res.json({ _id, name, items, rankingType, isPrivate, isFreeOrder });
   } else {
     const newList = new List({
       userId: req.user._id,
       name,
       items,
       rankingType: rankingType || 'numbers',
-      isPrivate: isPrivate || false
+      isPrivate: isPrivate || false,
+      isFreeOrder: isFreeOrder || false // ברירת מחדל: מסודר לפי ציונים
     });
     await newList.save();
     res.json(newList);

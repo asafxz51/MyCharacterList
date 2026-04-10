@@ -85,11 +85,13 @@ async function fetchLists() {
 async function createList(name) {
     const rType = document.getElementById('rankingTypeSelect').value;
     const isPrivate = document.getElementById('isPrivateInput').checked;
+    const isFreeOrder = document.getElementById('isFreeOrderInput').checked;
+
 
     const res = await fetch('/api/lists', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name, rankingType: rType,isPrivate, items: [] })
+        body: JSON.stringify({ name: name, rankingType: rType, isPrivate, isFreeOrder: isFreeOrder, items: [] })
     });
 
     const newList = await res.json();
@@ -121,8 +123,8 @@ async function updateCurrentList(forceSort = false) {
     const list = state.lists.find(l => l._id === state.activeListId);
     if (!list) return;
 
-    // אם התבקש מיון (למשל אחרי עריכת ציון), נסדר לפי הציון מהגבוה לנמוך
-    if (forceSort) {
+    // ממיין לפי ציונים *רק* אם ביקשנו למיין ו*רק* אם זו לא רשימה חופשית
+    if (forceSort && !list.isFreeOrder) {
         list.items.sort((a, b) => b.rating - a.rating);
     }
 
@@ -294,6 +296,10 @@ function renderCurrentList() {
 
     if (filterType !== 'all') {
         displayItems = displayItems.filter(item => item.sourceType === filterType);
+    }
+
+    if (!list.isFreeOrder) {
+        displayItems.sort((a, b) => b.rating - a.rating);
     }
 
     if (displayItems.length === 0) {
@@ -660,13 +666,10 @@ document.getElementById('saveCharBtn').addEventListener('click', () => {
         Object.assign(list.items[state.editingIndex], itemData);
         state.editingIndex = -1;
     } else {
-        // --- הכנסה חכמה ---
-        // מחפש איפה להכניס את הדמות החדשה כדי שלא תופיע בסוף הרשימה בטעות
-        let insertIndex = list.items.findIndex(i => i.rating < itemData.rating);
-        if (insertIndex === -1) insertIndex = list.items.length; // אם הציון הכי נמוך, דחוף לסוף
-
-        list.items.splice(insertIndex, 0, itemData);
+        list.items.push(itemData);
     }
+    updateCurrentList(true);
+    closeModal('charModal');
  updateCurrentList(true);
  closeModal('charModal');
 });
@@ -723,15 +726,15 @@ document.getElementById('createListBtn').addEventListener('click', () => {
     document.getElementById('newListName').value = '';
 
     document.getElementById('isPrivateInput').checked = false;
+    document.getElementById('isFreeOrderInput').checked = false;
     document.getElementById('rankingTypeSelect').disabled = false;
     document.getElementById('rankingTypeSelect').value = 'numbers';
 
-    document.getElementById('duplicateListBtn').classList.add('hidden'); // הסתרת כפתור שכפול
+    document.getElementById('duplicateListBtn').classList.add('hidden'); 
     document.getElementById('saveListBtn').textContent = "Create";
     document.getElementById('listModal').classList.remove('hidden');
 });
 
-// כפתור עריכת רשימה (גלגל שיניים/עיפרון)
 document.getElementById('editListTitleBtn').addEventListener('click', () => {
     const list = state.lists.find(l => l._id === state.activeListId);
     if (!list) return;
@@ -741,37 +744,50 @@ document.getElementById('editListTitleBtn').addEventListener('click', () => {
     document.getElementById('listModalTitle').textContent = "List Settings";
     document.getElementById('newListName').value = list.name;
     document.getElementById('isPrivateInput').checked = list.isPrivate || false;
-
-    // עכשיו נאפשר למשתמש לשנות את הסוג גם אחרי שהרשימה נוצרה!
+    document.getElementById('isFreeOrderInput').checked = list.isFreeOrder || false;
     document.getElementById('rankingTypeSelect').value = list.rankingType || 'numbers';
     document.getElementById('rankingTypeSelect').disabled = false;
 
-    document.getElementById('duplicateListBtn').classList.remove('hidden'); // הצגת כפתור שכפול
+    document.getElementById('duplicateListBtn').classList.remove('hidden');
     document.getElementById('saveListBtn').textContent = "Save Changes";
     document.getElementById('listModal').classList.remove('hidden');
 });
 
-// כפתור השמירה של הרשימה (Save)
 document.getElementById('saveListBtn').addEventListener('click', async () => {
-    const name = document.getElementById('newListName').value;
-    if (!name) return;
+    try {
+        const name = document.getElementById('newListName').value;
+        const rType = document.getElementById('rankingTypeSelect').value;
+        const isPrivate = document.getElementById('isPrivateInput').checked;
+        const isFreeOrder = document.getElementById('isFreeOrderInput').checked;
 
-    const isPrivate = document.getElementById('isPrivateInput').checked;
-    const rType = document.getElementById('rankingTypeSelect').value;
+        if (!name) {
+            alert("Please enter a list name.");
+            return;
+        }
 
-    if (state.isRenamingList) {
-        const list = state.lists.find(l => l._id === state.activeListId);
-        list.name = name;
-        list.isPrivate = isPrivate;
-        list.rankingType = rType; // שמירת סוג הדירוג החדש!
+        if (state.isRenamingList) {
+            const list = state.lists.find(l => l._id === state.activeListId);
+            if (!list) return;
 
-        await updateCurrentList();
-        renderSidebar();
-        renderCurrentList();
-    } else {
-        createList(name);
+            list.name = name;
+            list.rankingType = rType;
+            list.isPrivate = isPrivate;
+            list.isFreeOrder = isFreeOrder;
+
+            await updateCurrentList(true);
+
+            renderSidebar();
+            renderCurrentList();
+        } else {
+            await createList(name);
+        }
+
+        closeModal('listModal');
+
+    } catch (error) {
+        console.error("Error saving list:", error);
+        alert("An error occurred while saving the list.");
     }
-    closeModal('listModal');
 });
 
 // כפתור השכפול (Duplicate)

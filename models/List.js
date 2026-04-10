@@ -5,6 +5,7 @@ const ListSchema = new mongoose.Schema({
  name: { type: String, required: true },
  rankingType: { type: String, default: 'numbers' },
  isPrivate: { type: Boolean, default: false },
+ isFreeOrder: { type: Boolean, default: false },
  order: { type: Number, default: 0 },
  items: [{
   characterName: String,
