@@ -158,6 +158,7 @@
     <option value="7">D</option>
     <option value="6">E</option>
     <option value="5">F</option>
+    <option value="0">No Grade</option>
   </select>
 </div>
 
@@ -237,9 +238,11 @@
 </div>
 
 <!-- COMMUNITY MODAL -->
+<!-- COMMUNITY MODAL -->
 <div id="communityModal" class="modal hidden">
   <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
-    <span class="close-modal">&times;</span>
+    <!-- כפתור סגירה -->
+    <span class="close-modal" onclick="document.getElementById('communityModal').classList.add('hidden')">&times;</span>
 
     <h3 id="communityTitle" style="margin-bottom: 15px; text-align: center;">Community</h3>
 
@@ -252,11 +255,11 @@
         <input type="text" id="userSearchInput" placeholder="Search for users...">
       </div>
 
-    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-      <button id="tabAllUsers" class="btn-primary active-tab" style="flex:1;">All Users</button>
-      <button id="tabSavedUsers" class="btn-primary inactive-tab" style="flex:1;">Following</button>
-    </div>
-
+      <!-- הטאבים עם ה-ID שחסר לך -->
+      <div id="commTabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <button id="tabAllUsers" class="btn-primary active-tab" style="flex:1;">All Users</button>
+        <button id="tabSavedUsers" class="btn-primary inactive-tab" style="flex:1;">Following</button>
+      </div>
     </div>
 
     <div id="communityGrid" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">

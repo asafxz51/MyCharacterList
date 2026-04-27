@@ -54,6 +54,15 @@ const verifyToken = (req, res, next) => {
  } catch (err) { res.status(400).json({ error: 'Invalid Token' }); }
 };
 
+const optionalToken = (req, res, next) => {
+  const token = req.cookies.token;
+  if (!token) return next(); // אין טוקן? תמשיך כאורח
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch (err) { next(); }
+};
+
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -108,28 +117,33 @@ app.get('/api/auth/check', verifyToken, async (req, res) => {
  res.json({ username: user.username });
 });
 
-app.get('/api/users', verifyToken, async (req, res) => {
+// 1. Get Users (Public & Private logic)
+app.get('/api/users', optionalToken, async (req, res) => {
   try {
     const { search, onlyFollowing } = req.query;
-    const currentUser = await User.findById(req.user._id);
 
-    let query = {};
-
-    if (search) {
-      query.username = { $regex: search, $options: 'i' };
+    // אם אורח מנסה לראות "נעקבים", נזרוק לו שגיאה של התחברות
+    if (onlyFollowing === 'true' && !req.user) {
+      return res.status(401).json({ error: 'Please login to view followed users' });
     }
 
-    if (onlyFollowing === 'true') {
-      query._id = { $in: currentUser.following };
+    let query = {};
+    if (search) query.username = { $regex: search, $options: 'i' };
+
+    let currentUser = null;
+    if (req.user) {
+      currentUser = await User.findById(req.user._id);
+      if (onlyFollowing === 'true') {
+        query._id = { $in: currentUser.following };
+      }
     }
 
     const users = await User.find(query, 'username');
-
     const usersWithStatus = users.map(u => ({
       _id: u._id,
       username: u.username,
-      isFollowing: currentUser.following.includes(u._id),
-      isMe: u._id.equals(currentUser._id) // Flag if it's yourself
+      isFollowing: currentUser ? currentUser.following.includes(u._id) : false,
+      isMe: currentUser ? u._id.equals(currentUser._id) : false
     }));
 
     res.json(usersWithStatus);
@@ -235,6 +249,16 @@ app.delete('/api/lists/:id', verifyToken, async (req, res) => {
  res.json({ message: 'Deleted' });
 });
 
+
+app.delete('/api/users/me', verifyToken, async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.user._id);
+    res.json({ message: "Account deleted successfully" });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/share/:id', async (req, res) => {
  try {
   const list = await List.findById(req.params.id);
@@ -263,7 +287,7 @@ app.get('/api/tmdb/credits', checkRateLimit, async (req, res) => {
 app.get('/api/search/jikan', async (req, res) => {
  try {
   await new Promise(r => setTimeout(r, 500));
-  const r = await axios.get(`https://api.jikan.moe/v4/characters`, { params: { q: req.query.query, limit: 5 } });
+  const r = await axios.get(`https://api.jikan.moe/v4/characters`, { params: { q: req.query.query, limit: 15 } });
   res.json(r.data.data.map(i => ({
    id: i.mal_id, title: i.name, image: i.images?.jpg?.image_url, type: 'character', description: 'Anime Character'
   })));
@@ -326,7 +350,7 @@ app.get('/api/search/fandom', async (req, res) => {
    const apiUrl = `https://${subdomain}.fandom.com/api.php`;
 
    const searchRes = await axios.get(apiUrl, {
-    params: { action: 'query', list: 'search', srsearch: query, srlimit: 2, format: 'json' }
+    params: { action: 'query', list: 'search', srsearch: query, srlimit: 4, format: 'json' }
    });
    if (!searchRes.data.query) return [];
    const pageIds = searchRes.data.query.search.map(i => i.pageid).join('|');
@@ -437,7 +461,7 @@ app.get('/api/search/igdb', async (req, res) => {
 
   // IGDB uses a weird text-based query format
   const response = await axios.post('https://api.igdb.com/v4/characters',
-   `search "${req.query.query}"; fields name, mug_shot.image_id; limit 5;`,
+   `search "${req.query.query}"; fields name, mug_shot.image_id; limit 10;`,
    {
     headers: {
      'Client-ID': process.env.TWITCH_CLIENT_ID,

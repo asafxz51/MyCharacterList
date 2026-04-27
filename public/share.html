@@ -96,35 +96,49 @@
         <div id="grid" class="grid"></div>
     </div>
 
+    <!-- COMMUNITY MODAL -->
     <div id="communityModal" class="modal hidden">
         <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
-            <span class="close-modal" id="closeCommModal">&times;</span>
-
+            <!-- כפתור סגירה -->
+            <span class="close-modal"
+                onclick="document.getElementById('communityModal').classList.add('hidden')">&times;</span>
+    
             <h3 id="communityTitle" style="margin-bottom: 15px; text-align: center;">Community</h3>
-
-            <button id="commBackBtn" class="btn-primary hidden"
-                style="margin-bottom: 15px; width: auto; background: #555;">
+    
+            <button id="commBackBtn" class="btn-primary hidden" style="margin-bottom: 15px; width: auto; background: #555;">
                 <i class="fas fa-arrow-left"></i> Back
             </button>
-
+    
             <div id="commControls">
                 <div class="search-bar-container" style="width: 100%; margin-bottom: 15px;">
                     <input type="text" id="userSearchInput" placeholder="Search for users...">
                 </div>
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+    
+                <!-- הטאבים עם ה-ID שחסר לך -->
+                <div id="commTabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
                     <button id="tabAllUsers" class="btn-primary active-tab" style="flex:1;">All Users</button>
                     <button id="tabSavedUsers" class="btn-primary inactive-tab" style="flex:1;">Following</button>
                 </div>
             </div>
-
+    
             <div id="communityGrid" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
             </div>
         </div>
     </div>
 
     <script>
+
+        let loggedInUser = null; 
+
+            fetch('/api/auth/check').then(res => {
+                if (res.ok) {
+                    res.json().then(data => { loggedInUser = data.username; });
+                }
+            });
+
         function getRatingDisplay(rating, type) {
-                if (type !== 'letters') return rating; // If numbers, return as is
+                if (rating === 0) return 'No Grade';
+                if (type !== 'letters') return rating + '/10'; 
 
                 if (rating >= 13) return 'SSS';
                 if (rating >= 12) return 'SS';
@@ -196,7 +210,7 @@
 
                 div.innerHTML = `
                     <div class="rank-badge ${rankClass}">#${index + 1}</div>
-                    <div class="char-rating">${displayRating}</div>
+                     ${ratingHtml}
                     <img src="${item.image}" class="char-img">
                     <div class="char-info">
                         <div class="char-name">${item.characterName}</div>
@@ -251,56 +265,64 @@
         });
 
         async function loadCommunityUsers() {
-            const grid = document.getElementById('communityGrid');
-            const controls = document.getElementById('commControls');
-            const backBtn = document.getElementById('commBackBtn');
-            const title = document.getElementById('communityTitle');
+                const grid = document.getElementById('communityGrid');
+                const controls = document.getElementById('commControls');
+                const backBtn = document.getElementById('commBackBtn');
+                const title = document.getElementById('communityTitle');
+                const commTabs = document.getElementById('commTabs');
 
-            document.getElementById('communityModal').classList.remove('hidden');
-            controls.classList.remove('hidden');
-            backBtn.classList.add('hidden');
-            title.textContent = commState.view === 'all' ? "Community Users" : "Following";
+                document.getElementById('communityModal').classList.remove('hidden');
+                controls.classList.remove('hidden');
+                backBtn.classList.add('hidden');
+                title.textContent = commState.view === 'all' ? "Community Users" : "Following";
 
-            grid.innerHTML = '<p style="text-align:center;">Loading...</p>';
-
-            try {
-                const onlyFollowing = commState.view === 'saved';
-                const res = await fetch(`/api/users?search=${commState.search}&onlyFollowing=${onlyFollowing}`);
-
-                // If not logged in, the API returns 401
-                if (res.status === 401) {
-                    grid.innerHTML = `
-                        <div style="grid-column: 1/-1; text-align:center; padding: 20px;">
-                            <p style="margin-bottom:10px;">Please login to view the community.</p>
-                            <a href="/"><button class="btn-primary" style="width:auto;">Go to Login</button></a>
-                        </div>
-                    `;
-                    return;
+                // הסתרת טאבים לאורחים
+                if (!loggedInUser) {
+                    commTabs.style.display = 'none';
+                } else {
+                    commTabs.style.display = 'flex';
                 }
 
-                const users = await res.json();
-                grid.innerHTML = '';
+                grid.innerHTML = '<p style="text-align:center;">Loading...</p>';
 
-                if (users.length === 0) {
-                    grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center;">No users found.</p>';
-                    return;
-                }
+                try {
+                    const onlyFollowing = commState.view === 'saved';
+                    const res = await fetch(`/api/users?search=${commState.search}&onlyFollowing=${onlyFollowing}`);
 
-                users.forEach(u => {
-                    if (u.isMe) return;
-                    const div = document.createElement('div');
-                    div.className = 'user-card';
-                    const starClass = u.isFollowing ? 'fas fa-star active' : 'far fa-star';
-                    div.innerHTML = `
-                        <button class="follow-btn" onclick="toggleFollow(event, '${u._id}')"><i class="${starClass}"></i></button>
+                    const users = await res.json();
+                    grid.innerHTML = '';
+
+                    if (users.length === 0) {
+                        grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center;">No users found.</p>';
+                        return;
+                    }
+
+                    users.forEach(u => {
+                        if (u.isMe) return;
+                        const div = document.createElement('div');
+                        div.className = 'user-card';
+
+                        // ציור כוכב רק למחוברים
+                        let starHtml = '';
+                        if (loggedInUser) {
+                            const starClass = u.isFollowing ? 'fas fa-star active' : 'far fa-star';
+                            starHtml = `
+                            <button class="follow-btn" onclick="toggleFollow(event, '${u._id}')">
+                                <i class="${starClass}"></i>
+                            </button>
+                        `;
+                        }
+
+                        div.innerHTML = `
+                        ${starHtml}
                         <i class="fas fa-user-circle user-icon"></i>
-                        <div style="font-weight:bold;">${u.username}</div>
+                        <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 5px;">${u.username}</div>
                     `;
-                    div.onclick = (e) => { if (!e.target.closest('.follow-btn')) showUserLists(u._id, u.username); };
-                    grid.appendChild(div);
-                });
-            } catch (e) { grid.innerHTML = '<p style="text-align:center;">Error loading users.</p>'; }
-        }
+                        div.onclick = (e) => { if (!e.target.closest('.follow-btn')) showUserLists(u._id, u.username); };
+                        grid.appendChild(div);
+                    });
+                } catch (e) { grid.innerHTML = '<p style="text-align:center;">Error loading users.</p>'; }
+            }
 
         async function toggleFollow(e, userId) {
             e.stopPropagation();

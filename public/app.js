@@ -319,19 +319,20 @@ function renderCurrentList() {
 
         const listType = list.rankingType || 'numbers';
         const displayRating = getRatingDisplay(item.rating, listType);
+        const ratingHtml = item.rating === 0 ? '' : `<div class="char-rating">${displayRating}</div>`;
+
 
         let displayType = item.sourceType;
         if (displayType === 'TV Show') displayType = 'TV';
 
         div.innerHTML = `
             <div class="rank-badge ${rankClass}">#${index + 1}</div>
-            <div class="char-rating">${displayRating}</div>
+               ${ratingHtml}
             <img src="${item.image}" class="char-img">
             <div class="char-info">
                 <div class="char-name">${item.characterName}</div>
                 <div class="source-row">
                     <span class="source-title" title="${item.sourceTitle}">${item.sourceTitle}</span>
-                    <!-- שימוש במשתנה המקוצר -->
                     <span class="red-type">${displayType}</span>
                 </div>
                 <div class="card-actions">
@@ -905,11 +906,19 @@ async function loadCommunityUsers() {
     const controls = document.getElementById('commControls');
     const backBtn = document.getElementById('commBackBtn');
     const title = document.getElementById('communityTitle');
+    const commTabs = document.getElementById('commTabs'); // תפסנו את הטאבים
 
     document.getElementById('communityModal').classList.remove('hidden');
-    controls.classList.remove('hidden'); // Show Search/Tabs
+    controls.classList.remove('hidden');
     backBtn.classList.add('hidden');
     title.textContent = commState.view === 'all' ? "Community Users" : "Following";
+
+    // --- הסתרת הטאבים לאורחים ---
+    if (!state.user) {
+        commTabs.style.display = 'none';
+    } else {
+        commTabs.style.display = 'flex';
+    }
 
     grid.innerHTML = '<p style="text-align:center;">Loading...</p>';
 
@@ -925,23 +934,27 @@ async function loadCommunityUsers() {
         }
 
         users.forEach(u => {
-            if (u.isMe) return; // Don't show myself
+            if (u.isMe) return;
 
             const div = document.createElement('div');
             div.className = 'user-card';
 
-            // Follow Icon Class (Solid if following, Regular if not)
-            const starClass = u.isFollowing ? 'fas fa-star active' : 'far fa-star';
+            let starHtml = '';
+            if (state.user) {
+                const starClass = u.isFollowing ? 'fas fa-star active' : 'far fa-star';
+                starHtml = `
+                    <button class="follow-btn" onclick="toggleFollow(event, '${u._id}')">
+                        <i class="${starClass}"></i>
+                    </button>
+                `;
+            }
 
             div.innerHTML = `
-                <button class="follow-btn" onclick="toggleFollow(event, '${u._id}')">
-                    <i class="${starClass}"></i>
-                </button>
+                ${starHtml}
                 <i class="fas fa-user-circle user-icon"></i>
-                <div style="font-weight:bold;">${u.username}</div>
+                <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 5px;">${u.username}</div>
             `;
 
-            // Clicking card body opens lists
             div.onclick = (e) => {
                 if (!e.target.closest('.follow-btn')) showUserLists(u._id, u.username);
             };
@@ -951,7 +964,7 @@ async function loadCommunityUsers() {
 
     } catch (e) {
         console.error(e);
-        grid.innerHTML = '<p>Error loading users.</p>';
+        grid.innerHTML = '<p style="text-align:center;">Error loading users.</p>';
     }
 }
 
@@ -1014,7 +1027,8 @@ async function showUserLists(userId, username) {
 }
 
 function getRatingDisplay(rating, type) {
-    if (type !== 'letters') return rating; 
+    if (rating === 0) return 'No Grade'
+    if (type !== 'letters') return rating + '/10'; 
 
     if (rating >= 13) return 'SSS';
     if (rating >= 12) return 'SS';

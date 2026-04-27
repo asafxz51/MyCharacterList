@@ -274,19 +274,41 @@ body {
   padding: 15px;
 }
 
+/* --- עיצוב חדש ואסתטי לציון --- */
 .char-rating {
   position: absolute;
   top: 10px;
   right: 10px;
-  background: rgb(249, 83, 28);
-  color: white;
-  padding: 5px 8px;
-  border-radius: 4px;
-  font-weight: bold;
-  box-shadow: 0px 0px 26px 7px rgba(0, 0, 0, 0.69);
-  -webkit-box-shadow: 0px 0px 26px 7px rgba(0, 0, 0, 0.69);
-  -moz-box-shadow: 0px 0px 26px 7px rgba(0, 0, 0, 0.69);
+
+  /* רקע כהה חצי שקוף עם אפקט זכוכית */
+  background: rgba(18, 18, 18, 0.80);
+  backdrop-filter: blur(4px);
+
+  /* טקסט בזהב ועיצוב גלולה */
+  color: #FFD700;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 900;
+  font-size: 0.9rem;
+
+  /* מסגרת עדינה וצל נקי יותר */
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+
+  /* יישור הטקסט והכוכב */
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  z-index: 10;
 }
+
+/* .char-rating::before {
+  content: "\f005";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  font-size: 0.8rem;
+  color: #FFD700;
+} */
 
 .char-name {
   font-size: 1.1rem;
