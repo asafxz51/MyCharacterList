@@ -150,67 +150,100 @@
                 if (rating >= 6) return 'E';
                 return 'F';
             }
-        document.getElementById('themeToggle').addEventListener('click', () => {
-            document.body.classList.toggle('light-theme');
+         document.getElementById('themeToggle').addEventListener('click', () => {
+             document.body.classList.toggle('light-theme');
         });
 
-        const params = new URLSearchParams(window.location.search);
-        const id = params.get('id');
-        let allItems = [];
 
-        fetch(`/api/share/${id}`)
+        const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
+            let allItems = [];
+            let listRankingType = 'numbers';
+            let isFreeOrder = false;
+
+              function getRatingDisplay(rating, type) {
+                    if (rating === 0) return 'No Grade';
+
+                    if (type !== 'letters') return rating + '/10';
+
+                    if (rating >= 13) return 'SSS';
+                    if (rating >= 12) return 'SS';
+                    if (rating >= 11) return 'S';
+                    if (rating >= 10) return 'A';
+                    if (rating >= 9) return 'B';
+                    if (rating >= 8) return 'C';
+                    if (rating >= 7) return 'D';
+                    if (rating >= 6) return 'E';
+                    return 'F';
+                }
+
+      fetch(`/api/share/${id}`)
             .then(res => res.json())
             .then(data => {
                 if (data.error) {
                     document.querySelector('.share-wrapper').innerHTML = "<h1 style='text-align:center; margin-top:50px;'>List not found</h1>";
                     return;
                 }
+
                 document.title = data.name;
                 document.getElementById('listTitle').textContent = data.name;
                 document.getElementById('listAuthor').textContent = `Created by: ${data.author}`;
-                listRankingType = data.rankingType || 'numbers'; 
 
+                listRankingType = data.rankingType || 'numbers';
+                isFreeOrder = data.isFreeOrder || false;
                 allItems = data.items;
+
                 renderList();
             })
             .catch(err => console.error(err));
 
-        document.getElementById('filterSelect').addEventListener('change', renderList);
+            document.getElementById('filterSelect').addEventListener('change', renderList);
 
-        function renderList() {
-                const grid = document.getElementById('grid');
-                grid.innerHTML = '';
+                function renderList() {
+                        const grid = document.getElementById('grid');
+                        grid.innerHTML = '';
 
-                const filterType = document.getElementById('filterSelect').value;
+                        const filterType = document.getElementById('filterSelect').value;
 
-                let displayItems = allItems;
-                if (filterType !== 'all') {
-                    displayItems = allItems.filter(item => item.sourceType === filterType);
-                }
+                        // עותק של הרשימה
+                        let displayItems = [...allItems];
 
+                        if (filterType !== 'all') {
+                            displayItems = displayItems.filter(item => item.sourceType === filterType);
+                        }
 
-                if (displayItems.length === 0) {
-                    grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888; font-size:1.2rem;">No characters found for this category.</p>';
-                    return;
-                }
+                        // --- תיקון: מיון לפי ציון מתבצע רק אם זו לא רשימה חופשית! ---
+                        if (!isFreeOrder) {
+                            displayItems.sort((a, b) => b.rating - a.rating);
+                        }
 
-                displayItems.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = 'char-card';
+                        if (displayItems.length === 0) {
+                            grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888; font-size:1.2rem;">No characters found.</p>';
+                            return;
+                        }
 
-                let rankClass = 'rank-other';
-                if (index === 0) rankClass = 'rank-1';
-                if (index === 1) rankClass = 'rank-2';
-                if (index === 2) rankClass = 'rank-3';
+                        displayItems.forEach((item, index) => {
+                            const div = document.createElement('div');
+                            div.className = 'char-card';
 
-                const displayRating = getRatingDisplay(item.rating, listRankingType);
+                            let rankClass = 'rank-other';
+                            if (index === 0) rankClass = 'rank-1';
+                            if (index === 1) rankClass = 'rank-2';
+                            if (index === 2) rankClass = 'rank-3';
 
-                let displayType = item.sourceType;
-                if (displayType === 'TV Show') displayType = 'TV';
+                            // חישוב תצוגת הציון
+                            const displayRating = getRatingDisplay(item.rating, listRankingType);
+                            // מעלים את קופסת הציון לגמרי אם הציון הוא 0 (No Grade)
+                            const ratingHtml = item.rating === 0 ? '' : `<div class="char-rating">${displayRating}</div>`;
 
-                div.innerHTML = `
+                            let displayType = item.sourceType;
+                            if (displayType === 'TV Show') displayType = 'TV';
+
+                            div.innerHTML = `
                     <div class="rank-badge ${rankClass}">#${index + 1}</div>
-                     ${ratingHtml}
+                    
+                    ${ratingHtml}
+                    
                     <img src="${item.image}" class="char-img">
                     <div class="char-info">
                         <div class="char-name">${item.characterName}</div>
@@ -220,10 +253,10 @@
                         </div>
                     </div>
                 `;
-                grid.appendChild(div);
-            });
+                            grid.appendChild(div);
+                        });
+                    }
 
-            }
 
         // --- COMMUNITY LOGIC (Same as App.js) ---
         let commState = { view: 'all', search: '' };
@@ -372,7 +405,11 @@
                     grid.appendChild(div);
                 });
             } catch (e) { grid.innerHTML = '<p>Error.</p>'; }
+                    let loggedInUser = null;
+
         }
+
+        
     </script>
 </body>
 
