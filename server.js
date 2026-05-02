@@ -10,6 +10,7 @@ require('dotenv').config();
 const User = require('./models/User');
 const List = require('./models/List');
 const Settings = require('./models/Settings');
+const Log = require('./models/Log');
 
 
 const app = express();
@@ -73,6 +74,18 @@ const optionalToken = (req, res, next) => {
   } catch (err) { next(); }
 };
 
+async function saveLog(user, action, details) {
+  try {
+    const log = new Log({
+      userId: user ? user._id : null,
+      username: user ? user.username : 'Guest',
+      action,
+      details
+    });
+    await log.save();
+  } catch (e) { console.error("Log error:", e); }
+}
+
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -85,6 +98,7 @@ app.post('/api/auth/register', async (req, res) => {
     const user = new User({ username, password: hashedPassword });
     await user.save();
 
+    await saveLog(user, "User Registered", `New user: ${username}`);
     res.json({ message: 'User created' });
   } catch (err) {
     console.error("Registration Error:", err);
@@ -107,18 +121,12 @@ app.post('/api/auth/login', async (req, res) => {
     return res.status(400).json({ error: 'Invalid credentials' });
   }
 
-  const token = jwt.sign(
-    { _id: user._id },
-    process.env.JWT_SECRET,
-    { expiresIn: '7d' }
-  );
+  const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-  const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+  await saveLog(user, "User Login", "Logged into the system");
 
-  res.cookie('token', token, {
-    httpOnly: true,
-    maxAge: sevenDaysInMs
-  }).json({ message: 'Logged in', username: user.username });
+  res.cookie('token', token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 })
+    .json({ message: 'Logged in', username: user.username });
 });
 
 app.post('/api/auth/logout', (req, res) => res.clearCookie('token').json({ message: 'Logged out' }));
@@ -151,10 +159,23 @@ app.get('/api/admin/users', verifyToken, verifyAdmin, async (req, res) => {
   res.json(users);
 });
 
-app.delete('/api/admin/users/:id', verifyToken, verifyAdmin, async (req, res) => {
-  await User.findByIdAndDelete(req.params.id);
-  await List.deleteMany({ userId: req.params.id }); // מוחק גם את כל הרשימות של המשתמש!
-  res.json({ message: 'User deleted' });
+app.delete('/api/lists/:id', verifyToken, async (req, res) => {
+  try {
+    const list = await List.findOne({ _id: req.params.id, userId: req.user._id });
+
+    if (!list) {
+      return res.status(404).json({ error: 'List not found' });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    await saveLog(user, "Delete List", `Deleted list: "${list.name}"`);
+
+    await List.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Deleted' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.post('/api/admin/users/:id/reset', verifyToken, verifyAdmin, async (req, res) => {
@@ -271,22 +292,34 @@ app.put('/api/lists/reorder', verifyToken, async (req, res) => {
 });
 
 app.post('/api/lists', verifyToken, async (req, res) => {
-  const { _id, name, items, rankingType, isPrivate, isFreeOrder } = req.body;
+  try {
+    // הוספנו logAction ו-logDetails שנקבל מהפרונטאנד
+    const { _id, name, items, rankingType, isPrivate, isFreeOrder, logAction, logDetails } = req.body;
+    const user = await User.findById(req.user._id);
 
-  if (_id) {
-    await List.findByIdAndUpdate(_id, { name, items, isPrivate, rankingType, isFreeOrder });
-    res.json({ _id, name, items, rankingType, isPrivate, isFreeOrder });
-  } else {
-    const newList = new List({
-      userId: req.user._id,
-      name,
-      items,
-      rankingType: rankingType || 'numbers',
-      isPrivate: isPrivate || false,
-      isFreeOrder: isFreeOrder || false
-    });
-    await newList.save();
-    res.json(newList);
+    // קביעת סוג הלוג: אם הפרונטאנד שלח פעולה ספציפית, נשתמש בה. אחרת, ברירת מחדל.
+    const finalAction = logAction || (_id ? "Update List" : "Create List");
+    const finalDetails = logDetails || `List name: ${name}`;
+
+    await saveLog(user, finalAction, finalDetails);
+
+    if (_id) {
+      await List.findByIdAndUpdate(_id, { name, items, isPrivate, rankingType, isFreeOrder });
+      res.json({ _id, name, items, rankingType, isPrivate, isFreeOrder });
+    } else {
+      const newList = new List({
+        userId: req.user._id,
+        name,
+        items: items || [],
+        rankingType: rankingType || 'numbers',
+        isPrivate: isPrivate || false,
+        isFreeOrder: isFreeOrder || false
+      });
+      await newList.save();
+      res.json(newList);
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -304,6 +337,10 @@ app.post('/api/lists/:id/duplicate', verifyToken, async (req, res) => {
     });
 
     await newList.save();
+
+    const user = await User.findById(req.user._id);
+    await saveLog(user, "Duplicate List", `Duplicated "${originalList.name}" into "${newList.name}"`);
+
     res.json(newList);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -312,6 +349,7 @@ app.post('/api/lists/:id/duplicate', verifyToken, async (req, res) => {
 
 app.delete('/api/lists/:id', verifyToken, async (req, res) => {
   await List.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+  await saveLog(user, "Delete List", `List ID: ${req.params.id}`);
   res.json({ message: 'Deleted' });
 });
 
@@ -323,6 +361,11 @@ app.delete('/api/users/me', verifyToken, async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+app.get('/api/admin/logs', verifyToken, verifyAdmin, async (req, res) => {
+  const logs = await Log.find().sort({ timestamp: -1 }).limit(200); 
+  res.json(logs);
 });
 
 app.get('/api/share/:id', async (req, res) => {

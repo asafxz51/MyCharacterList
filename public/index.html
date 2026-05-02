@@ -279,6 +279,7 @@
       <div style="display: flex; gap: 10px; margin-bottom: 20px;">
         <button id="adminTabSettings" class="btn-primary active-tab" style="flex:1;">Welcome Screen</button>
         <button id="adminTabUsers" class="btn-primary inactive-tab" style="flex:1;">Users & Lists</button>
+        <button id="adminTabLogs" class="btn-primary inactive-tab" style="flex:1;">Activity Logs</button>
       </div>
 
       <div id="adminSettingsSection">
@@ -304,6 +305,19 @@
         </button>
         <h4 id="adminUserListsTitle" style="margin-bottom:15px; color:var(--accent);"></h4>
         <div id="adminListsGrid" style="display: flex; flex-direction: column; gap: 10px;"></div>
+      </div>
+      <!-- חפש את ה-div של adminLogsSection ותחליף את מה שבתוכו בזה -->
+      <div id="adminLogsSection" class="hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h4 style="color: var(--accent); margin: 0;">Recent Activity Log</h4>
+          <button id="refreshLogsBtn" class="btn-primary" style="width: auto; padding: 5px 15px; background: #2196F3;">
+            <i class="fas fa-sync-alt"></i> Refresh
+          </button>
+        </div>
+        <div id="adminLogsList"
+          style="display: flex; flex-direction: column; gap: 8px; max-height: 500px; overflow-y: auto; font-size: 0.85rem; border: 1px solid var(--border); padding: 5px; border-radius: 4px;">
+          <!-- פה יופיעו הלוגים -->
+        </div>
       </div>
 
     </div>

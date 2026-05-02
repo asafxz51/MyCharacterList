@@ -3,6 +3,8 @@ let state = {
     pendingDeleteListId: null, isReordering: false, isRenamingList: false
 };
 
+let logsAutoRefreshInterval = null;
+
 async function init() {
     await checkLoginStatus();
     setupEvents();
@@ -122,11 +124,10 @@ document.getElementById('confirmDeleteListBtn').addEventListener('click', async 
 });
 
 
-async function updateCurrentList(forceSort = false) {
+async function updateCurrentList(forceSort = false, logAction = null, logDetails = null) {
     const list = state.lists.find(l => l._id === state.activeListId);
     if (!list) return;
 
-    // ממיין לפי ציונים *רק* אם ביקשנו למיין ו*רק* אם זו לא רשימה חופשית
     if (forceSort && !list.isFreeOrder) {
         list.items.sort((a, b) => b.rating - a.rating);
     }
@@ -135,20 +136,15 @@ async function updateCurrentList(forceSort = false) {
         const response = await fetch('/api/lists', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(list)
+            body: JSON.stringify({
+                ...list,
+                logAction, 
+                logDetails  
+            })
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            alert("Error saving: " + (errorData.error || response.statusText));
-            window.location.reload();
-            return;
-        }
-
+        
         renderCurrentList();
-    } catch (e) {
-        console.error(e);
-    }
+    } catch (e) { console.error(e); }
 }
 
 function renderSidebar() {
@@ -395,9 +391,22 @@ window.removeItem = function (index) {
 
 document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
     if (state.pendingDeleteIndex === null) return;
+
     const list = state.lists.find(l => l._id === state.activeListId);
+    if (!list) return;
+
+    const itemToDelete = list.items[state.pendingDeleteIndex];
+    const charName = itemToDelete.characterName;
+    const listName = list.name;
+
     list.items.splice(state.pendingDeleteIndex, 1);
-    updateCurrentList(false);
+
+    updateCurrentList(
+        false,
+        "Delete Character",
+        `Removed "${charName}" from list: "${listName}"`
+    );
+
     state.pendingDeleteIndex = null;
     closeModal('deleteModal');
 });
@@ -637,10 +646,9 @@ function openCustomCharModal() {
 
 document.getElementById('saveCharBtn').addEventListener('click', () => {
     if (!state.activeListId) return alert("Select a list first");
+
     const name = document.getElementById('charNameInput').value;
     const customImg = document.getElementById('customImgInput').value;
-    const rating = document.getElementById('ratingInput').value;
-
     const sourceTitle = document.getElementById('sourceTitleInput').value;
     const sourceType = document.getElementById('sourceTypeInput').value;
 
@@ -656,14 +664,18 @@ document.getElementById('saveCharBtn').addEventListener('click', () => {
     } else {
         ratingVal = parseFloat(document.getElementById('ratingInput').value);
     }
+
+    let finalImage = customImg || state.tempSearchItem?.image || 'https://via.placeholder.com/200x300';
+
+    const actionType = state.editingIndex > -1 ? "Edit Character" : "Add Character";
+    const charDetails = `${name} (Source: ${sourceTitle})`;
+
     const itemData = {
         characterName: name,
         sourceTitle: sourceTitle,
         sourceType: sourceType,
-        rating: rating,
         rating: ratingVal,
-
-        image: customImg ? customImg : (state.tempSearchItem?.image || 'https://via.placeholder.com/200')
+        image: finalImage
     };
 
     if (state.editingIndex > -1) {
@@ -672,9 +684,9 @@ document.getElementById('saveCharBtn').addEventListener('click', () => {
     } else {
         list.items.push(itemData);
     }
-    updateCurrentList(true);
-    closeModal('charModal');
-    updateCurrentList(true);
+
+    updateCurrentList(true, actionType, charDetails);
+
     closeModal('charModal');
 });
 
@@ -778,7 +790,7 @@ document.getElementById('saveListBtn').addEventListener('click', async () => {
             list.isPrivate = isPrivate;
             list.isFreeOrder = isFreeOrder;
 
-            await updateCurrentList(true);
+            await updateCurrentList(true, "Update List Settings", `Changed settings for: ${name}`);
 
             renderSidebar();
             renderCurrentList();
@@ -813,8 +825,28 @@ document.getElementById('duplicateListBtn').addEventListener('click', async () =
 });
 
 document.querySelectorAll('.close-modal').forEach(b => b.onclick = (e) => e.target.closest('.modal').classList.add('hidden'));
-function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light-theme');
+
+function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+
+    if (id === 'adminModal' && typeof logsAutoRefreshInterval !== 'undefined' && logsAutoRefreshInterval) {
+        clearInterval(logsAutoRefreshInterval);
+        logsAutoRefreshInterval = null;
+        console.log("Admin closed: Logs auto-refresh stopped.");
+    }
+}
+
+document.querySelectorAll('.close-modal').forEach(btn => {
+    btn.onclick = (e) => {
+        const modal = e.target.closest('.modal');
+        if (modal) {
+            closeModal(modal.id);
+        }
+    };
+});
 
 function setupEvents() {
     document.getElementById('themeToggle').onclick = () => {
@@ -824,6 +856,10 @@ function setupEvents() {
     document.getElementById('reorderBtn').addEventListener('click', toggleReorderMode);
     document.getElementById('saveOrderBtn').addEventListener('click', saveOrder);
     document.getElementById('addCustomCharBtn').addEventListener('click', openCustomCharModal);
+
+    document.getElementById('refreshLogsBtn').addEventListener('click', () => {
+        loadAdminLogs(false); // רענון ידני תמיד יראה "Loading"
+    });
 
 
     const menuBtn = document.getElementById('mobileMenuBtn');
@@ -1123,14 +1159,23 @@ document.getElementById('adminTabSettings').onclick = () => switchAdminTab('sett
 document.getElementById('adminTabUsers').onclick = () => switchAdminTab('users');
 // הוספת חזרה לרשימת המשתמשים
 document.getElementById('adminBackToUsersBtn').onclick = () => switchAdminTab('users');
+document.getElementById('adminTabLogs').onclick = () => switchAdminTab('logs');
+
 
 function switchAdminTab(tab) {
     document.getElementById('adminSettingsSection').classList.add('hidden');
     document.getElementById('adminUsersSection').classList.add('hidden');
     document.getElementById('adminListsSection').classList.add('hidden');
+    document.getElementById('adminLogsSection').classList.add('hidden');
 
     document.getElementById('adminTabSettings').className = 'btn-primary inactive-tab';
     document.getElementById('adminTabUsers').className = 'btn-primary inactive-tab';
+    document.getElementById('adminTabLogs').className = 'btn-primary inactive-tab';
+
+    if (logsAutoRefreshInterval) {
+        clearInterval(logsAutoRefreshInterval);
+        logsAutoRefreshInterval = null;
+    }
 
     if (tab === 'settings') {
         document.getElementById('adminSettingsSection').classList.remove('hidden');
@@ -1139,9 +1184,53 @@ function switchAdminTab(tab) {
         document.getElementById('adminUsersSection').classList.remove('hidden');
         document.getElementById('adminTabUsers').className = 'btn-primary active-tab';
         loadAdminUsers();
+    } else if (tab === 'logs') {
+        document.getElementById('adminLogsSection').classList.remove('hidden');
+        document.getElementById('adminTabLogs').className = 'btn-primary active-tab';
+
+        loadAdminLogs(); 
+
+        logsAutoRefreshInterval = setInterval(() => {
+            loadAdminLogs(true); 
+        }, 5000);
     }
 }
 
+async function loadAdminLogs(silent = false) {
+    const list = document.getElementById('adminLogsList');
+
+    // מציגים Loading רק אם זה לא רענון שקט
+    if (!silent) {
+        list.innerHTML = '<div style="text-align:center; padding:20px;">Updating...</div>';
+    }
+
+    try {
+        const res = await fetch('/api/admin/logs');
+        const logs = await res.json();
+
+        // יצירת ה-HTML של כל הלוגים
+        const html = logs.map(log => {
+            const date = new Date(log.timestamp).toLocaleString('he-IL');
+            let actionColor = "var(--accent)";
+            if (log.action.includes("Delete")) actionColor = "#ff4444";
+            if (log.action.includes("Create")) actionColor = "#4CAF50";
+            if (log.action.includes("Login")) actionColor = "#2196F3";
+
+            return `
+                <div style="padding: 8px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 10px; background: var(--card-bg);">
+                    <span style="color: #888; min-width: 140px;">${date}</span>
+                    <span style="font-weight: bold; min-width: 100px;">${log.username}</span>
+                    <span style="color: ${actionColor}; font-weight: bold; min-width: 120px;">${log.action}</span>
+                    <span style="flex: 1; color: var(--text-muted);">${log.details}</span>
+                </div>
+            `;
+        }).join('');
+
+        list.innerHTML = html;
+    } catch (e) {
+        if (!silent) list.innerHTML = 'Error loading logs.';
+    }
+}
 async function loadAdminUsers() {
     const grid = document.getElementById('adminUsersGrid');
     grid.innerHTML = 'Loading users...';
