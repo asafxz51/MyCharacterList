@@ -25,7 +25,9 @@
 
   <div class="nav-controls">
     <span id="userDisplay" style="margin-right:15px; font-size:0.9rem;"></span>
-    <button id="authBtnNav">Login</button>
+  <button id="adminBtn" class="icon-btn hidden" title="Admin Panel"><i class="fas fa-crown"
+      style="color: gold;"></i></button>
+  <button id="authBtnNav">Login</button>
     <button id="communityBtn" title="View Users"><i class="fas fa-users"></i></button>
     <button id="shareBtn"><i class="fas fa-share-alt"></i></button> 
     <button id="themeToggle"><i class="fas fa-moon"></i></button>
@@ -238,10 +240,8 @@
 </div>
 
 <!-- COMMUNITY MODAL -->
-<!-- COMMUNITY MODAL -->
 <div id="communityModal" class="modal hidden">
   <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
-    <!-- כפתור סגירה -->
     <span class="close-modal" onclick="document.getElementById('communityModal').classList.add('hidden')">&times;</span>
 
     <h3 id="communityTitle" style="margin-bottom: 15px; text-align: center;">Community</h3>
@@ -264,6 +264,45 @@
 
     <div id="communityGrid" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
     </div>
+  </div>
+</div>
+
+<!-- ADMIN MODAL -->
+<div id="adminModal" class="modal hidden">
+  <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+    <span class="close-modal">&times;</span>
+    <h3 style="text-align: center; margin-bottom: 20px; color: gold;"><i class="fas fa-crown"></i> Admin Panel</h3>
+
+    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+      <button id="adminTabSettings" class="btn-primary active-tab" style="flex:1;">Welcome Screen</button>
+      <button id="adminTabUsers" class="btn-primary inactive-tab" style="flex:1;">Users & Lists</button>
+    </div>
+
+    <div id="adminSettingsSection">
+      <div class="form-group">
+        <label>Welcome Title:</label>
+        <input type="text" id="adminWelcomeTitle">
+      </div>
+      <div class="form-group">
+        <label>Welcome Text (Use \n for new lines):</label>
+        <textarea id="adminWelcomeText" rows="5"
+          style="width: 100%; padding: 8px; background: var(--bg-color); border: 1px solid var(--border); color: var(--text-main); border-radius: 4px; resize: vertical;"></textarea>
+      </div>
+      <button id="adminSaveSettingsBtn" class="btn-primary">Save Settings</button>
+    </div>
+
+    <div id="adminUsersSection" class="hidden">
+      <div id="adminUsersGrid" style="display: flex; flex-direction: column; gap: 10px;"></div>
+    </div>
+
+    <div id="adminListsSection" class="hidden">
+      <button id="adminBackToUsersBtn" class="btn-primary" style="margin-bottom:15px; width:auto; background:#555;">
+        <i class="fas fa-arrow-left"></i> Back to Users
+      </button>
+      <h4 id="adminUserListsTitle" style="margin-bottom:15px; color:var(--accent);"></h4>
+      <div id="adminListsGrid" style="display: flex; flex-direction: column; gap: 10px;"></div>
+    </div>
+
   </div>
 </div>
 

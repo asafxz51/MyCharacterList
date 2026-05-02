@@ -9,7 +9,9 @@ async function init() {
 
 async function checkLoginStatus() {
     const createBtn = document.getElementById('createListBtn');
-    const listHeader = document.querySelector('.list-header'); // אזור החיפוש והפילטרים
+    const listHeader = document.querySelector('.list-header');
+    const adminBtn = document.getElementById('adminBtn');
+    const authBtn = document.getElementById('authBtnNav');
 
     try {
         const res = await fetch('/api/auth/check');
@@ -17,57 +19,57 @@ async function checkLoginStatus() {
             const data = await res.json();
             state.user = data.username;
 
-            // --- מצב מחובר (Logged In) ---
+            // --- מצב מחובר ---
             document.getElementById('userDisplay').textContent = `Hi, ${state.user}`;
-            document.getElementById('authBtnNav').textContent = "Logout";
+            document.getElementById('userDisplay').style.display = 'inline'; // מציג את השם
+            authBtn.textContent = "Logout"; // משנה טקסט להתנתקות
+
+            document.querySelector('.sidebar').style.display = 'flex';
             createBtn.style.display = 'block';
-            listHeader.style.display = 'flex'; // מציג חזרה את שורת החיפוש
+            listHeader.style.display = 'flex';
+
+            if (data.role === 'admin' && adminBtn) adminBtn.classList.remove('hidden');
+            else if (adminBtn) adminBtn.classList.add('hidden');
 
             fetchLists();
         } else {
-            // --- מצב מנותק (Logged Out) ---
+            if (adminBtn) adminBtn.classList.add('hidden');
             showLoggedOutState();
         }
     } catch (e) {
-        console.error(e);
         showLoggedOutState();
     }
 }
 
-// פונקציית עזר שמציירת את מסך הפתיחה
-function showLoggedOutState() {
-    document.getElementById('authBtnNav').textContent = "Login";
-    document.getElementById('createListBtn').style.display = 'none';
-    document.querySelector('.list-header').style.display = 'none'; 
-    document.querySelector('.sidebar').style.display = 'none'; 
-    document.getElementById('mobileMenuBtn').style.display = 'none';
-    document.getElementById('listNav').innerHTML = ''; 
+async function showLoggedOutState() {
+    const authBtn = document.getElementById('authBtnNav');
+
+    // --- מצב מנותק ---
+    document.getElementById('userDisplay').style.display = 'none'; // מעלים את ה-"Hi"
+    authBtn.textContent = "Login"; // מוודא שכתוב לוגין
+    authBtn.style.display = 'inline-block'; // משאיר את הכפתור גלוי וזמין ללחיצה!
+
+    // מסתיר את שאר האתר
+    document.querySelector('.sidebar').style.display = 'none';
+    document.querySelector('.list-header').style.display = 'none';
+    document.getElementById('listNav').innerHTML = '';
+
+    // מסך הפתיחה
+    let title = "Welcome";
+    let text = "Please log in.";
+    try {
+        const res = await fetch('/api/settings/welcome');
+        const data = await res.json();
+        title = data.welcomeTitle;
+        text = data.welcomeText.replace(/\n/g, '<br>');
+    } catch (e) { }
 
     document.getElementById('characterGrid').innerHTML = `
         <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; max-width: 600px; margin: 40px auto; background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid var(--border);">
             <i class="fas fa-star" style="font-size: 4rem; color: var(--accent); margin-bottom: 20px;"></i>
-            <h2 style="margin-bottom: 15px; font-size: 2.2rem; color: var(--text-main);">Welcome to MyCharacterList</h2>
-            <p style="color: var(--text-muted); margin-bottom: 30px; font-size: 1.1rem; line-height: 1.6;">
-                
-
-We sincerely apologize for a major service disruption caused by the recent physical attacks on data centers in Bahrain (AWS Middle East).
-
-Unfortunately, despite our efforts, your previous account data and lists could not be recovered. <br> <br>
-
-What you need to do: <br>
-
-Re-register: Please create a new account to continue using the service. <br>
-
-New Lists: You will need to recreate your saved lists from scratch. <br> <br>
-
-We know how frustrating this is and deeply regret the loss of your data. We are already moving to a multi-region setup to ensure this never happens again.
-
-Thank you for your patience and for sticking with us as we rebuild. <br> <br>
-
-Best regards, Asafsuf
-
-            </p>
-            <button onclick="document.getElementById('authModal').classList.remove('hidden')" class="btn-primary" style="width: auto; padding: 12px 30px; font-size: 1.1rem; border-radius: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.4);">
+            <h2 style="margin-bottom: 15px; font-size: 2.2rem; color: var(--text-main);">${title}</h2>
+            <p style="color: var(--text-muted); margin-bottom: 30px; font-size: 1.1rem; line-height: 1.6;">${text}</p>
+            <button onclick="document.getElementById('authModal').classList.remove('hidden')" class="btn-primary" style="width: auto; padding: 12px 30px; font-size: 1.1rem; border-radius: 30px;">
                 <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i> Login or Register to Start
             </button>
         </div>
@@ -1084,6 +1086,141 @@ async function handleSidebarDrop(e) {
 
 function handleSidebarDragEnd(e) {
     this.style.opacity = '1';
+}
+
+// --- ADMIN LOGIC ---
+const adminBtn = document.getElementById('adminBtn');
+if (adminBtn) {
+    adminBtn.addEventListener('click', async () => {
+        document.getElementById('adminModal').classList.remove('hidden');
+        switchAdminTab('settings');
+
+        // טעינת טקסט נוכחי
+        const res = await fetch('/api/settings/welcome');
+        const data = await res.json();
+        document.getElementById('adminWelcomeTitle').value = data.welcomeTitle || '';
+        document.getElementById('adminWelcomeText').value = data.welcomeText || '';
+    });
+}
+
+document.getElementById('adminSaveSettingsBtn').addEventListener('click', async () => {
+    const title = document.getElementById('adminWelcomeTitle').value;
+    const text = document.getElementById('adminWelcomeText').value;
+    await fetch('/api/admin/settings/welcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, text })
+    });
+    alert("Welcome screen updated!");
+});
+
+// --- ADMIN LOGIC ---
+
+// (הקוד של כפתור השמירה של ה-Settings נשאר אותו דבר, מתחילים לעדכן מהטאבים:)
+
+document.getElementById('adminTabSettings').onclick = () => switchAdminTab('settings');
+document.getElementById('adminTabUsers').onclick = () => switchAdminTab('users');
+// הוספת חזרה לרשימת המשתמשים
+document.getElementById('adminBackToUsersBtn').onclick = () => switchAdminTab('users');
+
+function switchAdminTab(tab) {
+    document.getElementById('adminSettingsSection').classList.add('hidden');
+    document.getElementById('adminUsersSection').classList.add('hidden');
+    document.getElementById('adminListsSection').classList.add('hidden');
+
+    document.getElementById('adminTabSettings').className = 'btn-primary inactive-tab';
+    document.getElementById('adminTabUsers').className = 'btn-primary inactive-tab';
+
+    if (tab === 'settings') {
+        document.getElementById('adminSettingsSection').classList.remove('hidden');
+        document.getElementById('adminTabSettings').className = 'btn-primary active-tab';
+    } else if (tab === 'users') {
+        document.getElementById('adminUsersSection').classList.remove('hidden');
+        document.getElementById('adminTabUsers').className = 'btn-primary active-tab';
+        loadAdminUsers();
+    }
+}
+
+async function loadAdminUsers() {
+    const grid = document.getElementById('adminUsersGrid');
+    grid.innerHTML = 'Loading users...';
+    const res = await fetch('/api/admin/users');
+    const users = await res.json();
+    grid.innerHTML = '';
+
+    users.forEach(u => {
+        const div = document.createElement('div');
+        div.style = "display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg-color); border:1px solid var(--border); border-radius:4px; flex-wrap:wrap; gap:10px;";
+        div.innerHTML = `
+            <span><strong>${u.username}</strong> (${u.role})</span>
+            <div style="display:flex; gap:5px;">
+                <button onclick="adminManageLists('${u._id}', '${u.username}')" class="btn-primary" style="width:auto; padding:5px 10px; background:#2196F3;">Lists</button>
+                <button onclick="adminResetPass('${u._id}')" class="btn-primary" style="width:auto; padding:5px 10px; background:orange;">New Pass</button>
+                <button onclick="adminDeleteUser('${u._id}')" class="btn-primary" style="width:auto; padding:5px 10px; background:red;">Delete</button>
+            </div>
+        `;
+        grid.appendChild(div);
+    });
+}
+
+window.adminManageLists = async function (userId, username) {
+    // מחליף תצוגה מ"משתמשים" ל"רשימות"
+    document.getElementById('adminUsersSection').classList.add('hidden');
+    document.getElementById('adminListsSection').classList.remove('hidden');
+    document.getElementById('adminUserListsTitle').textContent = `Lists owned by: ${username}`;
+
+    const grid = document.getElementById('adminListsGrid');
+    grid.innerHTML = 'Loading...';
+
+    const res = await fetch(`/api/admin/users/${userId}/lists`);
+    const lists = await res.json();
+    grid.innerHTML = '';
+
+    if (lists.length === 0) {
+        grid.innerHTML = '<p>This user has no lists.</p>';
+        return;
+    }
+
+    lists.forEach(l => {
+        const div = document.createElement('div');
+        div.style = "display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg-color); border:1px solid var(--border); border-radius:4px;";
+        const privacyIcon = l.isPrivate ? "🔒 " : "";
+        div.innerHTML = `
+            <span>${privacyIcon}<strong>${l.name}</strong> (${l.items.length} items)</span>
+            <div style="display:flex; gap:5px;">
+                <button onclick="window.open('/share.html?id=${l._id}', '_blank')" class="btn-primary" style="width:auto; padding:5px 10px;">View</button>
+                <button onclick="adminDeleteList('${l._id}', '${userId}', '${username}')" class="btn-primary" style="width:auto; padding:5px 10px; background:red;">Delete</button>
+            </div>
+        `;
+        grid.appendChild(div);
+    });
+}
+
+window.adminResetPass = async function (id) {
+    // שואל את האדמין לסיסמה החדשה
+    const newPass = prompt("Enter new password for this user (Min 3 characters):");
+    if (!newPass) return; // אם לחץ ביטול או השאיר ריק
+
+    const res = await fetch(`/api/admin/users/${id}/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword: newPass })
+    });
+
+    if (res.ok) alert("Password changed successfully!");
+    else alert("Error changing password.");
+}
+
+window.adminDeleteUser = async function (id) {
+    if (!confirm("DELETE USER AND ALL THEIR LISTS? This cannot be undone.")) return;
+    await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+    loadAdminUsers();
+}
+
+window.adminDeleteList = async function (listId, userId, username) {
+    if (!confirm("Delete this list?")) return;
+    await fetch(`/api/admin/lists/${listId}`, { method: 'DELETE' });
+    adminManageLists(userId, username);
 }
 
 init();

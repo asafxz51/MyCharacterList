@@ -9,6 +9,8 @@ require('dotenv').config();
 
 const User = require('./models/User');
 const List = require('./models/List');
+const Settings = require('./models/Settings');
+
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
@@ -52,6 +54,14 @@ const verifyToken = (req, res, next) => {
   req.user = jwt.verify(token, process.env.JWT_SECRET);
   next();
  } catch (err) { res.status(400).json({ error: 'Invalid Token' }); }
+};
+
+const verifyAdmin = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (user.role !== 'admin') return res.status(403).json({ error: 'Access Denied: Admins Only' });
+    next();
+  } catch (err) { res.status(500).json({ error: 'Server error' }); }
 };
 
 const optionalToken = (req, res, next) => {
@@ -112,17 +122,73 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 app.post('/api/auth/logout', (req, res) => res.clearCookie('token').json({ message: 'Logged out' }));
+
 app.get('/api/auth/check', verifyToken, async (req, res) => {
- const user = await User.findById(req.user._id);
- res.json({ username: user.username });
+  const user = await User.findById(req.user._id);
+  res.json({ username: user.username, role: user.role }); 
 });
 
-// 1. Get Users (Public & Private logic)
+// --- SETTINGS (Public) ---
+app.get('/api/settings/welcome', async (req, res) => {
+  try {
+    let settings = await Settings.findOne({ key: 'global' });
+    if (!settings) settings = await Settings.create({}); // יוצר ברירת מחדל אם אין
+    res.json(settings);
+  } catch (e) { res.json({ welcomeTitle: 'Welcome', welcomeText: 'Please log in.' }); }
+});
+
+// --- ADMIN ROUTES ---
+app.post('/api/admin/settings/welcome', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { title, text } = req.body;
+    await Settings.findOneAndUpdate({ key: 'global' }, { welcomeTitle: title, welcomeText: text }, { upsert: true });
+    res.json({ message: 'Settings Updated' });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/admin/users', verifyToken, verifyAdmin, async (req, res) => {
+  const users = await User.find({}, '-password'); // מביא את כולם חוץ מהסיסמאות
+  res.json(users);
+});
+
+app.delete('/api/admin/users/:id', verifyToken, verifyAdmin, async (req, res) => {
+  await User.findByIdAndDelete(req.params.id);
+  await List.deleteMany({ userId: req.params.id }); // מוחק גם את כל הרשימות של המשתמש!
+  res.json({ message: 'User deleted' });
+});
+
+app.post('/api/admin/users/:id/reset', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { newPassword } = req.body; 
+    if (!newPassword || newPassword.length < 3) return res.status(400).json({ error: 'Password too short' });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await User.findByIdAndUpdate(req.params.id, { password: hashed });
+    res.json({ message: 'Password updated' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+app.get('/api/admin/users/:id/lists', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const lists = await List.find({ userId: req.params.id });
+    res.json(lists);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/admin/lists/:id', verifyToken, verifyAdmin, async (req, res) => {
+  await List.findByIdAndDelete(req.params.id);
+  res.json({ message: 'List deleted' });
+});
+
 app.get('/api/users', optionalToken, async (req, res) => {
   try {
     const { search, onlyFollowing } = req.query;
 
-    // אם אורח מנסה לראות "נעקבים", נזרוק לו שגיאה של התחברות
     if (onlyFollowing === 'true' && !req.user) {
       return res.status(401).json({ error: 'Please login to view followed users' });
     }
@@ -191,7 +257,7 @@ app.get('/api/lists', verifyToken, async (req, res) => {
 
 app.put('/api/lists/reorder', verifyToken, async (req, res) => {
   try {
-    const { orderedIds } = req.body; // Array of IDs in new order
+    const { orderedIds } = req.body; 
 
     const updates = orderedIds.map((id, index) => {
       return List.updateOne({ _id: id, userId: req.user._id }, { order: index });
@@ -217,7 +283,7 @@ app.post('/api/lists', verifyToken, async (req, res) => {
       items,
       rankingType: rankingType || 'numbers',
       isPrivate: isPrivate || false,
-      isFreeOrder: isFreeOrder || false // ברירת מחדל: מסודר לפי ציונים
+      isFreeOrder: isFreeOrder || false 
     });
     await newList.save();
     res.json(newList);
