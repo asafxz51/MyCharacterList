@@ -136,6 +136,18 @@ app.get('/api/auth/check', verifyToken, async (req, res) => {
   res.json({ username: user.username, role: user.role });
 });
 
+app.post('/api/auth/ping', verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (user) {
+      await saveLog(user, "Site Entry", "User accessed the site (session started)");
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // --- SETTINGS (Public) ---
 app.get('/api/settings/welcome', async (req, res) => {
   try {

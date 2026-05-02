@@ -22,18 +22,22 @@ async function checkLoginStatus() {
             const data = await res.json();
             state.user = data.username;
 
-            // --- מצב מחובר ---
+            // --- רישום כניסה לאתר (פעם אחת לסשן) ---
+            if (!sessionStorage.getItem('entryLogged')) {
+                fetch('/api/auth/ping', { method: 'POST' });
+                sessionStorage.setItem('entryLogged', 'true');
+            }
+
+            // הגדרות ממשק למחובר
             document.getElementById('userDisplay').textContent = `Hi, ${state.user}`;
-            document.getElementById('userDisplay').style.display = 'inline'; // מציג את השם
-            authBtn.textContent = "Logout"; // משנה טקסט להתנתקות
+            document.getElementById('userDisplay').style.display = 'inline';
+            authBtn.textContent = "Logout";
 
             document.querySelector('.sidebar').style.display = 'flex';
             createBtn.style.display = 'block';
             listHeader.style.display = 'flex';
 
             if (data.role === 'admin' && adminBtn) adminBtn.classList.remove('hidden');
-            else if (adminBtn) adminBtn.classList.add('hidden');
-
             fetchLists();
         } else {
             if (adminBtn) adminBtn.classList.add('hidden');
@@ -708,8 +712,16 @@ function normalizeType(apiType) {
 
 let isRegisterMode = false;
 document.getElementById('authBtnNav').addEventListener('click', async () => {
-    if (state.user) { await fetch('/api/auth/logout', { method: 'POST' }); window.location.reload(); }
-    else { document.getElementById('authModal').classList.remove('hidden'); }
+    if (state.user) {
+        await fetch('/api/auth/logout', { method: 'POST' });
+
+        sessionStorage.removeItem('entryLogged');
+
+        window.location.reload();
+    }
+    else {
+        document.getElementById('authModal').classList.remove('hidden');
+    }
 });
 
 document.getElementById('authSubmitBtn').addEventListener('click', async () => {
