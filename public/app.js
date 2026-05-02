@@ -1,13 +1,12 @@
 let state = {
     user: null, lists: [], activeListId: null, tempSearchItem: null, editingIndex: -1, pendingDeleteIndex: null, pendingDeleteIndex: null,
-    pendingDeleteListId: null, isReordering: false, isRenamingList: false };
+    pendingDeleteListId: null, isReordering: false, isRenamingList: false
+};
 
 async function init() {
- await checkLoginStatus();
- setupEvents();
+    await checkLoginStatus();
+    setupEvents();
 }
-
-let cropper = null;
 
 async function checkLoginStatus() {
     const createBtn = document.getElementById('createListBtn');
@@ -79,11 +78,11 @@ async function showLoggedOutState() {
 }
 
 async function fetchLists() {
- const res = await fetch('/api/lists');
- state.lists = await res.json();
- if (state.lists.length > 0 && !state.activeListId) state.activeListId = state.lists[0]._id;
- renderSidebar();
- renderCurrentList();
+    const res = await fetch('/api/lists');
+    state.lists = await res.json();
+    if (state.lists.length > 0 && !state.activeListId) state.activeListId = state.lists[0]._id;
+    renderSidebar();
+    renderCurrentList();
 }
 
 async function createList(name) {
@@ -182,7 +181,7 @@ function renderSidebar() {
         delBtn.innerHTML = '<i class="fas fa-trash"></i>';
 
         delBtn.onclick = (e) => {
-            e.stopPropagation(); 
+            e.stopPropagation();
             state.pendingDeleteListId = list._id;
             document.getElementById('deleteListModal').classList.remove('hidden');
         };
@@ -265,10 +264,10 @@ function handleDrop(e) {
         const toIndex = parseInt(this.dataset.index);
 
         const itemToMove = list.items[fromIndex];
-        list.items.splice(fromIndex, 1); 
-        list.items.splice(toIndex, 0, itemToMove); 
+        list.items.splice(fromIndex, 1);
+        list.items.splice(toIndex, 0, itemToMove);
 
-      
+
         renderCurrentList();
     }
     return false;
@@ -359,32 +358,24 @@ function renderCurrentList() {
 }
 
 window.editItem = function (index) {
- const list = state.lists.find(l => l._id === state.activeListId);
- const item = list.items[index];
- const isLetters = list.rankingType === 'letters';
+    const list = state.lists.find(l => l._id === state.activeListId);
+    const item = list.items[index];
+    const isLetters = list.rankingType === 'letters';
 
- state.editingIndex = index;
+    state.editingIndex = index;
 
- document.getElementById('modalImg').src = item.image;
-    // כדי למנוע שגיאות CORS מחיתוך תמונות שרת זר, נעביר אותן דרך הפרוקסי
-    const rawImg = item.image || 'https://via.placeholder.com/200x300';
-    document.getElementById('modalImg').src = `https://wsrv.nl/?url=${encodeURIComponent(rawImg)}`;
-
-    // מפעיל את החיתוך אחרי שהתמונה נטענת
-    document.getElementById('modalImg').onload = () => {
-        initCropper();
-    };
- document.getElementById('charNameInput').value = item.characterName;
- document.getElementById('customImgInput').value = item.image;
- document.getElementById('ratingInput').value = item.rating;
+    document.getElementById('modalImg').src = item.image;
+    document.getElementById('charNameInput').value = item.characterName;
+    document.getElementById('customImgInput').value = item.image;
+    document.getElementById('ratingInput').value = item.rating;
 
 
- document.getElementById('sourceTitleInput').value = item.sourceTitle;
- document.getElementById('sourceTypeInput').value = normalizeType(item.sourceType);
+    document.getElementById('sourceTitleInput').value = item.sourceTitle;
+    document.getElementById('sourceTypeInput').value = normalizeType(item.sourceType);
 
- document.getElementById('castSelector').innerHTML = '';
- document.getElementById('saveCharBtn').textContent = "Update Character";
- document.getElementById('charModal').classList.remove('hidden');
+    document.getElementById('castSelector').innerHTML = '';
+    document.getElementById('saveCharBtn').textContent = "Update Character";
+    document.getElementById('charModal').classList.remove('hidden');
 
     if (isLetters) {
         document.getElementById('ratingLetterInput').value = item.rating;
@@ -398,8 +389,8 @@ window.editItem = function (index) {
 }
 
 window.removeItem = function (index) {
-    state.pendingDeleteIndex = index; 
-    document.getElementById('deleteModal').classList.remove('hidden'); 
+    state.pendingDeleteIndex = index;
+    document.getElementById('deleteModal').classList.remove('hidden');
 }
 
 document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
@@ -414,84 +405,84 @@ document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
 
 let debounce;
 document.getElementById('searchInput').addEventListener('input', (e) => {
- clearTimeout(debounce);
- const q = e.target.value;
- if (q.length < 3) return document.getElementById('searchResults').classList.add('hidden');
- debounce = setTimeout(() => doSearch(q), 800);
+    clearTimeout(debounce);
+    const q = e.target.value;
+    if (q.length < 3) return document.getElementById('searchResults').classList.add('hidden');
+    debounce = setTimeout(() => doSearch(q), 800);
 });
 
 async function doSearch(query) {
- const resultsDiv = document.getElementById('searchResults');
- resultsDiv.classList.remove('hidden');
- resultsDiv.innerHTML = '<div class="search-item">Searching...</div>';
- const safeFetch = (url) => fetch(url).then(r => r.ok ? r.json() : []).catch(() => []);
+    const resultsDiv = document.getElementById('searchResults');
+    resultsDiv.classList.remove('hidden');
+    resultsDiv.innerHTML = '<div class="search-item">Searching...</div>';
+    const safeFetch = (url) => fetch(url).then(r => r.ok ? r.json() : []).catch(() => []);
 
- const [anime, igdb, tmdb, persons, fandom, rawg, books] = await Promise.all([
-  safeFetch(`/api/search/jikan?query=${query}`),
-  safeFetch(`/api/search/igdb?query=${query}`),
-  safeFetch(`/api/search/tmdb?query=${query}`),
-  safeFetch(`/api/search/tmdb/person?query=${query}`),
-  safeFetch(`/api/search/fandom?query=${query}`),
-  safeFetch(`/api/search/rawg?query=${query}`),
-  safeFetch(`/api/search/books?query=${query}`)
- ]);
-
-
- let combined = [...anime, ...igdb, ...tmdb, ...persons, ...fandom, ...rawg, ...books];
+    const [anime, igdb, tmdb, persons, fandom, rawg, books] = await Promise.all([
+        safeFetch(`/api/search/jikan?query=${query}`),
+        safeFetch(`/api/search/igdb?query=${query}`),
+        safeFetch(`/api/search/tmdb?query=${query}`),
+        safeFetch(`/api/search/tmdb/person?query=${query}`),
+        safeFetch(`/api/search/fandom?query=${query}`),
+        safeFetch(`/api/search/rawg?query=${query}`),
+        safeFetch(`/api/search/books?query=${query}`)
+    ]);
 
 
- combined.sort((a, b) => {
-  const q = query.toLowerCase();
-  const titleA = a.title.toLowerCase();
-  const titleB = b.title.toLowerCase();
+    let combined = [...anime, ...igdb, ...tmdb, ...persons, ...fandom, ...rawg, ...books];
 
-  if (titleA === q && titleB !== q) return -1;
-  if (titleB === q && titleA !== q) return 1;
 
-  const startA = titleA.startsWith(q);
-  const startB = titleB.startsWith(q);
-  if (startA && !startB) return -1;
-  if (startB && !startA) return 1;
+    combined.sort((a, b) => {
+        const q = query.toLowerCase();
+        const titleA = a.title.toLowerCase();
+        const titleB = b.title.toLowerCase();
 
-  const hasA = titleA.includes(q);
-  const hasB = titleB.includes(q);
-  if (hasA && !hasB) return -1;
-  if (hasB && !hasA) return 1;
+        if (titleA === q && titleB !== q) return -1;
+        if (titleB === q && titleA !== q) return 1;
 
-  return 0; 
- });
+        const startA = titleA.startsWith(q);
+        const startB = titleB.startsWith(q);
+        if (startA && !startB) return -1;
+        if (startB && !startA) return 1;
 
- resultsDiv.innerHTML = '';
+        const hasA = titleA.includes(q);
+        const hasB = titleB.includes(q);
+        if (hasA && !hasB) return -1;
+        if (hasB && !hasA) return 1;
 
- if (combined.length === 0) {
-  resultsDiv.innerHTML = '<div class="search-item">No results.</div>';
-  return;
- }
+        return 0;
+    });
 
- const typeMap = {
-  'character': 'Animanga',
-  'game_character': 'Game',
-  'wiki_character': 'TV/Movie',
-  'actor': 'Actor',
-  'movie': 'Movie',
-  'tv': 'TV Show',
-  'book': 'Book',
-  'manga': 'Manga'
- };
+    resultsDiv.innerHTML = '';
 
- combined.forEach(item => {
-  const div = document.createElement('div');
-  div.className = 'search-item';
+    if (combined.length === 0) {
+        resultsDiv.innerHTML = '<div class="search-item">No results.</div>';
+        return;
+    }
 
-  const displayType = typeMap[item.type] || item.type;
+    const typeMap = {
+        'character': 'Animanga',
+        'game_character': 'Game',
+        'wiki_character': 'TV/Movie',
+        'actor': 'Actor',
+        'movie': 'Movie',
+        'tv': 'TV Show',
+        'book': 'Book',
+        'manga': 'Manga'
+    };
 
-  let subText = item.sourceTitle ? item.sourceTitle : displayType;
+    combined.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'search-item';
 
-  if (item.type === 'movie' || item.type === 'tv') {
-   subText = `${displayType} • ${item.year}`;
-  }
+        const displayType = typeMap[item.type] || item.type;
 
-  div.innerHTML = `
+        let subText = item.sourceTitle ? item.sourceTitle : displayType;
+
+        if (item.type === 'movie' || item.type === 'tv') {
+            subText = `${displayType} • ${item.year}`;
+        }
+
+        div.innerHTML = `
             <img src="${item.image || 'https://via.placeholder.com/50'}" style="width:30px">
             <div>
                 <strong>${item.title}</strong>
@@ -499,45 +490,37 @@ async function doSearch(query) {
                 <small class="red-type">${subText}</small>
             </div>
         `;
-  div.onclick = () => openCharModal(item);
-  resultsDiv.appendChild(div);
- });
+        div.onclick = () => openCharModal(item);
+        resultsDiv.appendChild(div);
+    });
 }
 
 async function openCharModal(item) {
- state.tempSearchItem = item;
- state.editingIndex = -1;
- document.getElementById('searchResults').classList.add('hidden');
- document.getElementById('searchInput').value = '';
+    state.tempSearchItem = item;
+    state.editingIndex = -1;
+    document.getElementById('searchResults').classList.add('hidden');
+    document.getElementById('searchInput').value = '';
 
- document.getElementById('modalImg').src = item.image || 'https://via.placeholder.com/200';
-    // כדי למנוע שגיאות CORS מחיתוך תמונות שרת זר, נעביר אותן דרך הפרוקסי
-    const rawImg = item.image || 'https://via.placeholder.com/200x300';
-    document.getElementById('modalImg').src = `https://wsrv.nl/?url=${encodeURIComponent(rawImg)}`;
+    document.getElementById('modalImg').src = item.image || 'https://via.placeholder.com/200';
+    document.getElementById('customImgInput').value = '';
+    document.getElementById('ratingInput').value = 5;
+    document.getElementById('saveCharBtn').textContent = "Add to List";
 
-    // מפעיל את החיתוך אחרי שהתמונה נטענת
-    document.getElementById('modalImg').onload = () => {
-        initCropper();
-    };
- document.getElementById('customImgInput').value = '';
- document.getElementById('ratingInput').value = 5;
- document.getElementById('saveCharBtn').textContent = "Add to List";
-
- if (item.type === 'character' || item.type === 'game_character') {
-  document.getElementById('charNameInput').value = item.title;
- } else {
-  document.getElementById('charNameInput').value = '';
- }
+    if (item.type === 'character' || item.type === 'game_character') {
+        document.getElementById('charNameInput').value = item.title;
+    } else {
+        document.getElementById('charNameInput').value = '';
+    }
 
     const list = state.lists.find(l => l._id === state.activeListId);
     const isLetters = list && list.rankingType === 'letters';
 
     const numInput = document.getElementById('ratingInput');
     const letInput = document.getElementById('ratingLetterInput');
- const titleInput = document.getElementById('sourceTitleInput');
- const typeInput = document.getElementById('sourceTypeInput');
- const castDiv = document.getElementById('castSelector');
- castDiv.innerHTML = '';
+    const titleInput = document.getElementById('sourceTitleInput');
+    const typeInput = document.getElementById('sourceTypeInput');
+    const castDiv = document.getElementById('castSelector');
+    castDiv.innerHTML = '';
 
     if (isLetters) {
         numInput.classList.add('hidden');
@@ -550,72 +533,72 @@ async function openCharModal(item) {
         numInput.value = (item && item.rating) ? item.rating : 5;
     }
 
- if (item.type === 'character') {
-  titleInput.value = "Fetching info...";
-  typeInput.value = 'Anime';
-  try {
-   const res = await fetch(`/api/jikan/details/${item.id}`);
-   const data = await res.json();
-   titleInput.value = data.sourceTitle || "";
-   typeInput.value = data.sourceType || "Anime";
-  } catch (e) { titleInput.value = ""; }
- }
- else if (item.type === 'game_character') {
-  titleInput.value = "Fetching game...";
-  typeInput.value = 'Game';
+    if (item.type === 'character') {
+        titleInput.value = "Fetching info...";
+        typeInput.value = 'Anime';
+        try {
+            const res = await fetch(`/api/jikan/details/${item.id}`);
+            const data = await res.json();
+            titleInput.value = data.sourceTitle || "";
+            typeInput.value = data.sourceType || "Anime";
+        } catch (e) { titleInput.value = ""; }
+    }
+    else if (item.type === 'game_character') {
+        titleInput.value = "Fetching game...";
+        typeInput.value = 'Game';
 
-  try {
-   const res = await fetch(`/api/igdb/details/${item.id}`);
-   const data = await res.json();
-   titleInput.value = data.sourceTitle || "";
-  } catch (e) {
-   titleInput.value = "";
-   titleInput.placeholder = "Type game name...";
-  }
- }
+        try {
+            const res = await fetch(`/api/igdb/details/${item.id}`);
+            const data = await res.json();
+            titleInput.value = data.sourceTitle || "";
+        } catch (e) {
+            titleInput.value = "";
+            titleInput.placeholder = "Type game name...";
+        }
+    }
 
- else if (item.type === 'wiki_character') {
-  document.getElementById('charNameInput').value = item.title;
+    else if (item.type === 'wiki_character') {
+        document.getElementById('charNameInput').value = item.title;
 
-  if (item.sourceTitle && item.sourceTitle.length > 0) {
-   document.getElementById('sourceTitleInput').value = item.sourceTitle;
-  } else {
-   document.getElementById('sourceTitleInput').value = "";
-   document.getElementById('sourceTitleInput').placeholder = "Type Source (e.g. Breaking Bad)";
-  }
-  document.getElementById('sourceTypeInput').value = "TV Show";
- }
+        if (item.sourceTitle && item.sourceTitle.length > 0) {
+            document.getElementById('sourceTitleInput').value = item.sourceTitle;
+        } else {
+            document.getElementById('sourceTitleInput').value = "";
+            document.getElementById('sourceTitleInput').placeholder = "Type Source (e.g. Breaking Bad)";
+        }
+        document.getElementById('sourceTypeInput').value = "TV Show";
+    }
 
- else {
-  titleInput.value = item.title;
-  typeInput.value = normalizeType(item.type);
- }
+    else {
+        titleInput.value = item.title;
+        typeInput.value = normalizeType(item.type);
+    }
 
- if (item.type === 'movie' || item.type === 'tv') {
-  castDiv.innerHTML = '<p>Loading Cast...</p>';
-  try {
-   const res = await fetch(`/api/tmdb/credits?type=${item.type}&id=${item.id}`);
-   const cast = await res.json();
-   if (cast.length > 0) {
-    castDiv.innerHTML = '<p>Select Character:</p><div class="cast-grid"></div>';
-    const grid = castDiv.querySelector('.cast-grid');
-    cast.forEach(c => {
-     if (!c.image) return;
-     const img = document.createElement('img');
-     img.src = c.image;
-     img.title = c.characterName;
-     img.onclick = () => {
-      document.getElementById('charNameInput').value = c.characterName;
-      document.getElementById('modalImg').src = c.image;
-      document.getElementById('customImgInput').value = c.image;
-     };
-     grid.appendChild(img);
-    });
-   } else { castDiv.innerHTML = ''; }
-  } catch (e) { castDiv.innerHTML = ''; }
- }
+    if (item.type === 'movie' || item.type === 'tv') {
+        castDiv.innerHTML = '<p>Loading Cast...</p>';
+        try {
+            const res = await fetch(`/api/tmdb/credits?type=${item.type}&id=${item.id}`);
+            const cast = await res.json();
+            if (cast.length > 0) {
+                castDiv.innerHTML = '<p>Select Character:</p><div class="cast-grid"></div>';
+                const grid = castDiv.querySelector('.cast-grid');
+                cast.forEach(c => {
+                    if (!c.image) return;
+                    const img = document.createElement('img');
+                    img.src = c.image;
+                    img.title = c.characterName;
+                    img.onclick = () => {
+                        document.getElementById('charNameInput').value = c.characterName;
+                        document.getElementById('modalImg').src = c.image;
+                        document.getElementById('customImgInput').value = c.image;
+                    };
+                    grid.appendChild(img);
+                });
+            } else { castDiv.innerHTML = ''; }
+        } catch (e) { castDiv.innerHTML = ''; }
+    }
 
- document.getElementById('charModal').classList.remove('hidden');
+    document.getElementById('charModal').classList.remove('hidden');
 }
 
 function openCustomCharModal() {
@@ -628,14 +611,6 @@ function openCustomCharModal() {
     document.getElementById('searchInput').value = '';
 
     document.getElementById('modalImg').classList.add('hidden');
-    // כדי למנוע שגיאות CORS מחיתוך תמונות שרת זר, נעביר אותן דרך הפרוקסי
-    const rawImg = item.image || 'https://via.placeholder.com/200x300';
-    document.getElementById('modalImg').src = `https://wsrv.nl/?url=${encodeURIComponent(rawImg)}`;
-
-    // מפעיל את החיתוך אחרי שהתמונה נטענת
-    document.getElementById('modalImg').onload = () => {
-        initCropper();
-    };
     document.getElementById('charNameInput').value = '';
     document.getElementById('sourceTitleInput').value = '';
     document.getElementById('customImgInput').value = '';
@@ -660,12 +635,12 @@ function openCustomCharModal() {
     document.getElementById('charModal').classList.remove('hidden');
 }
 
-// --- שמירת דמות (כולל חיתוך תמונה) ---
 document.getElementById('saveCharBtn').addEventListener('click', () => {
     if (!state.activeListId) return alert("Select a list first");
-
     const name = document.getElementById('charNameInput').value;
     const customImg = document.getElementById('customImgInput').value;
+    const rating = document.getElementById('ratingInput').value;
+
     const sourceTitle = document.getElementById('sourceTitleInput').value;
     const sourceType = document.getElementById('sourceTypeInput').value;
 
@@ -681,35 +656,14 @@ document.getElementById('saveCharBtn').addEventListener('click', () => {
     } else {
         ratingVal = parseFloat(document.getElementById('ratingInput').value);
     }
-
-    // ==========================================
-    // התיקון של החיתוך (Cropper) מתחיל כאן
-    // ==========================================
-    let finalImage = null;
-
-    // מצב 1: אם המשתמש שם לינק בתיבה של ה-Custom Image URL, זה דורס הכל ונשתמש בו
-    if (customImg && customImg.trim().length > 0) {
-        finalImage = customImg;
-    }
-    // מצב 2: אם אין לינק, אבל יש כלי חיתוך פעיל במסך - ניקח את החיתוך!
-    else if (cropper) {
-        finalImage = cropper.getCroppedCanvas({
-            width: 400, // רוחב התמונה שתישמר בדאטה בייס
-            height: 600 // גובה התמונה שתישמר
-        }).toDataURL('image/jpeg', 0.8); // שומר כטקסט (Base64) באיכות 80%
-    }
-    // מצב 3: גיבוי (אם משהו השתבש, נשים את התמונה הרגילה מהחיפוש)
-    else {
-        finalImage = state.tempSearchItem?.image || 'https://via.placeholder.com/200x300';
-    }
-
-    // מכינים את האובייקט לשמירה
     const itemData = {
         characterName: name,
         sourceTitle: sourceTitle,
         sourceType: sourceType,
+        rating: rating,
         rating: ratingVal,
-        image: finalImage 
+
+        image: customImg ? customImg : (state.tempSearchItem?.image || 'https://via.placeholder.com/200')
     };
 
     if (state.editingIndex > -1) {
@@ -718,53 +672,54 @@ document.getElementById('saveCharBtn').addEventListener('click', () => {
     } else {
         list.items.push(itemData);
     }
-
-    updateCurrentList(true); // true אומר לו למיין מחדש לפי ציון (אם זו לא רשימה חופשית)
+    updateCurrentList(true);
+    closeModal('charModal');
+    updateCurrentList(true);
     closeModal('charModal');
 });
 
 function normalizeType(apiType) {
- if (!apiType) return 'Other';
- const lower = apiType.toLowerCase();
- if (lower === 'tv' || lower === 'tv show') return 'TV Show';
- if (lower === 'movie') return 'Movie';
- if (lower === 'game') return 'Game';
- if (lower === 'book') return 'Book';
- if (lower === 'anime' || lower === 'character') return 'Anime';
- if (lower === 'manga') return 'Manga';
- if (lower === 'vn') return 'VN';
- if (lower === 'comic') return 'Comic';
+    if (!apiType) return 'Other';
+    const lower = apiType.toLowerCase();
+    if (lower === 'tv' || lower === 'tv show') return 'TV Show';
+    if (lower === 'movie') return 'Movie';
+    if (lower === 'game') return 'Game';
+    if (lower === 'book') return 'Book';
+    if (lower === 'anime' || lower === 'character') return 'Anime';
+    if (lower === 'manga') return 'Manga';
+    if (lower === 'vn') return 'VN';
+    if (lower === 'comic') return 'Comic';
 
 
- return 'Other';
+    return 'Other';
 }
 
 let isRegisterMode = false;
 document.getElementById('authBtnNav').addEventListener('click', async () => {
- if (state.user) { await fetch('/api/auth/logout', { method: 'POST' }); window.location.reload(); }
- else { document.getElementById('authModal').classList.remove('hidden'); }
+    if (state.user) { await fetch('/api/auth/logout', { method: 'POST' }); window.location.reload(); }
+    else { document.getElementById('authModal').classList.remove('hidden'); }
 });
 
 document.getElementById('authSubmitBtn').addEventListener('click', async () => {
- const u = document.getElementById('authUsername').value, p = document.getElementById('authPassword').value;
- const url = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
- const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) });
- if (res.ok) { isRegisterMode ? (alert("Registered!"), isRegisterMode = false, updateAuthUI()) : window.location.reload(); }
- else { alert((await res.json()).error); }
+    const u = document.getElementById('authUsername').value, p = document.getElementById('authPassword').value;
+    const url = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) });
+    if (res.ok) { isRegisterMode ? (alert("Registered!"), isRegisterMode = false, updateAuthUI()) : window.location.reload(); }
+    else { alert((await res.json()).error); }
 });
 
 document.getElementById('authSwitch').addEventListener('click', () => { isRegisterMode = !isRegisterMode; updateAuthUI(); });
 function updateAuthUI() {
- const t = document.getElementById('authTitle'), b = document.getElementById('authSubmitBtn'), s = document.getElementById('authSwitch');
- t.textContent = isRegisterMode ? "Register" : "Login"; b.textContent = isRegisterMode ? "Register" : "Login";
- s.textContent = isRegisterMode ? "Have an account? Login." : "Need an account? Register.";
+    const t = document.getElementById('authTitle'), b = document.getElementById('authSubmitBtn'), s = document.getElementById('authSwitch');
+    t.textContent = isRegisterMode ? "Register" : "Login"; b.textContent = isRegisterMode ? "Register" : "Login";
+    s.textContent = isRegisterMode ? "Have an account? Login." : "Need an account? Register.";
 }
 
 document.getElementById('shareBtn').addEventListener('click', () => {
- if (!state.activeListId) return alert("Select a list");
- const url = `${window.location.origin}/share.html?id=${state.activeListId}`;
- navigator.clipboard.writeText(url);
- alert("Copied: " + url);
+    if (!state.activeListId) return alert("Select a list");
+    const url = `${window.location.origin}/share.html?id=${state.activeListId}`;
+    navigator.clipboard.writeText(url);
+    alert("Copied: " + url);
 });
 
 // כפתור יצירת רשימה
@@ -779,7 +734,7 @@ document.getElementById('createListBtn').addEventListener('click', () => {
     document.getElementById('rankingTypeSelect').disabled = false;
     document.getElementById('rankingTypeSelect').value = 'numbers';
 
-    document.getElementById('duplicateListBtn').classList.add('hidden'); 
+    document.getElementById('duplicateListBtn').classList.add('hidden');
     document.getElementById('saveListBtn').textContent = "Create";
     document.getElementById('listModal').classList.remove('hidden');
 });
@@ -869,11 +824,6 @@ function setupEvents() {
     document.getElementById('reorderBtn').addEventListener('click', toggleReorderMode);
     document.getElementById('saveOrderBtn').addEventListener('click', saveOrder);
     document.getElementById('addCustomCharBtn').addEventListener('click', openCustomCharModal);
-    document.getElementById('applyCropBtn').addEventListener('click', () => {
-        if (cropper) {
-            alert("Crop set! It will be saved when you click 'Add to List'.");
-        }
-    });
 
 
     const menuBtn = document.getElementById('mobileMenuBtn');
@@ -890,7 +840,7 @@ function setupEvents() {
     if (overlay) {
         overlay.addEventListener('click', closeMobileMenu);
     }
- }
+}
 
 function closeMobileMenu() {
     const sidebar = document.querySelector('.sidebar');
@@ -903,7 +853,7 @@ function closeMobileMenu() {
 document.getElementById('filterSelect').addEventListener('change', renderCurrentList);
 
 
-let commState = { view: 'all', search: '' }; 
+let commState = { view: 'all', search: '' };
 
 document.getElementById('communityBtn').addEventListener('click', () => {
     commState = { view: 'all', search: '' };
@@ -1081,7 +1031,7 @@ async function showUserLists(userId, username) {
 
 function getRatingDisplay(rating, type) {
     if (rating === 0) return 'No Grade'
-    if (type !== 'letters') return rating + '/10'; 
+    if (type !== 'letters') return rating + '/10';
 
     if (rating >= 13) return 'SSS';
     if (rating >= 12) return 'SS';
@@ -1272,24 +1222,6 @@ window.adminDeleteList = async function (listId, userId, username) {
     if (!confirm("Delete this list?")) return;
     await fetch(`/api/admin/lists/${listId}`, { method: 'DELETE' });
     adminManageLists(userId, username);
-}
-
-function initCropper() {
-    const image = document.getElementById('modalImg');
-
-    // אם יש חיתוך פעיל, נהרוס אותו קודם
-    if (cropper) {
-        cropper.destroy();
-        cropper = null;
-    }
-
-    // מפעיל את כלי החיתוך מחדש
-    cropper = new Cropper(image, {
-        aspectRatio: 2 / 3, // שומר על פרופורציה של כרטיס אנכי
-        viewMode: 1, // מונע חיתוך מחוץ לגבולות התמונה
-        background: false,
-        zoomable: true,
-    });
 }
 
 init();

@@ -2,325 +2,316 @@
 <html lang="en">
 
 <head>
- <meta charset="UTF-8">
- <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <meta name="referrer" content="no-referrer">
- <title>MyCharacterList</title>
- <link rel="stylesheet" href="style.css">
- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
-<link rel="icon" type="image/png" href="/icon.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <title>MyCharacterList</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="icon" type="image/png" href="/icon.png">
 </head>
 
 <body class="dark-theme">
 
-<nav class="navbar">
-  <div style="display: flex; align-items: center; gap: 10px;">
-    <button id="mobileMenuBtn" class="icon-btn mobile-only">
-      <i class="fas fa-bars"></i>
-    </button>
-    <a style="text-decoration: none;" href="/">
-    <div class="logo">MyCharacterList</div>
-    </a>
-  </div>
-
-  <div class="nav-controls">
-    <span id="userDisplay" style="margin-right:15px; font-size:0.9rem;"></span>
-  <button id="adminBtn" class="icon-btn hidden" title="Admin Panel"><i class="fas fa-crown"
-      style="color: gold;"></i></button>
-  <button id="authBtnNav">Login</button>
-    <button id="communityBtn" title="View Users"><i class="fas fa-users"></i></button>
-    <button id="shareBtn"><i class="fas fa-share-alt"></i></button> 
-    <button id="themeToggle"><i class="fas fa-moon"></i></button>
-  </div>
-</nav>
-
-
- <div class="container" id="appContainer">
-  <aside class="sidebar">
-   <div class="sidebar-header">
-    <h3>My Lists</h3>
-    <button id="createListBtn"><i class="fas fa-plus"></i></button>
-   </div>
-   <ul id="listNav"></ul>
-  </aside>
-
-  <main class="main-content">
-<header class="list-header">
-  <div style="display: flex; align-items: center; gap: 10px;">
-    <h2 id="currentListTitle">Select a List</h2>
-    <button id="editListTitleBtn" class="icon-btn hidden" style="font-size: 1rem; color: var(--text-muted);">
-      <i class="fas fa-pen"></i>
-    </button>
-  </div>
-
-  <div class="header-controls">
-
-    <button id="reorderBtn" class="btn-primary" style="width: auto; padding: 0 15px;">
-      <i class="fas fa-sort"></i> Reorder
-    </button>
-    <button id="saveOrderBtn" class="btn-primary hidden"
-      style="width: auto; padding: 0 15px; background-color: #4CAF50;">
-      <i class="fas fa-save"></i> Save Order
-    </button>
-
-    <select id="filterSelect">
-      <option value="all">Show All</option>
-      <option value="Anime">Animes</option>
-      <option value="Game">Games</option>
-      <option value="VN">Visual Novels</option>
-      <option value="TV Show">TV Shows</option>
-      <option value="Movie">Movies</option>
-      <option value="Manga">Mangas</option>
-      <option value="Book">Books</option>
-      <option value="Comic">Comics</option>
-      <option value="Other">Other</option>
-    </select>
-
-      <button id="addCustomCharBtn" class="btn-primary" style="width: auto; padding: 0 15px; background-color: #ff9800;">
-        <i class="fas fa-user-plus"></i> Custom
+  <nav class="navbar">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <button id="mobileMenuBtn" class="icon-btn mobile-only">
+        <i class="fas fa-bars"></i>
       </button>
+      <a style="text-decoration: none;" href="/">
+        <div class="logo">MyCharacterList</div>
+      </a>
+    </div>
 
-    <div class="search-bar-container">
-      <input type="text" id="searchInput" placeholder="Search Characters...">
-      <div id="searchResults" class="search-dropdown hidden"></div>
+    <div class="nav-controls">
+      <span id="userDisplay" style="margin-right:15px; font-size:0.9rem;"></span>
+      <button id="adminBtn" class="icon-btn hidden" title="Admin Panel"><i class="fas fa-crown"
+          style="color: gold;"></i></button>
+      <button id="authBtnNav">Login</button>
+      <button id="communityBtn" title="View Users"><i class="fas fa-users"></i></button>
+      <button id="shareBtn"><i class="fas fa-share-alt"></i></button>
+      <button id="themeToggle"><i class="fas fa-moon"></i></button>
+    </div>
+  </nav>
+
+
+  <div class="container" id="appContainer">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h3>My Lists</h3>
+        <button id="createListBtn"><i class="fas fa-plus"></i></button>
+      </div>
+      <ul id="listNav"></ul>
+    </aside>
+
+    <main class="main-content">
+      <header class="list-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h2 id="currentListTitle">Select a List</h2>
+          <button id="editListTitleBtn" class="icon-btn hidden" style="font-size: 1rem; color: var(--text-muted);">
+            <i class="fas fa-pen"></i>
+          </button>
+        </div>
+
+        <div class="header-controls">
+
+          <button id="reorderBtn" class="btn-primary" style="width: auto; padding: 0 15px;">
+            <i class="fas fa-sort"></i> Reorder
+          </button>
+          <button id="saveOrderBtn" class="btn-primary hidden"
+            style="width: auto; padding: 0 15px; background-color: #4CAF50;">
+            <i class="fas fa-save"></i> Save Order
+          </button>
+
+          <select id="filterSelect">
+            <option value="all">Show All</option>
+            <option value="Anime">Animes</option>
+            <option value="Game">Games</option>
+            <option value="VN">Visual Novels</option>
+            <option value="TV Show">TV Shows</option>
+            <option value="Movie">Movies</option>
+            <option value="Manga">Mangas</option>
+            <option value="Book">Books</option>
+            <option value="Comic">Comics</option>
+            <option value="Other">Other</option>
+          </select>
+
+          <button id="addCustomCharBtn" class="btn-primary"
+            style="width: auto; padding: 0 15px; background-color: #ff9800;">
+            <i class="fas fa-user-plus"></i> Custom
+          </button>
+
+          <div class="search-bar-container">
+            <input type="text" id="searchInput" placeholder="Search Characters...">
+            <div id="searchResults" class="search-dropdown hidden"></div>
+          </div>
+        </div>
+      </header>
+
+      <div id="characterGrid" class="grid"></div>
+    </main>
+  </div>
+
+  <div id="authModal" class="modal hidden">
+    <div class="modal-content small-modal">
+      <span class="close-modal">&times;</span>
+      <h3 id="authTitle">Login</h3>
+      <div class="form-group">
+        <input type="text" id="authUsername" placeholder="Username">
+        <input type="password" id="authPassword" placeholder="Password">
+      </div>
+      <button id="authSubmitBtn" class="btn-primary">Login</button>
+      <p id="authSwitch" style="margin-top:10px; cursor:pointer; color:#888;">Need an account? Register.</p>
     </div>
   </div>
-</header>
 
-   <div id="characterGrid" class="grid"></div>
-  </main>
- </div>
+  <div id="charModal" class="modal hidden">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <div class="modal-body">
+        <img id="modalImg" src="" alt="Source">
+        <div class="modal-info">
 
- <div id="authModal" class="modal hidden">
-  <div class="modal-content small-modal">
-   <span class="close-modal">&times;</span>
-   <h3 id="authTitle">Login</h3>
-   <div class="form-group">
-    <input type="text" id="authUsername" placeholder="Username">
-    <input type="password" id="authPassword" placeholder="Password">
-   </div>
-   <button id="authSubmitBtn" class="btn-primary">Login</button>
-   <p id="authSwitch" style="margin-top:10px; cursor:pointer; color:#888;">Need an account? Register.</p>
-  </div>
- </div>
+          <div id="castSelector"></div>
 
-<div id="charModal" class="modal hidden">
-  <div class="modal-content">
-    <span class="close-modal">&times;</span>
-    <div class="modal-body">
-      <!-- למחוק את התמונה הישנה ולהדביק את זה: -->
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
-        <!-- פה יוצג אזור החיתוך -->
-        <div id="cropperContainer"
-          style="width: 200px; height: 300px; background: #000; border-radius: 5px; overflow: hidden; position: relative;">
-          <img id="modalImg" src="" crossorigin="anonymous" style="display: block; max-width: 100%;">
-        </div>
-        <button id="applyCropBtn" class="btn-primary"
-          style="padding: 5px 10px; font-size: 0.9rem; width: auto; background: #2196F3;">
-          <i class="fas fa-crop"></i> Preview Crop
-        </button>
-      </div>
-      <div class="modal-info">
-
-        <div id="castSelector"></div>
-
-        <div class="form-group">
-          <label>Character Name:</label>
-          <input type="text" id="charNameInput" placeholder="e.g., Walter White">
-        </div>
-
-        <div class="row-group">
-          <div class="form-group" style="flex: 2;">
-            <label>Source Title:</label>
-            <input type="text" id="sourceTitleInput" placeholder="e.g. Breaking Bad">
+          <div class="form-group">
+            <label>Character Name:</label>
+            <input type="text" id="charNameInput" placeholder="e.g., Walter White">
           </div>
-          <div class="form-group" style="flex: 1;">
-            <label>Type:</label>
-            <select id="sourceTypeInput">
-              <option value="Anime">Anime</option>
-              <option value="Manga">Manga</option>
-              <option value="VN">Visual Novel</option>
-              <option value="Game">Game</option>
-              <option value="TV Show">TV Show</option>
-              <option value="Movie">Movie</option>
-              <option value="Book">Book</option>
-              <option value="Comic">Comic</option>
-              <option value="Other">Other</option>
+
+          <div class="row-group">
+            <div class="form-group" style="flex: 2;">
+              <label>Source Title:</label>
+              <input type="text" id="sourceTitleInput" placeholder="e.g. Breaking Bad">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label>Type:</label>
+              <select id="sourceTypeInput">
+                <option value="Anime">Anime</option>
+                <option value="Manga">Manga</option>
+                <option value="VN">Visual Novel</option>
+                <option value="Game">Game</option>
+                <option value="TV Show">TV Show</option>
+                <option value="Movie">Movie</option>
+                <option value="Book">Book</option>
+                <option value="Comic">Comic</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Custom Image URL (Optional):</label>
+            <input type="text" id="customImgInput" placeholder="Paste image link...">
+          </div>
+          <div class="form-group">
+            <label>Rating:</label>
+
+            <input type="number" id="ratingInput" min="0" max="10" step="0.5" value="5">
+
+            <select id="ratingLetterInput" class="hidden" style="width: 100%; padding: 8px; background: var(--bg-color); color: var
+    (--text-main); border: 1px solid var(--border); border-radius: 4px;">
+              <option value="13">SSS</option>
+              <option value="12">SS</option>
+              <option value="11">S</option>
+              <option value="10">A</option>
+              <option value="9">B</option>
+              <option value="8">C</option>
+              <option value="7">D</option>
+              <option value="6">E</option>
+              <option value="5">F</option>
+              <option value="0">No Grade</option>
             </select>
           </div>
+
+
+          <button id="saveCharBtn" class="btn-primary">Add to List</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="listModal" class="modal hidden">
+    <div class="modal-content small-modal">
+      <span class="close-modal">&times;</span>
+      <h3 id="listModalTitle">Create New List</h3>
+
+      <input type="text" id="newListName" placeholder="List Name">
+
+      <div style="margin-top: 10px; text-align: left;">
+        <label style="font-size: 0.9rem; color: var(--text-muted);">Ranking Style:</label>
+        <select id="rankingTypeSelect" style="width: 100%; margin-top: 5px;">
+          <option value="numbers">Numbers (0-10)</option>
+          <option value="letters">Letters (SSS - F)</option>
+        </select>
+      </div>
+
+      <div style="margin-top: 10px; text-align: left; display:flex; align-items:center; gap:10px;">
+        <input type="checkbox" id="isFreeOrderInput" style="width:auto;">
+        <label for="isFreeOrderInput" style="cursor:pointer;">Free Order Mode <small
+            style="color:var(--text-muted)">(Ignore
+            Score Sorting)</small></label>
+      </div>
+
+      <div style="margin-top: 15px; text-align: left; display:flex; align-items:center; gap:10px;">
+        <input type="checkbox" id="isPrivateInput" style="width:auto;">
+        <label for="isPrivateInput" style="cursor:pointer;">Private List <small style="color:var(--text-muted)">(Hidden
+            from Community)</small></label>
+      </div>
+
+      <div style="margin-top: 15px; text-align: left;">
+        <button id="duplicateListBtn" class="hidden"
+          style="background: transparent; border: 1px solid #2196F3; color: #2196F3; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+          <i class="fas fa-copy"></i> Duplicate List
+        </button>
+      </div>
+
+      <button id="saveListBtn" class="btn-primary" style="margin-top: 15px;">Create</button>
+    </div>
+  </div>
+
+  <div id="mobileOverlay" class="mobile-overlay hidden"></div>
+
+  <div id="deleteModal" class="modal hidden">
+    <div class="modal-content small-modal" style="text-align: center;">
+      <span class="close-modal">&times;</span>
+      <h3 style="margin-bottom: 10px;">Remove Character?</h3>
+      <p style="color: var(--text-muted); margin-bottom: 20px;">Are you sure you want to remove this character from your
+        list?</p>
+
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <button class="btn-primary" onclick="closeModal('deleteModal')" style="background: #555;">Cancel</button>
+        <button id="confirmDeleteBtn" class="btn-primary" style="background: #ff4444;">Yes, Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="deleteListModal" class="modal hidden">
+    <div class="modal-content small-modal" style="text-align: center;">
+      <span class="close-modal">&times;</span>
+      <h3 style="margin-bottom: 10px;">Delete List?</h3>
+      <p style="color: var(--text-muted); margin-bottom: 20px;">This will permanently delete this list and all
+        characters
+        inside it.</p>
+
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <button class="btn-primary" onclick="closeModal('deleteListModal')" style="background: #555;">Cancel</button>
+        <button id="confirmDeleteListBtn" class="btn-primary" style="background: #ff4444;">Yes, Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMMUNITY MODAL -->
+  <div id="communityModal" class="modal hidden">
+    <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
+      <span class="close-modal"
+        onclick="document.getElementById('communityModal').classList.add('hidden')">&times;</span>
+
+      <h3 id="communityTitle" style="margin-bottom: 15px; text-align: center;">Community</h3>
+
+      <button id="commBackBtn" class="btn-primary hidden" style="margin-bottom: 15px; width: auto; background: #555;">
+        <i class="fas fa-arrow-left"></i> Back
+      </button>
+
+      <div id="commControls">
+        <div class="search-bar-container" style="width: 100%; margin-bottom: 15px;">
+          <input type="text" id="userSearchInput" placeholder="Search for users...">
         </div>
 
+        <!-- הטאבים עם ה-ID שחסר לך -->
+        <div id="commTabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
+          <button id="tabAllUsers" class="btn-primary active-tab" style="flex:1;">All Users</button>
+          <button id="tabSavedUsers" class="btn-primary inactive-tab" style="flex:1;">Following</button>
+        </div>
+      </div>
+
+      <div id="communityGrid" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN MODAL -->
+  <div id="adminModal" class="modal hidden">
+    <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+      <span class="close-modal">&times;</span>
+      <h3 style="text-align: center; margin-bottom: 20px; color: gold;"><i class="fas fa-crown"></i> Admin Panel</h3>
+
+      <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <button id="adminTabSettings" class="btn-primary active-tab" style="flex:1;">Welcome Screen</button>
+        <button id="adminTabUsers" class="btn-primary inactive-tab" style="flex:1;">Users & Lists</button>
+      </div>
+
+      <div id="adminSettingsSection">
         <div class="form-group">
-          <label>Custom Image URL (Optional):</label>
-          <input type="text" id="customImgInput" placeholder="Paste image link...">
+          <label>Welcome Title:</label>
+          <input type="text" id="adminWelcomeTitle">
         </div>
-<div class="form-group">
-  <label>Rating:</label>
-
-  <input type="number" id="ratingInput" min="0" max="10" step="0.5" value="5">
-
-  <select id="ratingLetterInput" class="hidden"
-    style="width: 100%; padding: 8px; background: var(--bg-color); color: var
-    (--text-main); border: 1px solid var(--border); border-radius: 4px;">
-    <option value="13">SSS</option>
-    <option value="12">SS</option>
-    <option value="11">S</option>
-    <option value="10">A</option>
-    <option value="9">B</option>
-    <option value="8">C</option>
-    <option value="7">D</option>
-    <option value="6">E</option>
-    <option value="5">F</option>
-    <option value="0">No Grade</option>
-  </select>
-</div>
-
-
-        <button id="saveCharBtn" class="btn-primary">Add to List</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="listModal" class="modal hidden">
-  <div class="modal-content small-modal">
-    <span class="close-modal">&times;</span>
-    <h3 id="listModalTitle">Create New List</h3>
-
-    <input type="text" id="newListName" placeholder="List Name">
-
-    <div style="margin-top: 10px; text-align: left;">
-      <label style="font-size: 0.9rem; color: var(--text-muted);">Ranking Style:</label>
-      <select id="rankingTypeSelect" style="width: 100%; margin-top: 5px;">
-        <option value="numbers">Numbers (0-10)</option>
-        <option value="letters">Letters (SSS - F)</option>
-      </select>
-    </div>
-
-    <div style="margin-top: 10px; text-align: left; display:flex; align-items:center; gap:10px;">
-      <input type="checkbox" id="isFreeOrderInput" style="width:auto;">
-      <label for="isFreeOrderInput" style="cursor:pointer;">Free Order Mode <small style="color:var(--text-muted)">(Ignore
-          Score Sorting)</small></label>
-    </div>
-    
-    <div style="margin-top: 15px; text-align: left; display:flex; align-items:center; gap:10px;">
-      <input type="checkbox" id="isPrivateInput" style="width:auto;">
-      <label for="isPrivateInput" style="cursor:pointer;">Private List <small style="color:var(--text-muted)">(Hidden
-          from Community)</small></label>
-    </div>
-
-    <div style="margin-top: 15px; text-align: left;">
-      <button id="duplicateListBtn" class="hidden"
-        style="background: transparent; border: 1px solid #2196F3; color: #2196F3; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
-        <i class="fas fa-copy"></i> Duplicate List
-      </button>
-    </div>
-
-    <button id="saveListBtn" class="btn-primary" style="margin-top: 15px;">Create</button>
-  </div>
-</div>
-
-<div id="mobileOverlay" class="mobile-overlay hidden"></div>
-
-<div id="deleteModal" class="modal hidden">
-  <div class="modal-content small-modal" style="text-align: center;">
-    <span class="close-modal">&times;</span>
-    <h3 style="margin-bottom: 10px;">Remove Character?</h3>
-    <p style="color: var(--text-muted); margin-bottom: 20px;">Are you sure you want to remove this character from your
-      list?</p>
-
-    <div style="display: flex; gap: 10px; justify-content: center;">
-      <button class="btn-primary" onclick="closeModal('deleteModal')" style="background: #555;">Cancel</button>
-      <button id="confirmDeleteBtn" class="btn-primary" style="background: #ff4444;">Yes, Remove</button>
-    </div>
-  </div>
-</div>
-
-<div id="deleteListModal" class="modal hidden">
-  <div class="modal-content small-modal" style="text-align: center;">
-    <span class="close-modal">&times;</span>
-    <h3 style="margin-bottom: 10px;">Delete List?</h3>
-    <p style="color: var(--text-muted); margin-bottom: 20px;">This will permanently delete this list and all characters
-      inside it.</p>
-
-    <div style="display: flex; gap: 10px; justify-content: center;">
-      <button class="btn-primary" onclick="closeModal('deleteListModal')" style="background: #555;">Cancel</button>
-      <button id="confirmDeleteListBtn" class="btn-primary" style="background: #ff4444;">Yes, Delete</button>
-    </div>
-  </div>
-</div>
-
-<!-- COMMUNITY MODAL -->
-<div id="communityModal" class="modal hidden">
-  <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
-    <span class="close-modal" onclick="document.getElementById('communityModal').classList.add('hidden')">&times;</span>
-
-    <h3 id="communityTitle" style="margin-bottom: 15px; text-align: center;">Community</h3>
-
-    <button id="commBackBtn" class="btn-primary hidden" style="margin-bottom: 15px; width: auto; background: #555;">
-      <i class="fas fa-arrow-left"></i> Back
-    </button>
-
-    <div id="commControls">
-      <div class="search-bar-container" style="width: 100%; margin-bottom: 15px;">
-        <input type="text" id="userSearchInput" placeholder="Search for users...">
+        <div class="form-group">
+          <label>Welcome Text (Use \n for new lines):</label>
+          <textarea id="adminWelcomeText" rows="5"
+            style="width: 100%; padding: 8px; background: var(--bg-color); border: 1px solid var(--border); color: var(--text-main); border-radius: 4px; resize: vertical;"></textarea>
+        </div>
+        <button id="adminSaveSettingsBtn" class="btn-primary">Save Settings</button>
       </div>
 
-      <!-- הטאבים עם ה-ID שחסר לך -->
-      <div id="commTabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
-        <button id="tabAllUsers" class="btn-primary active-tab" style="flex:1;">All Users</button>
-        <button id="tabSavedUsers" class="btn-primary inactive-tab" style="flex:1;">Following</button>
+      <div id="adminUsersSection" class="hidden">
+        <div id="adminUsersGrid" style="display: flex; flex-direction: column; gap: 10px;"></div>
       </div>
-    </div>
 
-    <div id="communityGrid" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
+      <div id="adminListsSection" class="hidden">
+        <button id="adminBackToUsersBtn" class="btn-primary" style="margin-bottom:15px; width:auto; background:#555;">
+          <i class="fas fa-arrow-left"></i> Back to Users
+        </button>
+        <h4 id="adminUserListsTitle" style="margin-bottom:15px; color:var(--accent);"></h4>
+        <div id="adminListsGrid" style="display: flex; flex-direction: column; gap: 10px;"></div>
+      </div>
+
     </div>
   </div>
-</div>
 
-<!-- ADMIN MODAL -->
-<div id="adminModal" class="modal hidden">
-  <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
-    <span class="close-modal">&times;</span>
-    <h3 style="text-align: center; margin-bottom: 20px; color: gold;"><i class="fas fa-crown"></i> Admin Panel</h3>
 
-    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-      <button id="adminTabSettings" class="btn-primary active-tab" style="flex:1;">Welcome Screen</button>
-      <button id="adminTabUsers" class="btn-primary inactive-tab" style="flex:1;">Users & Lists</button>
-    </div>
 
-    <div id="adminSettingsSection">
-      <div class="form-group">
-        <label>Welcome Title:</label>
-        <input type="text" id="adminWelcomeTitle">
-      </div>
-      <div class="form-group">
-        <label>Welcome Text (Use \n for new lines):</label>
-        <textarea id="adminWelcomeText" rows="5"
-          style="width: 100%; padding: 8px; background: var(--bg-color); border: 1px solid var(--border); color: var(--text-main); border-radius: 4px; resize: vertical;"></textarea>
-      </div>
-      <button id="adminSaveSettingsBtn" class="btn-primary">Save Settings</button>
-    </div>
-
-    <div id="adminUsersSection" class="hidden">
-      <div id="adminUsersGrid" style="display: flex; flex-direction: column; gap: 10px;"></div>
-    </div>
-
-    <div id="adminListsSection" class="hidden">
-      <button id="adminBackToUsersBtn" class="btn-primary" style="margin-bottom:15px; width:auto; background:#555;">
-        <i class="fas fa-arrow-left"></i> Back to Users
-      </button>
-      <h4 id="adminUserListsTitle" style="margin-bottom:15px; color:var(--accent);"></h4>
-      <div id="adminListsGrid" style="display: flex; flex-direction: column; gap: 10px;"></div>
-    </div>
-
-  </div>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-
- <script src="app.js"></script>
+  <script src="app.js"></script>
 </body>
 
 </html>

@@ -810,3 +810,16 @@ select {
   color: #b3b3b3 !important;
   border: 1px solid var(--border);
 }
+
+#cropperContainer {
+  width: 100%;
+  height: 350px;
+  background: #000;
+  position: relative;
+  overflow: hidden;
+}
+
+#modalImg {
+  max-width: 100%;
+  display: block;
+}
