@@ -7,6 +7,8 @@ async function init() {
  setupEvents();
 }
 
+let cropper = null;
+
 async function checkLoginStatus() {
     const createBtn = document.getElementById('createListBtn');
     const listHeader = document.querySelector('.list-header');
@@ -364,6 +366,14 @@ window.editItem = function (index) {
  state.editingIndex = index;
 
  document.getElementById('modalImg').src = item.image;
+    // כדי למנוע שגיאות CORS מחיתוך תמונות שרת זר, נעביר אותן דרך הפרוקסי
+    const rawImg = item.image || 'https://via.placeholder.com/200x300';
+    document.getElementById('modalImg').src = `https://wsrv.nl/?url=${encodeURIComponent(rawImg)}`;
+
+    // מפעיל את החיתוך אחרי שהתמונה נטענת
+    document.getElementById('modalImg').onload = () => {
+        initCropper();
+    };
  document.getElementById('charNameInput').value = item.characterName;
  document.getElementById('customImgInput').value = item.image;
  document.getElementById('ratingInput').value = item.rating;
@@ -501,6 +511,14 @@ async function openCharModal(item) {
  document.getElementById('searchInput').value = '';
 
  document.getElementById('modalImg').src = item.image || 'https://via.placeholder.com/200';
+    // כדי למנוע שגיאות CORS מחיתוך תמונות שרת זר, נעביר אותן דרך הפרוקסי
+    const rawImg = item.image || 'https://via.placeholder.com/200x300';
+    document.getElementById('modalImg').src = `https://wsrv.nl/?url=${encodeURIComponent(rawImg)}`;
+
+    // מפעיל את החיתוך אחרי שהתמונה נטענת
+    document.getElementById('modalImg').onload = () => {
+        initCropper();
+    };
  document.getElementById('customImgInput').value = '';
  document.getElementById('ratingInput').value = 5;
  document.getElementById('saveCharBtn').textContent = "Add to List";
@@ -610,6 +628,14 @@ function openCustomCharModal() {
     document.getElementById('searchInput').value = '';
 
     document.getElementById('modalImg').classList.add('hidden');
+    // כדי למנוע שגיאות CORS מחיתוך תמונות שרת זר, נעביר אותן דרך הפרוקסי
+    const rawImg = item.image || 'https://via.placeholder.com/200x300';
+    document.getElementById('modalImg').src = `https://wsrv.nl/?url=${encodeURIComponent(rawImg)}`;
+
+    // מפעיל את החיתוך אחרי שהתמונה נטענת
+    document.getElementById('modalImg').onload = () => {
+        initCropper();
+    };
     document.getElementById('charNameInput').value = '';
     document.getElementById('sourceTitleInput').value = '';
     document.getElementById('customImgInput').value = '';
@@ -634,19 +660,19 @@ function openCustomCharModal() {
     document.getElementById('charModal').classList.remove('hidden');
 }
 
+// --- שמירת דמות (כולל חיתוך תמונה) ---
 document.getElementById('saveCharBtn').addEventListener('click', () => {
- if (!state.activeListId) return alert("Select a list first");
- const name = document.getElementById('charNameInput').value;
- const customImg = document.getElementById('customImgInput').value;
- const rating = document.getElementById('ratingInput').value;
+    if (!state.activeListId) return alert("Select a list first");
 
- const sourceTitle = document.getElementById('sourceTitleInput').value;
- const sourceType = document.getElementById('sourceTypeInput').value;
+    const name = document.getElementById('charNameInput').value;
+    const customImg = document.getElementById('customImgInput').value;
+    const sourceTitle = document.getElementById('sourceTitleInput').value;
+    const sourceType = document.getElementById('sourceTypeInput').value;
 
- if (!name) return alert("Character Name required");
- if (!sourceTitle) return alert("Source Title required");
+    if (!name) return alert("Character Name required");
+    if (!sourceTitle) return alert("Source Title required");
 
- const list = state.lists.find(l => l._id === state.activeListId);
+    const list = state.lists.find(l => l._id === state.activeListId);
     const isLetters = list.rankingType === 'letters';
 
     let ratingVal;
@@ -655,15 +681,36 @@ document.getElementById('saveCharBtn').addEventListener('click', () => {
     } else {
         ratingVal = parseFloat(document.getElementById('ratingInput').value);
     }
- const itemData = {
-  characterName: name,
-  sourceTitle: sourceTitle,
-  sourceType: sourceType,
-  rating: rating,
-     rating: ratingVal, 
 
-  image: customImg ? customImg : (state.tempSearchItem?.image || 'https://via.placeholder.com/200')
- };
+    // ==========================================
+    // התיקון של החיתוך (Cropper) מתחיל כאן
+    // ==========================================
+    let finalImage = null;
+
+    // מצב 1: אם המשתמש שם לינק בתיבה של ה-Custom Image URL, זה דורס הכל ונשתמש בו
+    if (customImg && customImg.trim().length > 0) {
+        finalImage = customImg;
+    }
+    // מצב 2: אם אין לינק, אבל יש כלי חיתוך פעיל במסך - ניקח את החיתוך!
+    else if (cropper) {
+        finalImage = cropper.getCroppedCanvas({
+            width: 400, // רוחב התמונה שתישמר בדאטה בייס
+            height: 600 // גובה התמונה שתישמר
+        }).toDataURL('image/jpeg', 0.8); // שומר כטקסט (Base64) באיכות 80%
+    }
+    // מצב 3: גיבוי (אם משהו השתבש, נשים את התמונה הרגילה מהחיפוש)
+    else {
+        finalImage = state.tempSearchItem?.image || 'https://via.placeholder.com/200x300';
+    }
+
+    // מכינים את האובייקט לשמירה
+    const itemData = {
+        characterName: name,
+        sourceTitle: sourceTitle,
+        sourceType: sourceType,
+        rating: ratingVal,
+        image: finalImage 
+    };
 
     if (state.editingIndex > -1) {
         Object.assign(list.items[state.editingIndex], itemData);
@@ -671,10 +718,9 @@ document.getElementById('saveCharBtn').addEventListener('click', () => {
     } else {
         list.items.push(itemData);
     }
-    updateCurrentList(true);
+
+    updateCurrentList(true); // true אומר לו למיין מחדש לפי ציון (אם זו לא רשימה חופשית)
     closeModal('charModal');
- updateCurrentList(true);
- closeModal('charModal');
 });
 
 function normalizeType(apiType) {
@@ -823,6 +869,11 @@ function setupEvents() {
     document.getElementById('reorderBtn').addEventListener('click', toggleReorderMode);
     document.getElementById('saveOrderBtn').addEventListener('click', saveOrder);
     document.getElementById('addCustomCharBtn').addEventListener('click', openCustomCharModal);
+    document.getElementById('applyCropBtn').addEventListener('click', () => {
+        if (cropper) {
+            alert("Crop set! It will be saved when you click 'Add to List'.");
+        }
+    });
 
 
     const menuBtn = document.getElementById('mobileMenuBtn');
@@ -1221,6 +1272,24 @@ window.adminDeleteList = async function (listId, userId, username) {
     if (!confirm("Delete this list?")) return;
     await fetch(`/api/admin/lists/${listId}`, { method: 'DELETE' });
     adminManageLists(userId, username);
+}
+
+function initCropper() {
+    const image = document.getElementById('modalImg');
+
+    // אם יש חיתוך פעיל, נהרוס אותו קודם
+    if (cropper) {
+        cropper.destroy();
+        cropper = null;
+    }
+
+    // מפעיל את כלי החיתוך מחדש
+    cropper = new Cropper(image, {
+        aspectRatio: 2 / 3, // שומר על פרופורציה של כרטיס אנכי
+        viewMode: 1, // מונע חיתוך מחוץ לגבולות התמונה
+        background: false,
+        zoomable: true,
+    });
 }
 
 init();
