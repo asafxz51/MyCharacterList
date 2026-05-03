@@ -551,6 +551,28 @@ body {
   margin-top: 20px;
 }
 
+#editListTitleBtn {
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: color 0.2s ease;
+  padding: 5px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* כשהעכבר מעל העט - הוא יצבע בצבע הסגול (Accent) שלך */
+#editListTitleBtn:hover {
+  color: var(--accent);
+}
+
+/* וודא שהאייקון עצמו (ה-i) יורש את הצבע מהכפתור */
+#editListTitleBtn i {
+  color: inherit;
+}
+
 
 .modal-content {
   background: var(--card-bg);
