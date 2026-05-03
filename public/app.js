@@ -142,11 +142,11 @@ async function updateCurrentList(forceSort = false, logAction = null, logDetails
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 ...list,
-                logAction, 
-                logDetails  
+                logAction,
+                logDetails
             })
         });
-        
+
         renderCurrentList();
     } catch (e) { console.error(e); }
 }
@@ -285,28 +285,33 @@ function renderCurrentList() {
     grid.innerHTML = '';
     const list = state.lists.find(l => l._id === state.activeListId);
 
-    const editTitleBtn = document.getElementById('editListTitleBtn');
-    if (!list) {
-        if (editTitleBtn) editTitleBtn.classList.add('hidden');
-        return;
-    }
-    if (editTitleBtn) editTitleBtn.classList.remove('hidden');
-    document.getElementById('currentListTitle').textContent = list.name;
+    if (!list) return;
 
-    const filterType = document.getElementById('filterSelect').value;
+    document.getElementById('currentListTitle').textContent = list.name;
+    const editTitleBtn = document.getElementById('editListTitleBtn');
+    if (editTitleBtn) editTitleBtn.classList.remove('hidden');
+
+    // --- לוגיקת פילטור משולבת ---
+    const category = document.getElementById('filterSelect').value;
+    const search = document.getElementById('listFilterInput').value.toLowerCase();
 
     let displayItems = list.items.map((item, index) => ({ ...item, originalIndex: index }));
 
-    if (filterType !== 'all') {
-        displayItems = displayItems.filter(item => item.sourceType === filterType);
-    }
+    displayItems = displayItems.filter(item => {
+        const matchesCategory = (category === 'all' || item.sourceType === category);
+        const matchesSearch = (
+            item.characterName.toLowerCase().includes(search) ||
+            item.sourceTitle.toLowerCase().includes(search)
+        );
+        return matchesCategory && matchesSearch;
+    });
 
     if (!list.isFreeOrder) {
         displayItems.sort((a, b) => b.rating - a.rating);
     }
 
     if (displayItems.length === 0) {
-        grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888;">No characters found for this category.</p>';
+        grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888; padding: 40px;">No characters found.</p>';
         return;
     }
 
@@ -315,28 +320,19 @@ function renderCurrentList() {
         div.className = 'char-card';
         div.dataset.index = item.originalIndex;
 
-        let rankClass = 'rank-other';
-        if (index === 0) rankClass = 'rank-1';
-        if (index === 1) rankClass = 'rank-2';
-        if (index === 2) rankClass = 'rank-3';
-
-        const listType = list.rankingType || 'numbers';
-        const displayRating = getRatingDisplay(item.rating, listType);
+        let rankClass = (index === 0) ? 'rank-1' : (index === 1) ? 'rank-2' : (index === 2) ? 'rank-3' : 'rank-other';
+        const displayRating = getRatingDisplay(item.rating, list.rankingType || 'numbers');
         const ratingHtml = item.rating === 0 ? '' : `<div class="char-rating">${displayRating}</div>`;
-
-
-        let displayType = item.sourceType;
-        if (displayType === 'TV Show') displayType = 'TV';
 
         div.innerHTML = `
             <div class="rank-badge ${rankClass}">#${index + 1}</div>
-               ${ratingHtml}
+            ${ratingHtml}
             <img src="${item.image}" class="char-img">
             <div class="char-info">
                 <div class="char-name">${item.characterName}</div>
                 <div class="source-row">
                     <span class="source-title" title="${item.sourceTitle}">${item.sourceTitle}</span>
-                    <span class="red-type">${displayType}</span>
+                    <span class="red-type">${item.sourceType === 'TV Show' ? 'TV' : item.sourceType}</span>
                 </div>
                 <div class="card-actions">
                     <button class="icon-btn edit-btn" onclick="editItem(${item.originalIndex})"><i class="fas fa-edit"></i></button>
@@ -352,10 +348,13 @@ function renderCurrentList() {
             div.addEventListener('drop', handleDrop);
             div.addEventListener('dragend', handleDragEnd);
         }
-
         grid.appendChild(div);
     });
 }
+
+// אל תשכח להוסיף את המאזינים בסוף הקוד ב-setupEvents או בסוף הקובץ:
+document.getElementById('listFilterInput').addEventListener('input', renderCurrentList);
+document.getElementById('filterSelect').addEventListener('change', renderCurrentList);
 
 window.editItem = function (index) {
     const list = state.lists.find(l => l._id === state.activeListId);
@@ -1200,10 +1199,10 @@ function switchAdminTab(tab) {
         document.getElementById('adminLogsSection').classList.remove('hidden');
         document.getElementById('adminTabLogs').className = 'btn-primary active-tab';
 
-        loadAdminLogs(); 
+        loadAdminLogs();
 
         logsAutoRefreshInterval = setInterval(() => {
-            loadAdminLogs(true); 
+            loadAdminLogs(true);
         }, 5000);
     }
 }

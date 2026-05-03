@@ -62,13 +62,183 @@ body {
 }
 
 .list-header {
+  width: 100%;
+  max-width: 1400px;
+  margin-bottom: 35px;
+  padding: 0 20px;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.title-row {
+  display: flex;
   align-items: center;
-  margin-bottom: 40px;
-  flex-wrap: wrap;
   gap: 15px;
 }
+
+.controls-row {
+  display: flex;
+  justify-content: space-between;
+  /* דוחף צד אחד לשמאל וצד שני לימין */
+  align-items: center;
+  width: 100%;
+  flex-wrap: wrap;
+  /* תמיכה במסכים קטנים */
+  gap: 15px;
+}
+
+.controls-left {
+  display: flex;
+  align-items: center;
+}
+
+.controls-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.unified-filter {
+  display: flex;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  height: 42px;
+  overflow: hidden;
+  width: 350px;
+  min-width: 0;
+}
+
+.unified-filter input {
+  flex: 2;
+  /* נותן לחיפוש יותר משקל */
+  min-width: 100px;
+  /* מבטיח שהוא לא יעלם לעולם */
+  border: none !important;
+  background: transparent !important;
+  padding: 0 12px;
+  color: var(--text-main);
+  outline: none;
+  font-size: 14px;
+}
+
+.unified-filter select {
+  flex: 1;
+  min-width: 110px;
+  border: none !important;
+  border-left: 1px solid var(--border) !important;
+  background: var(--card-bg);
+  color: var(--accent);
+  font-weight: bold;
+  cursor: pointer;
+  outline: none;
+  font-size: 13px;
+}
+
+/* עיצוב החיפוש והכפתורים (ימין) */
+.search-bar-container {
+  width: 240px;
+  position: relative;
+}
+
+#searchInput {
+  height: 42px;
+  border-radius: 6px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-main);
+  width: 100%;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.action-buttons button {
+  height: 42px;
+  padding: 0 18px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* התאמה למובייל */
+@media (max-width: 900px) {
+  .controls-row {
+      flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+  }
+     .list-header {
+       padding: 0 15px;
+       gap: 15px;
+     }
+
+  .controls-right {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+     .controls-left,
+     .controls-right {
+       width: 100%;
+       display: flex;
+       flex-direction: column;
+       gap: 10px;
+     }
+
+  .search-bar-container,
+  .action-buttons,
+  .action-buttons button {
+    width: 100% !important;
+  }
+
+    .unified-filter {
+      width: 100% !important;
+      height: auto;
+      flex-direction: row;
+    }
+
+
+}
+@media (max-width: 480px) {
+  .unified-filter {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .unified-filter input {
+    height: 42px;
+    border-bottom: 1px solid var(--border) !important;
+  }
+
+  .unified-filter select {
+    height: 42px;
+    border-left: none !important;
+    width: 100%;
+  }
+}
+
+.search-bar-container,
+.action-buttons {
+  width: 100% !important;
+}
+
+.action-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  /* כפתורים זה לצד זה */
+  gap: 8px;
+}
+
+.action-buttons button {
+  width: 100%;
+  justify-content: center;
+}
+
+
 
 .list-header,
 .grid {
@@ -112,14 +282,14 @@ body {
   }
 
   .navbar {
-      padding: 0 10px;
+    padding: 0 10px;
   }
 
-    .logo {
-      font-weight: bold;
-      font-size: 1rem;
-      color: var(--accent);
-    }
+  .logo {
+    font-weight: bold;
+    font-size: 1rem;
+    color: var(--accent);
+  }
 
   #reorderBtn,
   #saveOrderBtn {
@@ -636,8 +806,8 @@ select {
   }
 
   #themeToggle {
-  display: none;
-}
+    display: none;
+  }
 }
 
 #deleteModal .btn-primary {
@@ -823,3 +993,5 @@ select {
   max-width: 100%;
   display: block;
 }
+
+/* סידור הכותרת: שמאל וימין */

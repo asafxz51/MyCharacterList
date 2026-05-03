@@ -5,8 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer">
-    <link rel="icon"
-        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
+    <link rel="icon" type="image/png" href="/icon.png">
     <title>Shared List</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -29,12 +28,10 @@
             padding: 0 20px 80px 20px;
         }
 
-        /* הבלוק האפור של הכותרת - ממורכז ואלגנטי */
         .share-header {
             text-align: center;
             margin: 0 auto 40px auto;
             max-width: 800px;
-            /* מונע ממנו להימתח על כל המסך */
             background: var(--card-bg);
             padding: 30px;
             border-radius: 10px;
@@ -43,39 +40,77 @@
         }
 
         .controls {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 30px;
-        }
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+    padding: 0 15px;
+}
 
-        #filterSelect {
-            width: 250px;
-            padding: 10px;
-        }
+.unified-filter {
+    display: flex;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    height: 42px;
+    overflow: hidden;
+    width: 100%;
+    max-width: 450px; /* רוחב נוח לתצוגה */
+}
+
+.unified-filter input {
+    flex: 2;
+    min-width: 80px;
+    border: none !important;
+    background: transparent !important;
+    padding: 0 12px;
+    color: var(--text-main);
+    outline: none;
+}
+
+
+  .unified-filter select {
+    flex: 1;
+    min-width: 120px;
+    border: none !important;
+    border-left: 1px solid var(--border) !important;
+    background: var(--card-bg);
+    color: var(--accent);
+    font-weight: bold;
+    cursor: pointer;
+    outline: none;
+}
+
+@media (max-width: 480px) {
+    .unified-filter { flex-direction: column; height: auto; }
+    .unified-filter input, .unified-filter select { height: 42px; width: 100%; }
+    .unified-filter input { border-bottom: 1px solid var(--border) !important; }
+
+    #userListDropdown{
+        max-width: 10px;
+    }
+}
     </style>
 </head>
 
 <body class="dark-theme">
 
-    <!-- NAVBAR -->
-<nav class="navbar">
-    <div style="display: flex; align-items: center; gap: 10px;">
-        <button id="mobileMenuBtn" class="icon-btn mobile-only">
-            <i class="fas fa-bars"></i>
-        </button>
-        <a style="text-decoration: none;" href="/">
-            <div class="logo">MyCharacterList</div>
-        </a>
-    </div>
+    <nav class="navbar">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <button id="mobileMenuBtn" class="icon-btn mobile-only">
+                <i class="fas fa-bars"></i>
+            </button>
+            <a style="text-decoration: none;" href="/">
+                <div class="logo">MyCharacterList</div>
+            </a>
+        </div>
 
-    <div class="nav-controls">
-        <span id="userDisplay" style="margin-right:15px; font-size:0.9rem;"></span>
-        <button id="communityBtn" title="View Users"><i class="fas fa-users"></i></button>
-        <button id="themeToggle"><i class="fas fa-moon"></i></button>
-    </div>
-</nav>
+        <div class="nav-controls">
+            <span id="userDisplay" style="margin-right:15px; font-size:0.9rem;"></span>
+            <button id="communityBtn" title="View Users"><i class="fas fa-users"></i></button>
+            <button id="themeToggle"><i class="fas fa-moon"></i></button>
+        </div>
+    </nav>
 
-    <!-- MAIN CONTENT -->
     <div class="share-wrapper">
         <div class="share-header">
             <h1 id="listTitle" style="font-size: 2.5rem; margin-bottom: 10px;">Loading...</h1>
@@ -85,38 +120,39 @@
                 style="display: none; justify-content: center; align-items: center; gap: 10px; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
                 <label style="color: var(--text-muted); font-size: 0.9rem;">More from this user:</label>
                 <select id="userListsDropdown"
-                    style="width: auto; min-width: 200px; padding: 8px; background: var(--bg-color); border: 1px solid var(--border); color: var(--text-main); border-radius: 4px; cursor: pointer;">
-                </select>
+                    style="width: auto; min-width: 200px; padding: 8px; background: var(--bg-color); border: 1px solid var(--border); color: var(--text-main); border-radius: 4px; cursor: pointer;"></select>
             </div>
         </div>
 
+        <!-- הפילטר המאוחד -->
         <div class="controls">
-            <select id="filterSelect">
-                <option value="all">Show All</option>
-                <option value="Anime">Anime</option>
-                <option value="Game">Game</option>
-                <option value="Visual Novel">Visual Novel</option>
-                <option value="TV Show">TV Shows</option>
-                <option value="Movie">Movies</option>
-                <option value="Manga">Manga</option>
-                <option value="Book">Books</option>
-                <option value="Actor">Actors</option>
-                <option value="Other">Other</option>
-            </select>
+            <div class="unified-filter">
+                <input type="text" id="listFilterInput" placeholder="🔍 Search in list...">
+                <select id="filterSelect">
+                    <option value="all">All Categories</option>
+                    <option value="Anime">Anime</option>
+                    <option value="Game">Game</option>
+                    <option value="Visual Novel">Visual Novel</option>
+                    <option value="TV Show">TV Shows</option>
+                    <option value="Movie">Movies</option>
+                    <option value="Manga">Manga</option>
+                    <option value="Book">Books</option>
+                    <option value="Actor">Actors</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
         </div>
 
         <div id="grid" class="grid"></div>
     </div>
 
-    <!-- COMMUNITY MODAL -->
     <div id="communityModal" class="modal hidden">
         <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
             <span class="close-modal" id="closeCommModal">&times;</span>
             <h3 id="communityTitle" style="margin-bottom: 15px; text-align: center;">Community</h3>
             <button id="commBackBtn" class="btn-primary hidden"
-                style="margin-bottom: 15px; width: auto; background: #555;">
-                <i class="fas fa-arrow-left"></i> Back
-            </button>
+                style="margin-bottom: 15px; width: auto; background: #555;"><i class="fas fa-arrow-left"></i>
+                Back</button>
             <div id="commControls">
                 <div class="search-bar-container" style="width: 100%; margin-bottom: 15px;">
                     <input type="text" id="userSearchInput" placeholder="Search for users...">
@@ -137,18 +173,15 @@
             document.body.classList.toggle('light-theme');
         });
 
-        // --- משתנים גלובליים ---
         const params = new URLSearchParams(window.location.search);
         const id = params.get('id');
         let allItems = [];
         let listRankingType = 'numbers';
         let isFreeOrder = false;
 
-        // הפונקציה המעודכנת (כולל SSS ו /10)
         function getRatingDisplay(rating, type) {
             if (rating === 0) return 'No Grade';
             if (type !== 'letters') return rating + '/10';
-
             if (rating >= 13) return 'SSS';
             if (rating >= 12) return 'SS';
             if (rating >= 11) return 'S';
@@ -168,86 +201,85 @@
                     document.querySelector('.share-wrapper').innerHTML = "<h1 style='text-align:center; margin-top:50px;'>List not found</h1>";
                     return;
                 }
-
                 document.title = data.name;
                 document.getElementById('listTitle').textContent = data.name;
                 document.getElementById('listAuthor').textContent = `Created by: ${data.author}`;
-
                 listRankingType = data.rankingType || 'numbers';
                 isFreeOrder = data.isFreeOrder || false;
                 allItems = data.items;
-
                 renderList();
                 if (data.userId) fetchUserLists(data.userId, id);
             })
             .catch(err => console.error(err));
 
-        document.getElementById('filterSelect').addEventListener('change', renderList);
-
         function renderList() {
             const grid = document.getElementById('grid');
             grid.innerHTML = '';
 
-            const filterType = document.getElementById('filterSelect').value;
+            const category = document.getElementById('filterSelect').value;
+            const searchInput = document.getElementById('listFilterInput');
+            const search = searchInput ? searchInput.value.toLowerCase() : "";
+
             let displayItems = [...allItems];
 
-            if (filterType !== 'all') {
-                displayItems = displayItems.filter(item => item.sourceType === filterType);
-            }
+            // פילטור משולב
+            displayItems = displayItems.filter(item => {
+                const matchesCategory = (category === 'all' || item.sourceType === category);
+                const matchesSearch = (
+                    item.characterName.toLowerCase().includes(search) ||
+                    item.sourceTitle.toLowerCase().includes(search)
+                );
+                return matchesCategory && matchesSearch;
+            });
 
             if (!isFreeOrder) {
                 displayItems.sort((a, b) => b.rating - a.rating);
             }
 
             if (displayItems.length === 0) {
-                grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888; font-size:1.2rem;">No characters found.</p>';
+                grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888; font-size:1.2rem; padding: 40px;">No characters found.</p>';
                 return;
             }
 
             displayItems.forEach((item, index) => {
                 const div = document.createElement('div');
                 div.className = 'char-card';
-
-                let rankClass = 'rank-other';
-                if (index === 0) rankClass = 'rank-1';
-                if (index === 1) rankClass = 'rank-2';
-                if (index === 2) rankClass = 'rank-3';
-
+                let rankClass = (index === 0) ? 'rank-1' : (index === 1) ? 'rank-2' : (index === 2) ? 'rank-3' : 'rank-other';
                 const displayRating = getRatingDisplay(item.rating, listRankingType);
                 const ratingHtml = item.rating === 0 ? '' : `<div class="char-rating">${displayRating}</div>`;
-
-                let displayType = item.sourceType;
-                if (displayType === 'TV Show') displayType = 'TV';
+                let displayType = item.sourceType === 'TV Show' ? 'TV' : item.sourceType;
 
                 div.innerHTML = `
-                    <div class="rank-badge ${rankClass}">#${index + 1}</div>
-                    ${ratingHtml}
-                    <img src="${item.image}" class="char-img">
-                    <div class="char-info">
-                        <div class="char-name">${item.characterName}</div>
-                        <div class="source-row">
-                            <span class="source-title" title="${item.sourceTitle}">${item.sourceTitle}</span>
-                            <span class="red-type">${displayType}</span>
-                        </div>
+                <div class="rank-badge ${rankClass}">#${index + 1}</div>
+                ${ratingHtml}
+                <img src="${item.image}" class="char-img">
+                <div class="char-info">
+                    <div class="char-name">${item.characterName}</div>
+                    <div class="source-row">
+                        <span class="source-title" title="${item.sourceTitle}">${item.sourceTitle}</span>
+                        <span class="red-type">${displayType}</span>
                     </div>
-                `;
+                </div>
+            `;
                 grid.appendChild(div);
             });
         }
 
+        // מאזינים
+        document.getElementById('listFilterInput').addEventListener('input', renderList);
+        document.getElementById('filterSelect').addEventListener('change', renderList);
+
+        // --- שאר הפונקציות (fetchUserLists, community וכו') נשארות כפי שהיו ---
         async function fetchUserLists(userId, currentListId) {
             try {
                 const res = await fetch(`/api/users/${userId}/lists`);
                 if (!res.ok) return;
                 const lists = await res.json();
-
                 if (lists.length > 1) {
                     const container = document.getElementById('otherListsContainer');
                     const dropdown = document.getElementById('userListsDropdown');
-
                     container.style.display = 'flex';
                     dropdown.innerHTML = '';
-
                     lists.forEach(l => {
                         const option = document.createElement('option');
                         option.value = l._id;
@@ -255,7 +287,6 @@
                         if (l._id === currentListId) option.selected = true;
                         dropdown.appendChild(option);
                     });
-
                     dropdown.addEventListener('change', (e) => {
                         const selectedId = e.target.value;
                         if (selectedId !== currentListId) {
@@ -263,20 +294,12 @@
                         }
                     });
                 }
-            } catch (e) {
-                console.error(e);
-            }
+            } catch (e) { console.error(e); }
         }
 
-        // --- COMMUNITY LOGIC ---
         let loggedInUser = null;
         let commState = { view: 'all', search: '' };
-
-        fetch('/api/auth/check').then(res => {
-            if (res.ok) {
-                res.json().then(data => { loggedInUser = data.username; });
-            }
-        });
+        fetch('/api/auth/check').then(res => { if (res.ok) res.json().then(data => { loggedInUser = data.username; }); });
 
         document.getElementById('communityBtn').addEventListener('click', () => {
             commState = { view: 'all', search: '' };
@@ -289,7 +312,6 @@
 
         const btnAll = document.getElementById('tabAllUsers');
         const btnSaved = document.getElementById('tabSavedUsers');
-
         btnAll.onclick = () => switchCommTab('all');
         btnSaved.onclick = () => switchCommTab('saved');
 
@@ -319,59 +341,32 @@
             const backBtn = document.getElementById('commBackBtn');
             const title = document.getElementById('communityTitle');
             const commTabs = document.getElementById('commTabs');
-
             document.getElementById('communityModal').classList.remove('hidden');
             controls.classList.remove('hidden');
             backBtn.classList.add('hidden');
             title.textContent = commState.view === 'all' ? "Community Users" : "Following";
-
             if (!loggedInUser) commTabs.style.display = 'none';
             else commTabs.style.display = 'flex';
-
             grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Loading...</p>';
-
             try {
                 const onlyFollowing = commState.view === 'saved';
                 const res = await fetch(`/api/users?search=${commState.search}&onlyFollowing=${onlyFollowing}`);
-
                 if (res.status === 401) {
-                    grid.innerHTML = `
-                        <div style="grid-column: 1/-1; text-align:center; padding: 20px;">
-                            <p style="margin-bottom:10px;">Please login to use this feature.</p>
-                            <a href="/"><button class="btn-primary" style="width:auto;">Go to Login</button></a>
-                        </div>
-                    `;
+                    grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 20px;"><p style="margin-bottom:10px;">Please login to use this feature.</p><a href="/"><button class="btn-primary" style="width:auto;">Go to Login</button></a></div>`;
                     return;
                 }
-
                 const users = await res.json();
                 grid.innerHTML = '';
-
                 if (users.length === 0) {
                     grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center;">No users found.</p>';
                     return;
                 }
-
                 users.forEach(u => {
                     if (u.isMe) return;
                     const div = document.createElement('div');
                     div.className = 'user-card';
-
-                    let starHtml = '';
-                    if (loggedInUser) {
-                        const starClass = u.isFollowing ? 'fas fa-star active' : 'far fa-star';
-                        starHtml = `
-                            <button class="follow-btn" onclick="toggleFollow(event, '${u._id}')">
-                                <i class="${starClass}"></i>
-                            </button>
-                        `;
-                    }
-
-                    div.innerHTML = `
-                        ${starHtml}
-                        <i class="fas fa-user-circle user-icon"></i>
-                        <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 5px;">${u.username}</div>
-                    `;
+                    let starHtml = loggedInUser ? `<button class="follow-btn" onclick="toggleFollow(event, '${u._id}')"><i class="${u.isFollowing ? 'fas fa-star active' : 'far fa-star'}"></i></button>` : '';
+                    div.innerHTML = `${starHtml}<i class="fas fa-user-circle user-icon"></i><div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 5px;">${u.username}</div>`;
                     div.onclick = (e) => { if (!e.target.closest('.follow-btn')) showUserLists(u._id, u.username); };
                     grid.appendChild(div);
                 });
@@ -381,11 +376,9 @@
         async function toggleFollow(e, userId) {
             e.stopPropagation();
             const btn = e.currentTarget.querySelector('i');
-
             try {
                 const res = await fetch(`/api/users/follow/${userId}`, { method: 'POST' });
                 if (res.status === 401) return alert("Please login to follow users.");
-
                 const isFollowing = btn.classList.contains('fas');
                 btn.className = isFollowing ? 'far fa-star' : 'fas fa-star active';
                 if (commState.view === 'saved' && isFollowing) loadCommunityUsers();
@@ -397,29 +390,22 @@
             const controls = document.getElementById('commControls');
             const backBtn = document.getElementById('commBackBtn');
             const title = document.getElementById('communityTitle');
-
             controls.classList.add('hidden');
             backBtn.classList.remove('hidden');
             title.textContent = `${username}'s Lists`;
             grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Loading lists...</p>';
-
             try {
                 const res = await fetch(`/api/users/${userId}/lists`);
                 const lists = await res.json();
                 grid.innerHTML = '';
-
                 if (lists.length === 0) {
                     grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center;">No public lists.</p>';
                     return;
                 }
-
                 lists.forEach(list => {
                     const div = document.createElement('div');
                     div.className = 'comm-list-card';
-                    div.innerHTML = `
-                        <h4 style="color:var(--accent); margin:0 0 5px 0;">${list.name}</h4>
-                        <p style="color:var(--text-muted); font-size:0.9rem;">${list.items.length} items</p>
-                    `;
+                    div.innerHTML = `<h4 style="color:var(--accent); margin:0 0 5px 0;">${list.name}</h4><p style="color:var(--text-muted); font-size:0.9rem;">${list.items.length} items</p>`;
                     div.onclick = () => window.location.href = `/share.html?id=${list._id}`;
                     grid.appendChild(div);
                 });
