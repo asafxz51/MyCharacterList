@@ -220,33 +220,47 @@ app.delete('/api/admin/lists/:id', verifyToken, verifyAdmin, async (req, res) =>
 
 app.get('/api/users', optionalToken, async (req, res) => {
   try {
-    const { search, onlyFollowing } = req.query;
+    const { search } = req.query;
 
-    if (onlyFollowing === 'true' && !req.user) {
-      return res.status(401).json({ error: 'Please login to view followed users' });
+    // 1. נמצא את כל ה-IDs של משתמשים שיש להם לפחות רשימה אחת שאינה פרטית
+    const usersWithPublicLists = await List.distinct('userId', { isPrivate: { $ne: true } });
+
+    let query = { _id: { $in: usersWithPublicLists } };
+
+    // פילטר חיפוש (אם קיים)
+    if (search) {
+      query.username = { $regex: search, $options: 'i' };
     }
 
-    let query = {};
-    if (search) query.username = { $regex: search, $options: 'i' };
-
+    // 2. נמצא את המשתמש הנוכחי כדי לדעת אחרי מי הוא עוקב
     let currentUser = null;
     if (req.user) {
       currentUser = await User.findById(req.user._id);
-      if (onlyFollowing === 'true') {
-        query._id = { $in: currentUser.following };
-      }
     }
 
+    // 3. שליפת המשתמשים
     const users = await User.find(query, 'username');
-    const usersWithStatus = users.map(u => ({
+
+    // 4. עיבוד הנתונים: הוספת סטטוס מעקב ומיון
+    let usersWithStatus = users.map(u => ({
       _id: u._id,
       username: u.username,
       isFollowing: currentUser ? currentUser.following.includes(u._id) : false,
       isMe: currentUser ? u._id.equals(currentUser._id) : false
     }));
 
+    // לא נציג את עצמנו ברשימה
+    usersWithStatus = usersWithStatus.filter(u => !u.isMe);
+
+    // 5. מיון: אלו שאנחנו עוקבים אחריהם (isFollowing === true) יהיו למעלה
+    usersWithStatus.sort((a, b) => {
+      if (a.isFollowing === b.isFollowing) return 0;
+      return a.isFollowing ? -1 : 1;
+    });
+
     res.json(usersWithStatus);
   } catch (e) {
+    console.error(e);
     res.status(500).json({ error: e.message });
   }
 });

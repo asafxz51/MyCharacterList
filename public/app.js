@@ -910,9 +910,6 @@ document.getElementById('communityBtn').addEventListener('click', () => {
 
 document.getElementById('commBackBtn').addEventListener('click', loadCommunityUsers);
 
-// Tabs
-document.getElementById('tabAllUsers').addEventListener('click', () => switchCommTab('all'));
-document.getElementById('tabSavedUsers').addEventListener('click', () => switchCommTab('saved'));
 
 // Search Listener (Debounced)
 let userSearchDebounce;
@@ -956,36 +953,26 @@ async function loadCommunityUsers() {
     const controls = document.getElementById('commControls');
     const backBtn = document.getElementById('commBackBtn');
     const title = document.getElementById('communityTitle');
-    const commTabs = document.getElementById('commTabs'); // תפסנו את הטאבים
 
     document.getElementById('communityModal').classList.remove('hidden');
     controls.classList.remove('hidden');
     backBtn.classList.add('hidden');
-    title.textContent = commState.view === 'all' ? "Community Users" : "Following";
+    title.textContent = "Community";
 
-    // --- הסתרת הטאבים לאורחים ---
-    if (!state.user) {
-        commTabs.style.display = 'none';
-    } else {
-        commTabs.style.display = 'flex';
-    }
-
-    grid.innerHTML = '<p style="text-align:center;">Loading...</p>';
+    grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Loading...</p>';
 
     try {
-        const onlyFollowing = commState.view === 'saved';
-        const res = await fetch(`/api/users?search=${commState.search}&onlyFollowing=${onlyFollowing}`);
+        // שולחים בקשה רגילה, השרת כבר ימיין ויסנן עבורנו
+        const res = await fetch(`/api/users?search=${commState.search}`);
         const users = await res.json();
 
         grid.innerHTML = '';
         if (users.length === 0) {
-            grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center;">No users found.</p>';
+            grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color: var(--text-muted);">No users with public lists found.</p>';
             return;
         }
 
         users.forEach(u => {
-            if (u.isMe) return;
-
             const div = document.createElement('div');
             div.className = 'user-card';
 
@@ -1002,7 +989,7 @@ async function loadCommunityUsers() {
             div.innerHTML = `
                 ${starHtml}
                 <i class="fas fa-user-circle user-icon"></i>
-                <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 5px;">${u.username}</div>
+                <div title="${u.username}">${u.username}</div>
             `;
 
             div.onclick = (e) => {
@@ -1014,29 +1001,24 @@ async function loadCommunityUsers() {
 
     } catch (e) {
         console.error(e);
-        grid.innerHTML = '<p style="text-align:center;">Error loading users.</p>';
+        grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Error loading users.</p>';
     }
 }
 
 // Toggle Follow
 window.toggleFollow = async function (e, userId) {
-    e.stopPropagation(); // Don't open the user's lists
+    e.stopPropagation();
     const btn = e.currentTarget.querySelector('i');
 
-    // UI Update immediately (Optimistic)
-    const isFollowing = btn.classList.contains('fas');
-    if (isFollowing) {
-        btn.className = 'far fa-star'; // Unfollow visually
-    } else {
-        btn.className = 'fas fa-star active'; // Follow visually
-    }
+    // שינוי ויזואלי מהיר
+    const wasFollowing = btn.classList.contains('fas');
+    btn.className = wasFollowing ? 'far fa-star' : 'fas fa-star active';
 
     try {
         await fetch(`/api/users/follow/${userId}`, { method: 'POST' });
-        // If we are in "Following" tab and we unfollow, reload to remove item
-        if (commState.view === 'saved' && isFollowing) {
-            loadCommunityUsers();
-        }
+
+        // רענון הרשימה כדי שהמיון (מעקב למעלה) יתעדכן
+        loadCommunityUsers();
     } catch (err) {
         console.error("Follow error", err);
     }
