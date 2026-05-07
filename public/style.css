@@ -102,6 +102,31 @@ body {
   min-width: auto;
 }
 
+/* באדג' לייקים ליד הכותרת באינדקס */
+.likes-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 68, 68, 0.1);
+  color: #ff4444;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border: 1px solid rgba(255, 68, 68, 0.2);
+}
+
+/* קונטיינר התגובות */
+.comments-container {
+  width: 100%;
+  max-width: 900px;
+  margin-top: 50px;
+  padding: 30px;
+  background: var(--card-bg);
+  border-radius: 15px;
+  border: 1px solid var(--border);
+}
+
 /* --- נאב-בר מצב מובייל --- */
 @media (max-width: 768px) {
   .navbar {

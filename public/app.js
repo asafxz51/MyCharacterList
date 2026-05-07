@@ -6,6 +6,7 @@ let state = {
 let logsAutoRefreshInterval = null;
 let visibleNotifsLimit = 5;
 let currentNotifsData = [];
+let visibleIndexCommentsLimit = 10;
 
 async function init() {
     await checkLoginStatus();
@@ -418,12 +419,18 @@ function handleDragEnd(e) {
 
 function renderCurrentList() {
     const grid = document.getElementById('characterGrid');
-    const header = document.querySelector('.list-header'); // תופסים את כל שורת הפקדים
+    const header = document.querySelector('.list-header');
+    const likesArea = document.getElementById('indexLikesCount');
+    const likesNum = document.getElementById('indexLikesNumber');
+    const commentsSec = document.getElementById('indexCommentsSection');
+
     grid.innerHTML = '';
 
     // --- מצב שבו המשתמש מחובר אבל אין לו אף רשימה ---
     if (state.user && state.lists.length === 0) {
-        if (header) header.style.display = 'none'; // העלמת כל שורת הכלים (חיפוש, פילטר, כפתורים)
+        if (header) header.style.display = 'none';
+        if (commentsSec) commentsSec.classList.add('hidden'); // מסתיר תגובות
+        if (likesArea) likesArea.classList.add('hidden');   // מסתיר לייקים
 
         grid.innerHTML = `
             <div style="grid-column: 1/-1; text-align: center; padding: 80px 20px; max-width: 500px; margin: 60px auto; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
@@ -444,16 +451,38 @@ function renderCurrentList() {
     // --- מצב רגיל (יש רשימות) ---
     const list = state.lists.find(l => l._id === state.activeListId);
     if (!list) {
-        if (header) header.style.display = 'none'; // אם מסיבה כלשהי אין ליסט פעיל, נסתיר את ההדר
+        if (header) header.style.display = 'none';
+        if (commentsSec) commentsSec.classList.add('hidden');
+        if (likesArea) likesArea.classList.add('hidden');
         return;
     }
 
-    // הצגת ההדר חזרה כשיש ליסט
+    // הצגת הפקדים
     if (header) header.style.display = 'flex';
-
     document.getElementById('currentListTitle').textContent = list.name;
     const editTitleBtn = document.getElementById('editListTitleBtn');
     if (editTitleBtn) editTitleBtn.classList.remove('hidden');
+
+    // --- 1. עדכון מונה הלייקים (Chip) ליד הכותרת ---
+    if (likesArea && likesNum) {
+        const count = list.likes ? list.likes.length : 0;
+        likesNum.textContent = count;
+        // נציג את הצ'יפ רק אם יש לייקים
+        if (count > 0) likesArea.classList.remove('hidden');
+        else likesArea.classList.add('hidden');
+    }
+
+    // --- 2. הצגת/הסתרת אזור התגובות באינדקס ---
+    if (commentsSec) {
+        if (list.allowComments !== false) {
+            commentsSec.classList.remove('hidden');
+            // מאפסים את מגבלת התגובות כשעוברים ליסט ומרנדרים
+            visibleIndexCommentsLimit = 10;
+            renderIndexComments(list.comments, list.userId);
+        } else {
+            commentsSec.classList.add('hidden');
+        }
+    }
 
     // --- לוגיקת פילטור משולבת ---
     const category = document.getElementById('filterSelect').value;
@@ -1579,6 +1608,73 @@ window.adminDeleteList = async function (listId, userId, username) {
     await fetch(`/api/admin/lists/${listId}`, { method: 'DELETE' });
     adminManageLists(userId, username);
 }
+
+function renderIndexComments(comments, ownerId) {
+    const listArea = document.getElementById('indexCommentsList');
+    const loadMore = document.getElementById('indexLoadMoreCommentsContainer');
+    if (!listArea) return;
+    listArea.innerHTML = '';
+    const safeComments = Array.isArray(comments) ? comments : [];
+
+    if (safeComments.length === 0) {
+        listArea.innerHTML = '<p style="text-align:center; color:#888;">No comments from the community yet.</p>';
+        if (loadMore) loadMore.style.display = 'none';
+        return;
+    }
+
+    const sorted = [...safeComments].reverse();
+    sorted.slice(0, visibleIndexCommentsLimit).forEach(c => {
+        const div = document.createElement('div');
+        div.style = "padding:15px; background:var(--bg-color); border-radius:10px; border:1px solid var(--border); position:relative; margin-bottom:12px;";
+
+        // כאן (באינדקס) המשתמש הוא הבעלים, אז תמיד מופיע לו כפתור מחיקה
+        const delBtn = `<button onclick="deleteIndexComment('${c._id}')" style="position:absolute; right:12px; top:12px; background:none; border:none; color:#ff4444; cursor:pointer;"><i class="fas fa-trash"></i></button>`;
+
+        div.innerHTML = `${delBtn}<div style="font-weight:bold; color:var(--accent);">${c.username}</div><div>${c.text}</div><div style="font-size:0.7rem; color:#666; margin-top:5px;">${new Date(c.timestamp).toLocaleString('he-IL')}</div>`;
+        listArea.appendChild(div);
+    });
+    if (loadMore) loadMore.style.display = sorted.length > visibleIndexCommentsLimit ? 'block' : 'none';
+}
+
+// לחיצה על "שלח תגובה" באינדקס
+document.getElementById('submitIndexComment').onclick = async () => {
+    const input = document.getElementById('indexCommentText');
+    const text = input.value.trim();
+    if (!text || !state.activeListId) return;
+
+    const res = await fetch(`/api/lists/${state.activeListId}/comment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+    });
+    if (res.ok) {
+        const data = await res.json();
+        // מעדכנים את הזיכרון הלוקאלי
+        const currentList = state.lists.find(l => l._id === state.activeListId);
+        currentList.comments = data;
+        input.value = '';
+        renderIndexComments(data, currentList.userId);
+    } else {
+        const err = await res.json();
+        alert(err.error);
+    }
+};
+
+window.deleteIndexComment = async function (commentId) {
+    if (!confirm("Delete this community comment?")) return;
+    const res = await fetch(`/api/lists/${state.activeListId}/comments/${commentId}`, { method: 'DELETE' });
+    if (res.ok) {
+        const currentList = state.lists.find(l => l._id === state.activeListId);
+        currentList.comments = currentList.comments.filter(c => c._id !== commentId);
+        renderIndexComments(currentList.comments, currentList.userId);
+    }
+};
+
+document.getElementById('loadMoreIndexCommentsBtn').onclick = () => {
+    visibleIndexCommentsLimit += 10;
+    const list = state.lists.find(l => l._id === state.activeListId);
+    renderIndexComments(list.comments, list.userId);
+};
 
 
 

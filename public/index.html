@@ -70,8 +70,13 @@
       <header class="list-header">
         <!-- שורה 1: כותרת בלבד -->
         <div class="title-row">
-          <h2 id="currentListTitle">Select a List</h2>
-          <button id="editListTitleBtn" class="icon-btn hidden"><i class="fas fa-pen"></i></button>
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <h2 id="currentListTitle">Select a List</h2>
+            <button id="editListTitleBtn" class="icon-btn hidden"><i class="fas fa-pen"></i></button>
+            <div id="indexLikesCount" class="likes-chip hidden">
+              <i class="fas fa-heart"></i> <span id="indexLikesNumber">0</span>
+            </div>
+          </div>
         </div>
       
         <div class="controls-row">
@@ -113,6 +118,22 @@
         </div>
       </header>
       <div id="characterGrid" class="grid"></div>
+      <div id="indexCommentsSection" class="comments-container hidden">
+        <h3 style="margin-bottom: 20px; color: var(--accent);"><i class="fas fa-comments"></i> Comments</h3>
+      
+        <div id="indexCommentInputArea" style="margin-bottom: 30px; display: flex; gap: 10px;">
+          <input type="text" id="indexCommentText" placeholder="Write a reply..."
+            style="flex: 1; height: 45px; padding: 0 15px; background: var(--bg-color); border: 1px solid var(--border); color: var(--text-main); border-radius: 10px;">
+          <button id="submitIndexComment" class="btn-primary" style="width: auto; padding: 0 25px;">Post</button>
+        </div>
+      
+        <div id="indexCommentsList"></div>
+        <div id="indexLoadMoreCommentsContainer" style="text-align: center; margin-top: 20px; display: none;">
+          <button id="loadMoreIndexCommentsBtn" class="btn-primary"
+            style="width: auto; background: transparent; border: 1px solid var(--accent); color: var(--accent);">Load
+            More</button>
+        </div>
+      </div>
     </main>
   </div>
 
