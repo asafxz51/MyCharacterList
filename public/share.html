@@ -77,6 +77,33 @@
             padding: 0 15px;
         }
 
+        #notifArea {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+#notifBadge {
+    position: absolute;
+    top: -2px;      /* שינוי מיקום מלמעלה */
+    right: -2px;     /* שינוי מיקום מימין */
+    background: #ff4444;
+    color: white;
+    border-radius: 50%;
+    min-width: 24px; /* מבטיח עיגול מושלם */
+    height: 24px;
+    padding: 0 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--sidebar-bg); /* מסגרת דקה שיוצרת הפרדה מהכפתור */
+    z-index: 10;
+    pointer-events: none; /* מבטיח שהלחיצה תעבור לכפתור שמתחת */
+}
+
         @media (max-width: 768px) {
             .navbar {
                 padding: 10px;
@@ -99,10 +126,23 @@
                 flex: 1.5;
             }
 
-            .nav-controls button,
-            #notifArea {
-                flex: 1;
-            }
+             .nav-controls button, #notifArea {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    #notifBtn {
+        width: 100%; /* שהכפתור ימלא את המיכל */
+    }
+
+    #notifBadge {
+        top: 2px;   /* התאמה למובייל */
+        right: 15%; /* הצמדה לפינת האייקון במובייל */
+    }
+
+    
 
                #otherListsContainer {
             display: flex;
@@ -458,7 +498,7 @@
             const safeComments = Array.isArray(comments) ? comments : [];
 
             if (safeComments.length === 0) {
-                area.innerHTML = '<p style="text-align:center; color:#888; padding: 20px;">No comments yet.</p>';
+                area.innerHTML = '<p style="text-align:center; color:#888; padding: 20px;">No comments yet. Be the first to reply!</p>';
                 if (loadMore) loadMore.style.display = 'none';
                 return;
             }
@@ -475,6 +515,18 @@
                 // לייק לתגובה ראשית
                 const hasLikedC = c.likes && currentUserData && c.likes.map(id => id.toString()).includes(currentUserData._id.toString());
                 const cLikeColor = hasLikedC ? '#ff4444' : '#888';
+                const cHeartClass = hasLikedC ? 'fas' : 'far';
+
+                // מחיקת תגובה ראשית
+                let delBtnC = '';
+                if (currentUserData) {
+                    const isOwner = currentUserData._id.toString() === ownerId.toString();
+                    const isAdmin = currentUserData.role === 'admin';
+                    const isAuthor = currentUserData._id.toString() === (c.userId ? c.userId.toString() : '');
+                    if (isOwner || isAdmin || isAuthor) {
+                        delBtnC = `<button onclick="deleteComment('${c._id}')" style="color:#ff4444; background:none; border:none; cursor:pointer;"><i class="fas fa-trash"></i></button>`;
+                    }
+                }
 
                 div.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
@@ -483,29 +535,44 @@
                 </div>
                 <div style="display:flex; gap:12px; align-items:center;">
                     <button onclick="likeComment('${c._id}')" style="background:none; border:none; color:${cLikeColor}; cursor:pointer; font-size:0.9rem;">
-                        <i class="${hasLikedC ? 'fas' : 'far'} fa-heart"></i> ${c.likes?.length || 0}
+                        <i class="${cHeartClass} fa-heart"></i> ${c.likes?.length || 0}
                     </button>
                     <button onclick="toggleReplyBox('${c._id}', '${c.username}')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.9rem;">
                         <i class="fas fa-reply"></i>
                     </button>
-                    ${(currentUserData && (currentUserData._id === ownerId || currentUserData._id === c.userId || currentUserData.role === 'admin')) ?
-                        `<button onclick="deleteComment('${c._id}')" style="color:#ff4444; background:none; border:none; cursor:pointer;"><i class="fas fa-trash"></i></button>` : ''}
+                    ${delBtnC}
                 </div>
             </div>
             <div style="color:var(--text-main); margin-bottom:12px; line-height:1.4;">${c.text}</div>
             
-            <!-- שרשור תגובות (Replies) -->
+            <!-- שרשור תגובות לתגובה (Replies) -->
             <div id="replies-${c._id}" style="margin-left: 20px; border-left: 2px solid var(--border); padding-left: 15px; margin-top: 10px;">
                 ${c.replies ? c.replies.map(r => {
-                            const hasLikedR = r.likes && currentUserData && r.likes.map(id => id.toString()).includes(currentUserData._id.toString());
-                            return `
+                    const hasLikedR = r.likes && currentUserData && r.likes.map(id => id.toString()).includes(currentUserData._id.toString());
+                    const rLikeColor = hasLikedR ? '#ff4444' : '#888';
+                    const rHeartClass = hasLikedR ? 'fas' : 'far';
+
+                    let delBtnR = '';
+                    if (currentUserData) {
+                        const isOwner = currentUserData._id.toString() === ownerId.toString();
+                        const isAdmin = currentUserData.role === 'admin';
+                        const isAuthor = currentUserData._id.toString() === (r.userId ? r.userId.toString() : '');
+                        if (isOwner || isAdmin || isAuthor) {
+                            delBtnR = `<button onclick="deleteReply('${c._id}', '${r._id}')" style="background:none; border:none; color:#ff4444; cursor:pointer; font-size:0.75rem; padding:0;"><i class="fas fa-trash"></i></button>`;
+                        }
+                    }
+
+                    return `
                     <div style="margin-bottom:10px; font-size:0.85rem; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; position:relative;">
-                        <b style="color:var(--accent); cursor:pointer;" onclick="showUserLists('${r.userId}', '${r.username}'); document.getElementById('communityModal').classList.remove('hidden');">${r.username}</b> 
-                        ${r.replyingTo ? `<span style="color:var(--text-muted); font-size:0.75rem;">replying to @${r.replyingTo}</span>` : ''}
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <b style="color:var(--accent); cursor:pointer;" onclick="showUserLists('${r.userId}', '${r.username}'); document.getElementById('communityModal').classList.remove('hidden');">${r.username}</b>
+                            ${delBtnR}
+                        </div>
+                        ${r.replyingTo ? `<span style="color:var(--text-muted); font-size:0.7rem;">replying to @${r.replyingTo}</span>` : ''}
                         <p style="margin:5px 0; color:var(--text-main);">${r.text}</p>
                         <div style="display:flex; gap:15px; align-items:center;">
-                             <button onclick="likeReply('${c._id}', '${r._id}')" style="background:none; border:none; color:${hasLikedR ? '#ff4444' : '#666'}; cursor:pointer; font-size:0.75rem; padding:0;">
-                                <i class="${hasLikedR ? 'fas' : 'far'} fa-heart"></i> ${r.likes?.length || 0}
+                             <button onclick="likeReply('${c._id}', '${r._id}')" style="background:none; border:none; color:${rLikeColor}; cursor:pointer; font-size:0.75rem; padding:0;">
+                                <i class="${rHeartClass} fa-heart"></i> ${r.likes?.length || 0}
                              </button>
                              <button onclick="toggleReplyBox('${c._id}', '${r.username}')" style="background:none; border:none; color:var(--accent); font-size:0.7rem; cursor:pointer; padding:0;">Reply</button>
                         </div>
@@ -528,13 +595,38 @@
         document.getElementById('filterSelect').onchange = renderList;
 
         document.getElementById('likeBtn').onclick = async () => {
-            if (!loggedInUser) return alert("Please Login to like.");
-            const res = await fetch(`/api/lists/${listId}/like`, { method: 'POST' });
-            const r = await res.json();
-            document.getElementById('likesCount').textContent = r.likesCount;
-            document.querySelector('#likeBtn i').className = r.isLiked ? 'fas fa-heart' : 'far fa-heart';
-            if (r.isLiked) currentListData.likes.push(currentUserData._id); else currentListData.likes = currentListData.likes.filter(id => id !== currentUserData._id);
-        };
+                // בודקים אם יש משתמש מחובר (שימוש במשתנה המדויק שלך)
+                if (!loggedInUser) return alert("Please Login to like.");
+
+                try {
+                    // שים לב: משתמשים ב-listId כפי שהגדרת בראש הקובץ
+                    const res = await fetch(`/api/lists/${listId}/like`, { method: 'POST' });
+                    const result = await res.json();
+
+                    // עדכון המספר על המסך
+                    const likesCountEl = document.getElementById('likesCount');
+                    if (likesCountEl) likesCountEl.textContent = result.likesCount;
+
+                    // שינוי צבע הלב
+                    const icon = document.querySelector('#likeBtn i');
+                    if (icon) {
+                        icon.className = result.isLiked ? 'fas fa-heart' : 'far fa-heart';
+                    }
+
+                    // עדכון הזיכרון המקומי למקרה של רינדור חוזר
+                    if (currentListData) {
+                        if (result.isLiked) {
+                            if (!currentListData.likes) currentListData.likes = [];
+                            currentListData.likes.push(currentUserData._id);
+                        } else {
+                            currentListData.likes = currentListData.likes.filter(uid => uid !== currentUserData._id);
+                        }
+                    }
+
+                } catch (err) {
+                    console.error("Like Action Error:", err);
+                }
+            };
 
         document.getElementById('submitComment').onclick = async () => {
                 const inp = document.getElementById('commentText');
@@ -703,14 +795,16 @@
                     }
                 };
 
-            window.likeComment = async function (cid) {
-                if (!loggedInUser) return alert("Please Login to like.");
-                const res = await fetch(`/api/lists/${listId}/comments/${cid}/like`, { method: 'POST' });
-                if (res.ok) {
-                    currentListData.comments = await res.json();
-                    renderComments(currentListData.comments, currentListData.userId);
-                }
-            };
+            window.likeComment = async function (commentId) {
+                    if (!loggedInUser) return alert("Please Login to like.");
+                    const res = await fetch(`/api/lists/${listId}/comments/${commentId}/like`, { method: 'POST' });
+                    if (res.ok) {
+                    
+                        const updatedComments = await res.json();
+                        currentListData.comments = updatedComments;
+                        renderComments(updatedComments, currentListData.userId);
+                    }
+                };
 
             window.likeReply = async function (commentId, replyId) {
                     if (!loggedInUser) return alert("Please Login");
@@ -723,6 +817,18 @@
                         }
                     } catch (err) { console.error(err); }
                 };
+
+                window.deleteReply = async function (commentId, replyId) {
+                        if (!confirm("Delete this reply?")) return;
+                        try {
+                            const res = await fetch(`/api/lists/${listId}/comments/${commentId}/replies/${replyId}`, { method: 'DELETE' });
+                            if (res.ok) {
+                                const updatedComments = await res.json();
+                                currentListData.comments = updatedComments;
+                                renderComments(updatedComments, currentListData.userId);
+                            }
+                        } catch (err) { console.error(err); }
+                    };
 
         initPage();
     </script>

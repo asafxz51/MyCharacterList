@@ -169,47 +169,59 @@ app.post('/api/lists/:id/duplicate', verifyToken, async (req, res) => {
 
 // --- INTERACTIONS (LIKES/COMMENTS) ---
 
-// לייק לתגובה ראשית (עם הגנה מספאם נוטיפיקציות)
-app.post('/api/lists/:listId/comments/:commentId/like', verifyToken, async (req, res) => {
-  try {
-    const list = await List.findById(req.params.listId);
-    const comment = list.comments.id(req.params.commentId);
-    if (!comment) return res.status(404).send("Comment not found");
 
-    const user = await User.findById(req.user._id);
-    const index = comment.likes.indexOf(user._id);
+app.post('/api/lists/:id/like', verifyToken, async (req, res) => {
+  try {
+    const list = await List.findById(req.params.id);
+    if (!list) return res.status(404).json({ error: "List not found" });
+
+    const userId = req.user._id.toString(); // ה-ID של המשתמש שעושה לייק
+    const owner = await User.findById(list.userId);
+
+    // הפיכת כל הלייקים הקיימים לטקסט כדי לבדוק בקלות
+    const stringLikes = list.likes.map(id => id.toString());
+    const index = stringLikes.indexOf(userId);
+    let isLiked = false;
 
     if (index === -1) {
       // הוספת לייק
-      comment.likes.push(user._id);
+      list.likes.push(req.user._id);
+      isLiked = true;
 
-      // הגנה מספאם: בודקים אם כבר שלחנו לו התראה על לייק לתגובה הספציפית הזו לאחרונה
-      const author = await User.findById(comment.userId);
-      const alreadyNotified = author?.notifications.find(n =>
-        n.type === 'comment_like' &&
-        n.fromUser === user.username &&
-        n.listId.toString() === list._id.toString()
-        // הערה: אנחנו בודקים לפי הליסט. אם תרצה הגנה מחמירה יותר, אפשר להוסיף בדיקת תוכן, 
-        // אבל זה ימנע ספאם ב-99% מהמקרים.
-      );
+      // בדיקה אם המשתמש הוא לא בעל הרשימה
+      if (owner && list.userId.toString() !== userId) {
+        const userWhoLiked = await User.findById(req.user._id);
 
-      if (author && comment.userId.toString() !== user._id.toString() && !alreadyNotified) {
-        author.notifications.unshift({
-          type: 'comment_like',
-          fromUser: user.username,
-          listId: list._id,
-          listName: list.name
-        });
-        await author.save();
+        // הגנה מספאם: האם כבר קיימת התראה על לייק לליסט הזה מהמשתמש הזה?
+        const alreadyNotified = owner.notifications && owner.notifications.find(n =>
+          n.type === 'like' &&
+          n.fromUser === userWhoLiked.username &&
+          n.listId.toString() === list._id.toString()
+        );
+
+        if (!alreadyNotified) {
+          owner.notifications.unshift({
+            type: 'like',
+            fromUser: userWhoLiked.username,
+            listId: list._id,
+            listName: list.name,
+            read: false,
+            timestamp: new Date()
+          });
+          await owner.save();
+        }
       }
+      await saveLog(await User.findById(req.user._id), "Like List", `Liked: ${list.name}`);
     } else {
       // הסרת לייק
-      comment.likes.splice(index, 1);
+      list.likes.splice(index, 1);
+      isLiked = false;
     }
 
     await list.save();
-    res.json(list.comments); // מחזירים את התגובות המעודכנות כדי שצבע הלב יתעדכן ב-UI
+    res.json({ likesCount: list.likes.length, isLiked: isLiked });
   } catch (e) {
+    console.error(e);
     res.status(500).send(e.message);
   }
 });
@@ -263,6 +275,45 @@ app.post('/api/lists/:id/comment', verifyToken, async (req, res) => {
   }
 });
 
+app.post('/api/lists/:listId/comments/:commentId/like', verifyToken, async (req, res) => {
+  try {
+    const list = await List.findById(req.params.listId);
+    const comment = list.comments.id(req.params.commentId);
+    const user = await User.findById(req.user._id);
+    const author = await User.findById(comment.userId);
+
+    const index = comment.likes.indexOf(user._id);
+    if (index === -1) {
+      comment.likes.push(user._id);
+
+      // בדיקה אם לשלוח התראה
+      if (author && comment.userId.toString() !== user._id.toString()) {
+        // הגנה: בודקים אם קיימת התראה מסוג לייק לתגובה *הספציפית הזו* (לפי ID)
+        const alreadyNotified = author.notifications.find(n =>
+          n.type === 'comment_like' &&
+          n.fromUser === user.username &&
+          n.commentText === comment._id.toString()
+        );
+
+        if (!alreadyNotified) {
+          author.notifications.unshift({
+            type: 'comment_like',
+            fromUser: user.username,
+            listId: list._id,
+            listName: list.name,
+            commentText: comment._id.toString() 
+          });
+          await author.save();
+        }
+      }
+    } else {
+      comment.likes.splice(index, 1);
+    }
+    await list.save();
+    res.json(list.comments);
+  } catch (e) { res.status(500).send(e.message); }
+});
+
 app.delete('/api/lists/:listId/comments/:commentId', verifyToken, async (req, res) => {
   try {
     const list = await List.findById(req.params.listId);
@@ -286,6 +337,38 @@ app.delete('/api/lists/:listId/comments/:commentId', verifyToken, async (req, re
     await saveLog(user, "Comment Deleted", `From list: ${list.name}`);
     res.json({ success: true });
   } catch (e) { res.status(500).send(e.message); }
+});
+
+// מחיקת תגובה לתגובה (Delete Reply)
+app.delete('/api/lists/:listId/comments/:commentId/replies/:replyId', verifyToken, async (req, res) => {
+  try {
+    const list = await List.findById(req.params.listId);
+    const comment = list.comments.id(req.params.commentId);
+    if (!comment) return res.status(404).send("Comment not found");
+
+    const reply = comment.replies.id(req.params.replyId);
+    if (!reply) return res.status(404).send("Reply not found");
+
+    const user = await User.findById(req.user._id);
+
+    // בדיקת הרשאות מורחבת
+    const isAdmin = user.role === 'admin';
+    const isListOwner = list.userId.toString() === user._id.toString();
+    const isReplyAuthor = reply.userId.toString() === user._id.toString();
+
+    if (!isAdmin && !isListOwner && !isReplyAuthor) {
+      return res.status(403).json({ error: "Unauthorized deletion" });
+    }
+
+    // הסרת הריפליי מהמערך
+    comment.replies.pull(req.params.replyId);
+    await list.save();
+
+    await saveLog(user, "Delete Reply", `From list: ${list.name}`);
+    res.json(list.comments); // מחזירים את המערך המעודכן
+  } catch (e) {
+    res.status(500).send(e.message);
+  }
 });
 
 // --- NOTIFICATIONS ---
@@ -441,102 +524,53 @@ app.get('/api/share/:id', async (req, res) => {
   }
 });
 
-// לייק לתגובה
-app.post('/api/lists/:listId/comments/:commentId/like', verifyToken, async (req, res) => {
+
+// תגובה לתגובה
+// תגובה לתגובה (Reply) - מתוקן
+app.post('/api/lists/:listId/comments/:commentId/reply', verifyToken, async (req, res) => {
   try {
+    const { text, replyingTo } = req.body;
     const list = await List.findById(req.params.listId);
     const comment = list.comments.id(req.params.commentId);
     const user = await User.findById(req.user._id);
 
-    const index = comment.likes.indexOf(user._id);
-    if (index === -1) {
-      comment.likes.push(user._id);
-      // התראה לכותב התגובה
-      if (comment.userId.toString() !== user._id.toString()) {
-        const author = await User.findById(comment.userId);
-        author.notifications.unshift({ type: 'comment_like', fromUser: user.username, listId: list._id, listName: list.name });
-        await author.save();
-      }
-    } else {
-      comment.likes.splice(index, 1);
+    // הגבלת 30 שניות
+    const lastR = comment.replies.filter(r => r.userId?.toString() === user._id.toString()).pop();
+    if (lastR && (Date.now() - new Date(lastR.timestamp)) / 1000 < 30) {
+      return res.status(429).json({ error: "Wait 30 seconds" });
     }
+
+    comment.replies.push({ userId: user._id, username: user.username, text, role: user.role, replyingTo });
     await list.save();
+
+    // התראה לבעל התגובה המקורית
+    if (comment.userId.toString() !== user._id.toString()) {
+      const author = await User.findById(comment.userId);
+      author?.notifications.unshift({ type: 'reply', fromUser: user.username, listId: list._id, listName: list.name });
+      await author?.save();
+    }
     res.json(list.comments);
   } catch (e) { res.status(500).send(e.message); }
 });
 
-// לייק לתגובה של תגובה (Reply Like)
-// לייק לתגובה של תגובה (Reply Like)
+// לייק לתת-תגובה (Reply Like) - להוסיף כאן (היה חסר!)
 app.post('/api/lists/:listId/comments/:commentId/replies/:replyId/like', verifyToken, async (req, res) => {
   try {
     const list = await List.findById(req.params.listId);
     const comment = list.comments.id(req.params.commentId);
     const reply = comment.replies.id(req.params.replyId);
     const user = await User.findById(req.user._id);
-
-    const index = reply.likes.indexOf(user._id);
-    if (index === -1) {
+    const idx = reply.likes.indexOf(user._id);
+    if (idx === -1) {
       reply.likes.push(user._id);
-
-      const author = await User.findById(reply.userId);
-      if (author && reply.userId.toString() !== user._id.toString()) {
-
-        // הגנה מספאם משופרת: בודקים אם יש התראה מהמשתמש הזה על הריפליי הספציפי הזה
-        // אנחנו נבדוק אם כבר קיימת התראה מסוג לייק לריפליי הזה (לפי ה-replyId)
-        const alreadyNotified = author.notifications.find(n =>
-          n.type === 'comment_like' &&
-          n.fromUser === user.username &&
-          n.commentText === reply._id.toString() // שימוש זמני בשדה הזה כדי לזהות את הריפליי
-        );
-
-        if (!alreadyNotified) {
-          author.notifications.unshift({
-            type: 'comment_like',
-            fromUser: user.username,
-            listId: list._id,
-            listName: list.name,
-            commentText: reply._id.toString() // שומרים את ה-ID של הריפליי לזיהוי
-          });
-          await author.save();
-        }
+      if (reply.userId.toString() !== user._id.toString()) {
+        const author = await User.findById(reply.userId);
+        author?.notifications.unshift({ type: 'comment_like', fromUser: user.username, listId: list._id, listName: list.name });
+        await author?.save();
       }
-      await saveLog(user, "Reply Like", `On list: ${list.name}`);
-    } else {
-      reply.likes.splice(index, 1);
-    }
-
-    await list.save();
-    res.json(list.comments);
-  } catch (e) {
-    console.error(e);
-    res.status(500).send(e.message);
-  }
-});
-
-// תגובה לתגובה
-app.post('/api/lists/:listId/comments/:commentId/reply', verifyToken, async (req, res) => {
-  const { text, replyingTo } = req.body; // <--- התיקון הקריטי כאן!
-  const list = await List.findById(req.params.listId);
-  const comment = list.comments.id(req.params.commentId);
-  const user = await User.findById(req.user._id);
-
-  // Spam Protection (30s)
-  const userR = comment.replies.filter(r => r.userId?.toString() === user._id.toString());
-  if (userR.length > 0) {
-    const diff = (Date.now() - new Date(userR[userR.length - 1].timestamp)) / 1000;
-    if (diff < 30) return res.status(429).json({ error: `Wait ${Math.ceil(30 - diff)} seconds` });
-  }
-
-  comment.replies.push({ userId: user._id, username: user.username, text, role: user.role, replyingTo });
-  await list.save();
-
-  if (comment.userId.toString() !== user._id.toString()) {
-    const author = await User.findById(comment.userId);
-    author?.notifications.unshift({ type: 'reply', fromUser: user.username, listId: list._id, listName: list.name });
-    await author?.save();
-  }
-  await saveLog(user, "Reply", `To: ${comment.username}`);
-  res.json(list.comments);
+    } else { reply.likes.splice(idx, 1); }
+    await list.save(); res.json(list.comments);
+  } catch (e) { res.status(500).send(e.message); }
 });
 
 // Netlify & Production setup

@@ -1651,14 +1651,12 @@ window.adminDeleteList = async function (listId, userId, username) {
 
 function renderIndexComments(comments, ownerId) {
     const listArea = document.getElementById('indexCommentsList');
-    const loadMore = document.getElementById('indexLoadMoreCommentsContainer');
     if (!listArea) return;
     listArea.innerHTML = '';
     const safeComments = Array.isArray(comments) ? comments : [];
 
     if (safeComments.length === 0) {
         listArea.innerHTML = '<p style="text-align:center; color:#888;">No comments yet.</p>';
-        if (loadMore) loadMore.style.display = 'none';
         return;
     }
 
@@ -1673,6 +1671,7 @@ function renderIndexComments(comments, ownerId) {
 
         // לייק לתגובה ראשית
         const hasLikedC = c.likes && state.userId && c.likes.map(id => id.toString()).includes(state.userId.toString());
+        const cHeartClass = hasLikedC ? 'fas' : 'far';
         const cLikeColor = hasLikedC ? '#ff4444' : '#888';
 
         div.innerHTML = `
@@ -1682,7 +1681,7 @@ function renderIndexComments(comments, ownerId) {
                 </div>
                 <div style="display:flex; gap:12px; align-items:center;">
                     <button onclick="likeCommentIndex('${c._id}')" style="background:none; border:none; color:${cLikeColor}; cursor:pointer; font-size:0.9rem;">
-                        <i class="${hasLikedC ? 'fas' : 'far'} fa-heart"></i> ${c.likes?.length || 0}
+                        <i class="${cHeartClass} fa-heart"></i> ${c.likes?.length || 0}
                     </button>
                     <button onclick="toggleReplyBoxIndex('${c._id}', '${c.username}')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.9rem;">
                         <i class="fas fa-reply"></i>
@@ -1692,23 +1691,40 @@ function renderIndexComments(comments, ownerId) {
             </div>
             <div style="color:var(--text-main); margin-bottom:12px; line-height:1.4;">${c.text}</div>
             
-            <!-- שרשור תגובות (Replies) -->
+            <!-- הצגת Replies -->
             <div id="index-replies-${c._id}" style="margin-left: 20px; border-left: 2px solid var(--border); padding-left: 15px; margin-top: 10px;">
                 ${c.replies ? c.replies.map(r => {
+            // בדיקת הרשאות מחיקה בריפליי (מותאם לאינדקס)
+            let showDeleteR = false;
+            if (state.userId) {
+                const isListOwner = state.userId.toString() === ownerId.toString();
+                const isReplyAuthor = state.userId.toString() === r.userId.toString();
+                const isAdmin = !document.getElementById('adminBtn').classList.contains('hidden'); // בדיקה אם המשתמש הוא אדמין
+
+                if (isListOwner || isReplyAuthor || isAdmin) showDeleteR = true;
+            }
+
+            const delBtnR = showDeleteR ? `<button onclick="deleteReplyIndex('${c._id}', '${r._id}')" style="background:none; border:none; color:#ff4444; cursor:pointer; font-size:0.75rem; padding:0;"><i class="fas fa-trash"></i></button>` : '';
+
             const hasLikedR = r.likes && state.userId && r.likes.map(id => id.toString()).includes(state.userId.toString());
+
             return `
-                    <div style="margin-bottom:10px; font-size:0.85rem; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; position:relative;">
-                        <b style="color:var(--accent); cursor:pointer;" onclick="showUserLists('${r.userId}', '${r.username}'); document.getElementById('communityModal').classList.remove('hidden');">${r.username}</b> 
-                        ${r.replyingTo ? `<span style="color:var(--text-muted); font-size:0.75rem;">replying to @${r.replyingTo}</span>` : ''}
-                        <p style="margin:5px 0; color:var(--text-main);">${r.text}</p>
-                        <div style="display:flex; gap:15px; align-items:center;">
-                             <button onclick="likeReplyIndex('${c._id}', '${r._id}')" style="background:none; border:none; color:${hasLikedR ? '#ff4444' : '#666'}; cursor:pointer; font-size:0.75rem; padding:0;">
-                                <i class="${hasLikedR ? 'fas' : 'far'} fa-heart"></i> ${r.likes?.length || 0}
-                             </button>
-                             <button onclick="toggleReplyBoxIndex('${c._id}', '${r.username}')" style="background:none; border:none; color:var(--accent); font-size:0.7rem; cursor:pointer; padding:0;">Reply</button>
+                        <div style="margin-bottom:10px; font-size:0.85rem; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; position:relative;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <b style="color:var(--accent); cursor:pointer;" onclick="showUserLists('${r.userId}', '${r.username}'); document.getElementById('communityModal').classList.remove('hidden');">${r.username}</b>
+                                ${delBtnR}
+                            </div>
+                            ${r.replyingTo ? `<span style="color:var(--text-muted); font-size:0.7rem;">replying to @${r.replyingTo}</span>` : ''}
+                            <p style="margin:5px 0; color:var(--text-main);">${r.text}</p>
+                            <div style="display:flex; gap:15px; align-items:center;">
+                                 <button onclick="likeReplyIndex('${c._id}', '${r._id}')" style="background:none; border:none; color:${hasLikedR ? '#ff4444' : '#888'}; font-size:0.75rem; cursor:pointer; padding:0;">
+                                    <i class="${hasLikedR ? 'fas' : 'far'} fa-heart"></i> ${r.likes?.length || 0}
+                                 </button>
+                                 <button onclick="toggleReplyBoxIndex('${c._id}', '${r.username}')" style="background:none; border:none; color:var(--accent); font-size:0.7rem; cursor:pointer; padding:0;">Reply</button>
+                            </div>
                         </div>
-                    </div>
-                `}).join('') : ''}
+                    `;
+        }).join('') : ''}
             </div>
 
             <div id="index-reply-box-${c._id}" class="hidden" style="margin-top:15px; margin-left:20px; display:flex; gap:10px;">
@@ -1718,8 +1734,6 @@ function renderIndexComments(comments, ownerId) {
         `;
         listArea.appendChild(div);
     });
-
-    if (loadMore) loadMore.style.display = sorted.length > visibleIndexCommentsLimit ? 'block' : 'none';
 }
 
 // לחיצה על "שלח תגובה" באינדקס
@@ -1810,18 +1824,23 @@ window.sendReplyIndex = async function (cid) {
     }
 };
 
-window.likeCommentIndex = async function (cid) {
+window.likeCommentIndex = async function (commentId) {
     if (!state.activeListId) return;
     try {
-        const res = await fetch(`/api/lists/${state.activeListId}/comments/${cid}/like`, { method: 'POST' });
+        const res = await fetch(`/api/lists/${state.activeListId}/comments/${commentId}/like`, {
+            method: 'POST'
+        });
+
         if (res.ok) {
             const updatedComments = await res.json();
-            // עדכון הזיכרון המקומי (state) כדי שהשינוי יופיע מיד
             const currentList = state.lists.find(l => l._id === state.activeListId);
-            currentList.comments = updatedComments;
-            renderIndexComments(updatedComments, currentList.userId);
+            if (currentList) currentList.comments = updatedComments;
+
+            renderIndexComments(updatedComments, state.userId);
         }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+        console.error("Main comment like error:", e);
+    }
 };
 
 window.likeReplyIndex = async function (commentId, replyId) {
@@ -1835,6 +1854,19 @@ window.likeReplyIndex = async function (commentId, replyId) {
             renderIndexComments(data, currentList.userId);
         }
     } catch (e) { console.error(e); }
+};
+
+window.deleteReplyIndex = async function (commentId, replyId) {
+    if (!confirm("Delete this reply?")) return;
+    try {
+        const res = await fetch(`/api/lists/${state.activeListId}/comments/${commentId}/replies/${replyId}`, { method: 'DELETE' });
+        if (res.ok) {
+            const data = await res.json();
+            const currentList = state.lists.find(l => l._id === state.activeListId);
+            currentList.comments = data;
+            renderIndexComments(data, currentList.userId);
+        }
+    } catch (err) { console.error(err); }
 };
 
 
