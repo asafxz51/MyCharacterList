@@ -213,7 +213,6 @@ app.post('/api/lists/:id/comment', verifyToken, async (req, res) => {
 
     const user = await User.findById(req.user._id);
 
-    // --- בדיקת הגבלת 10 דקות (Spam Protection) ---
     // מוצאים את כל התגובות של המשתמש הספציפי ברשימה הזו
     const userComments = list.comments.filter(c => c.userId && c.userId.toString() === user._id.toString());
 
@@ -233,7 +232,7 @@ app.post('/api/lists/:id/comment', verifyToken, async (req, res) => {
     }
 
     const owner = await User.findById(list.userId);
-    list.comments.push({ userId: user._id, username: user.username, text });
+    list.comments.push({ userId: user._id, username: user.username, text, role: user.role });
     await list.save();
 
     if (owner && list.userId.toString() !== user._id.toString()) {

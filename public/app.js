@@ -1634,7 +1634,7 @@ function renderIndexComments(comments, ownerId) {
     const safeComments = Array.isArray(comments) ? comments : [];
 
     if (safeComments.length === 0) {
-        listArea.innerHTML = '<p style="text-align:center; color:#888;">No comments from the community yet.</p>';
+        listArea.innerHTML = '<p style="text-align:center; color:#888;">No comments yet.</p>';
         if (loadMore) loadMore.style.display = 'none';
         return;
     }
@@ -1644,10 +1644,17 @@ function renderIndexComments(comments, ownerId) {
         const div = document.createElement('div');
         div.style = "padding:15px; background:var(--bg-color); border-radius:10px; border:1px solid var(--border); position:relative; margin-bottom:12px;";
 
-        // כאן (באינדקס) המשתמש הוא הבעלים, אז תמיד מופיע לו כפתור מחיקה
+        // --- תג אדמין מוזהב ---
+        const adminTag = c.role === 'admin' ? '<span style="color:#FFD700; font-size:0.75rem; margin-left:5px; font-weight:bold;">(Admin)</span>' : '';
+
         const delBtn = `<button onclick="deleteIndexComment('${c._id}')" style="position:absolute; right:12px; top:12px; background:none; border:none; color:#ff4444; cursor:pointer;"><i class="fas fa-trash"></i></button>`;
 
-        div.innerHTML = `${delBtn}<div style="font-weight:bold; color:var(--accent);">${c.username}</div><div>${c.text}</div><div style="font-size:0.7rem; color:#666; margin-top:5px;">${new Date(c.timestamp).toLocaleString('he-IL')}</div>`;
+        div.innerHTML = `
+            ${delBtn}
+            <div style="font-weight:bold; color:var(--accent); margin-bottom:5px;">${c.username}${adminTag}</div>
+            <div>${c.text}</div>
+            <div style="font-size:0.7rem; color:#666; margin-top:5px;">${new Date(c.timestamp).toLocaleString('he-IL')}</div>
+        `;
         listArea.appendChild(div);
     });
     if (loadMore) loadMore.style.display = sorted.length > visibleIndexCommentsLimit ? 'block' : 'none';

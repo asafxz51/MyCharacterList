@@ -12,6 +12,7 @@ const ListSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   username: String,
   text: String,
+  role: String,
   timestamp: { type: Date, default: Date.now }
  }],
  items: [{
