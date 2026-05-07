@@ -233,11 +233,19 @@ async function createList(name) {
     const isPrivate = document.getElementById('isPrivateInput').checked;
     const isFreeOrder = document.getElementById('isFreeOrderInput').checked;
 
+    const allowComments = document.getElementById('allowCommentsInput').checked;
 
     const res = await fetch('/api/lists', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name, rankingType: rType, isPrivate, isFreeOrder: isFreeOrder, items: [] })
+        body: JSON.stringify({
+            name: name,
+            rankingType: rType,
+            isPrivate,
+            isFreeOrder: isFreeOrder,
+            allowComments: allowComments, 
+            items: []
+        })
     });
 
     const newList = await res.json();
@@ -991,6 +999,9 @@ document.getElementById('editListTitleBtn').addEventListener('click', () => {
     document.getElementById('newListName').value = list.name;
     document.getElementById('isPrivateInput').checked = list.isPrivate || false;
     document.getElementById('isFreeOrderInput').checked = list.isFreeOrder || false;
+
+    document.getElementById('allowCommentsInput').checked = list.allowComments !== false;
+
     document.getElementById('rankingTypeSelect').value = list.rankingType || 'numbers';
     document.getElementById('rankingTypeSelect').disabled = false;
 
@@ -1006,6 +1017,9 @@ document.getElementById('saveListBtn').addEventListener('click', async () => {
         const isPrivate = document.getElementById('isPrivateInput').checked;
         const isFreeOrder = document.getElementById('isFreeOrderInput').checked;
 
+        // תיקון: קבלת הערך מהאינפוט של התגובות בהגדרות
+        const allowComments = document.getElementById('allowCommentsInput').checked;
+
         if (!name) {
             alert("Please enter a list name.");
             return;
@@ -1019,6 +1033,9 @@ document.getElementById('saveListBtn').addEventListener('click', async () => {
             list.rankingType = rType;
             list.isPrivate = isPrivate;
             list.isFreeOrder = isFreeOrder;
+
+            // תיקון: עדכון הזיכרון הלוקאלי לפני השליחה לשרת
+            list.allowComments = allowComments;
 
             await updateCurrentList(true, "Update List Settings", `Changed settings for: ${name}`);
 
