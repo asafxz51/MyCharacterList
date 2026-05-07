@@ -169,39 +169,49 @@ app.post('/api/lists/:id/duplicate', verifyToken, async (req, res) => {
 
 // --- INTERACTIONS (LIKES/COMMENTS) ---
 
-app.post('/api/lists/:id/like', verifyToken, async (req, res) => {
+// לייק לתגובה ראשית (עם הגנה מספאם נוטיפיקציות)
+app.post('/api/lists/:listId/comments/:commentId/like', verifyToken, async (req, res) => {
   try {
-    const list = await List.findById(req.params.id);
-    const user = await User.findById(req.user._id);
-    const owner = await User.findById(list.userId);
+    const list = await List.findById(req.params.listId);
+    const comment = list.comments.id(req.params.commentId);
+    if (!comment) return res.status(404).send("Comment not found");
 
-    const index = list.likes.indexOf(user._id);
-    let isLiked = false;
+    const user = await User.findById(req.user._id);
+    const index = comment.likes.indexOf(user._id);
 
     if (index === -1) {
-      list.likes.push(user._id);
-      isLiked = true;
+      // הוספת לייק
+      comment.likes.push(user._id);
 
-      // הגבלת ספאם נוטיפקציות:
-      // נבדוק אם כבר קיימת התראה מסוג לייק מהמשתמש הזה על הליסט הזה ב-24 שעות האחרונות
-      const recentNotif = owner.notifications.find(n =>
-        n.type === 'like' &&
+      // הגנה מספאם: בודקים אם כבר שלחנו לו התראה על לייק לתגובה הספציפית הזו לאחרונה
+      const author = await User.findById(comment.userId);
+      const alreadyNotified = author?.notifications.find(n =>
+        n.type === 'comment_like' &&
         n.fromUser === user.username &&
         n.listId.toString() === list._id.toString()
+        // הערה: אנחנו בודקים לפי הליסט. אם תרצה הגנה מחמירה יותר, אפשר להוסיף בדיקת תוכן, 
+        // אבל זה ימנע ספאם ב-99% מהמקרים.
       );
 
-      if (owner && list.userId.toString() !== user._id.toString() && !recentNotif) {
-        owner.notifications.unshift({ type: 'like', fromUser: user.username, listId: list._id, listName: list.name });
-        await owner.save();
+      if (author && comment.userId.toString() !== user._id.toString() && !alreadyNotified) {
+        author.notifications.unshift({
+          type: 'comment_like',
+          fromUser: user.username,
+          listId: list._id,
+          listName: list.name
+        });
+        await author.save();
       }
-      await saveLog(user, "Like List", `List: ${list.name}`);
     } else {
-      list.likes.splice(index, 1);
-      await saveLog(user, "Unlike List", `List: ${list.name}`);
+      // הסרת לייק
+      comment.likes.splice(index, 1);
     }
+
     await list.save();
-    res.json({ likesCount: list.likes.length, isLiked });
-  } catch (e) { res.status(500).send(e.message); }
+    res.json(list.comments); // מחזירים את התגובות המעודכנות כדי שצבע הלב יתעדכן ב-UI
+  } catch (e) {
+    res.status(500).send(e.message);
+  }
 });
 
 app.post('/api/lists/:id/comment', verifyToken, async (req, res) => {
@@ -221,12 +231,12 @@ app.post('/api/lists/:id/comment', verifyToken, async (req, res) => {
       const lastComment = userComments[userComments.length - 1];
       const now = new Date();
       const lastTime = new Date(lastComment.timestamp);
-      const diffInMinutes = (now - lastTime) / (1000 * 60);
+      const diffInSeconds = (now - lastTime) / 1000;
 
-      if (diffInMinutes < 10) {
-        const waitTime = Math.ceil(10 - diffInMinutes);
+      if (diffInSeconds < 30) {
+        const waitTime = Math.ceil(30 - diffInSeconds);
         return res.status(429).json({
-          error: `You are commenting too fast. Please wait ${waitTime} more minutes.`
+          error: `Please wait ${waitTime} seconds before posting another comment.`
         });
       }
     }
@@ -312,10 +322,15 @@ app.get('/api/users', optionalToken, async (req, res) => {
 });
 
 app.post('/api/users/follow/:id', verifyToken, async (req, res) => {
-  const target = req.params.id;
+  const targetId = req.params.id;
   const user = await User.findById(req.user._id);
-  const index = user.following.indexOf(target);
-  index === -1 ? user.following.push(target) : user.following.splice(index, 1);
+  const targetUser = await User.findById(targetId);
+  const index = user.following.indexOf(targetId);
+  if (index === -1) {
+    user.following.push(targetId);
+    if (targetUser) targetUser.notifications.unshift({ type: 'follow', fromUser: user.username });
+    await targetUser?.save();
+  } else { user.following.splice(index, 1); }
   await user.save();
   res.json(user.following);
 });
@@ -424,6 +439,104 @@ app.get('/api/share/:id', async (req, res) => {
     console.error("Share list error:", err);
     res.status(404).json({ error: 'Not found' });
   }
+});
+
+// לייק לתגובה
+app.post('/api/lists/:listId/comments/:commentId/like', verifyToken, async (req, res) => {
+  try {
+    const list = await List.findById(req.params.listId);
+    const comment = list.comments.id(req.params.commentId);
+    const user = await User.findById(req.user._id);
+
+    const index = comment.likes.indexOf(user._id);
+    if (index === -1) {
+      comment.likes.push(user._id);
+      // התראה לכותב התגובה
+      if (comment.userId.toString() !== user._id.toString()) {
+        const author = await User.findById(comment.userId);
+        author.notifications.unshift({ type: 'comment_like', fromUser: user.username, listId: list._id, listName: list.name });
+        await author.save();
+      }
+    } else {
+      comment.likes.splice(index, 1);
+    }
+    await list.save();
+    res.json(list.comments);
+  } catch (e) { res.status(500).send(e.message); }
+});
+
+// לייק לתגובה של תגובה (Reply Like)
+// לייק לתגובה של תגובה (Reply Like)
+app.post('/api/lists/:listId/comments/:commentId/replies/:replyId/like', verifyToken, async (req, res) => {
+  try {
+    const list = await List.findById(req.params.listId);
+    const comment = list.comments.id(req.params.commentId);
+    const reply = comment.replies.id(req.params.replyId);
+    const user = await User.findById(req.user._id);
+
+    const index = reply.likes.indexOf(user._id);
+    if (index === -1) {
+      reply.likes.push(user._id);
+
+      const author = await User.findById(reply.userId);
+      if (author && reply.userId.toString() !== user._id.toString()) {
+
+        // הגנה מספאם משופרת: בודקים אם יש התראה מהמשתמש הזה על הריפליי הספציפי הזה
+        // אנחנו נבדוק אם כבר קיימת התראה מסוג לייק לריפליי הזה (לפי ה-replyId)
+        const alreadyNotified = author.notifications.find(n =>
+          n.type === 'comment_like' &&
+          n.fromUser === user.username &&
+          n.commentText === reply._id.toString() // שימוש זמני בשדה הזה כדי לזהות את הריפליי
+        );
+
+        if (!alreadyNotified) {
+          author.notifications.unshift({
+            type: 'comment_like',
+            fromUser: user.username,
+            listId: list._id,
+            listName: list.name,
+            commentText: reply._id.toString() // שומרים את ה-ID של הריפליי לזיהוי
+          });
+          await author.save();
+        }
+      }
+      await saveLog(user, "Reply Like", `On list: ${list.name}`);
+    } else {
+      reply.likes.splice(index, 1);
+    }
+
+    await list.save();
+    res.json(list.comments);
+  } catch (e) {
+    console.error(e);
+    res.status(500).send(e.message);
+  }
+});
+
+// תגובה לתגובה
+app.post('/api/lists/:listId/comments/:commentId/reply', verifyToken, async (req, res) => {
+  const { text, replyingTo } = req.body; // <--- התיקון הקריטי כאן!
+  const list = await List.findById(req.params.listId);
+  const comment = list.comments.id(req.params.commentId);
+  const user = await User.findById(req.user._id);
+
+  // Spam Protection (30s)
+  const userR = comment.replies.filter(r => r.userId?.toString() === user._id.toString());
+  if (userR.length > 0) {
+    const diff = (Date.now() - new Date(userR[userR.length - 1].timestamp)) / 1000;
+    if (diff < 30) return res.status(429).json({ error: `Wait ${Math.ceil(30 - diff)} seconds` });
+  }
+
+  comment.replies.push({ userId: user._id, username: user.username, text, role: user.role, replyingTo });
+  await list.save();
+
+  if (comment.userId.toString() !== user._id.toString()) {
+    const author = await User.findById(comment.userId);
+    author?.notifications.unshift({ type: 'reply', fromUser: user.username, listId: list._id, listName: list.name });
+    await author?.save();
+  }
+  await saveLog(user, "Reply", `To: ${comment.username}`);
+  res.json(list.comments);
 });
 
 // Netlify & Production setup

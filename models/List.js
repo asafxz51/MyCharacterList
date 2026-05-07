@@ -13,8 +13,19 @@ const ListSchema = new mongoose.Schema({
   username: String,
   text: String,
   role: String,
-  timestamp: { type: Date, default: Date.now }
+  timestamp: { type: Date, default: Date.now },
+  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // לייקים לתגובה
+  replies: [{ // תגובות לתגובה
+   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+   username: String,
+   text: String,
+   role: String,
+   replyingTo: String,
+   timestamp: { type: Date, default: Date.now },
+   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+  }]
  }],
+ 
  items: [{
   characterName: String,
   sourceTitle: String,

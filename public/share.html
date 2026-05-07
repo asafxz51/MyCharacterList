@@ -327,27 +327,69 @@
             } catch (e) { }
         }
 
-        function renderNotifDropdownUI() {
+       function renderNotifDropdownUI() {
             const dropdown = document.getElementById('notifDropdown');
             const badge = document.getElementById('notifBadge');
             if (!dropdown) return;
-            const unread = currentNotifsData.filter(n => !n.read).length;
-            if (badge) { badge.textContent = unread; unread > 0 ? badge.classList.remove('hidden') : badge.classList.add('hidden'); }
-            dropdown.innerHTML = currentNotifsData.length === 0 ? '<div style="padding:15px;text-align:center;color:#888;">No notifications</div>' : '';
-            currentNotifsData.slice(0, visibleNotifsLimit).forEach(n => {
+
+            // מונה התראות שלא נקראו
+            const unreadCount = currentNotifsData.filter(n => !n.read).length;
+            if (badge) {
+                badge.textContent = unreadCount;
+                unreadCount > 0 ? badge.classList.remove('hidden') : badge.classList.add('hidden');
+            }
+
+            dropdown.innerHTML = '';
+
+            if (currentNotifsData.length === 0) {
+                dropdown.innerHTML = '<div style="padding:15px; text-align:center; color:#888;">No notifications</div>';
+                return;
+            }
+
+            // מיפוי ההודעות לפי סוג ההתראה (מה שהיה בשלב 3 א)
+            const msgMap = {
+                'like': `liked your list`,
+                'comment': `commented on your list`,
+                'follow': `started following you`,
+                'reply': `replied to your comment`,
+                'comment_like': `liked your comment`
+            };
+
+            // חיתוך המערך לפי המגבלה (5, 10 וכו')
+            const notifsToShow = currentNotifsData.slice(0, visibleNotifsLimit);
+
+            notifsToShow.forEach(n => {
                 const div = document.createElement('div');
-                div.style = `padding:12px; border-bottom:1px solid var(--border); cursor:pointer; background:${n.read ? 'transparent' : 'rgba(187, 134, 252, 0.05)'}`;
-                const msg = n.type === 'like' ? `<b>${n.fromUser}</b> liked your list` : `<b>${n.fromUser}</b> commented`;
-                div.innerHTML = `<div>${msg}: <b>${n.listName}</b></div><div style="font-size:0.7rem;color:#666;margin-top:4px;">${new Date(n.timestamp).toLocaleString('he-IL')}</div>`;
-                div.onclick = () => window.location.href = `/share.html?id=${n.listId}`;
+                // עיצוב הפריט (רקע שונה אם לא נקרא)
+                div.style = `padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.85rem; cursor: pointer; background: ${n.read ? 'transparent' : 'rgba(187, 134, 252, 0.08)'}`;
+
+                // יצירת תוכן ההודעה בעזרת המפה
+                const actionText = msgMap[n.type] || 'interacted with you';
+                const listNameText = n.listName ? `: <b>${n.listName}</b>` : '';
+
+                div.innerHTML = `
+            <div><b>${n.fromUser}</b> ${actionText}${listNameText}</div>
+            <div style="font-size:0.7rem; color:#666; margin-top:4px;">${new Date(n.timestamp).toLocaleString('he-IL')}</div>
+        `;
+
+                // לחיצה על התראה תוביל לרשימה (אם יש כזו)
+                div.onclick = () => {
+                    if (n.listId) window.location.href = `/share.html?id=${n.listId}`;
+                };
                 dropdown.appendChild(div);
             });
+
+            // כפתור "Show more"
             if (currentNotifsData.length > visibleNotifsLimit) {
-                const more = document.createElement('div');
-                more.style = "padding:10px;text-align:center;color:var(--accent);cursor:pointer;font-weight:bold;";
-                more.textContent = "Show more...";
-                more.onclick = (e) => { e.stopPropagation(); visibleNotifsLimit += 5; renderNotifDropdownUI(); };
-                dropdown.appendChild(more);
+                const loadMoreDiv = document.createElement('div');
+                loadMoreDiv.style = "padding: 10px; text-align: center; color: var(--accent); cursor: pointer; font-size: 0.85rem; font-weight: bold; border-top: 1px solid var(--border);";
+                loadMoreDiv.innerHTML = 'Show more...';
+                loadMoreDiv.onclick = (e) => {
+                    e.stopPropagation();
+                    visibleNotifsLimit += 5;
+                    renderNotifDropdownUI();
+                };
+                dropdown.appendChild(loadMoreDiv);
             }
         }
 
@@ -408,7 +450,7 @@
             });
         }
 
-       function renderComments(comments, ownerId) {
+      function renderComments(comments, ownerId) {
             const area = document.getElementById('commentsList');
             const loadMore = document.getElementById('loadMoreCommentsContainer');
             if (!area) return;
@@ -426,27 +468,55 @@
 
             toDisplay.forEach(c => {
                 const div = document.createElement('div');
-                div.style = "padding:15px; background:var(--bg-color); border-radius:10px; border:1px solid var(--border); position:relative; margin-bottom:12px;";
+                div.style = "padding:15px; background:var(--card-bg); border-radius:10px; border:1px solid var(--border); position:relative; margin-bottom:20px;";
 
-                // --- הוספת תג אדמין ליד השם ---
-                const adminTag = c.role === 'admin' ? '<span style="color:#FFD700; font-size:0.75rem; margin-left:5px; font-weight:bold;">(Admin)</span>' : '';
+                const adminTag = c.role === 'admin' ? '<span style="color:#FFD700; font-weight:bold; font-size:0.75rem; margin-left:5px;">(Admin)</span>' : '';
 
-                let showDelete = false;
-                if (currentUserData) {
-                    if (currentUserData._id === ownerId || currentUserData.role === 'admin' || currentUserData._id === c.userId) {
-                        showDelete = true;
-                    }
-                }
-
-                const delBtn = showDelete ? `<button onclick="deleteComment('${c._id}')" style="position:absolute; right:12px; top:12px; background:none; border:none; color:#ff4444; cursor:pointer;"><i class="fas fa-trash"></i></button>` : '';
+                // לייק לתגובה ראשית
+                const hasLikedC = c.likes && currentUserData && c.likes.map(id => id.toString()).includes(currentUserData._id.toString());
+                const cLikeColor = hasLikedC ? '#ff4444' : '#888';
 
                 div.innerHTML = `
-            ${delBtn}
-            <div style="font-weight:bold; color:var(--accent); margin-bottom:5px; font-size: 0.95rem;">
-                ${c.username || 'User'}${adminTag}
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                <div style="cursor:pointer; color:var(--accent); font-weight:bold;" onclick="showUserLists('${c.userId}', '${c.username}'); document.getElementById('communityModal').classList.remove('hidden');">
+                    ${c.username}${adminTag}
+                </div>
+                <div style="display:flex; gap:12px; align-items:center;">
+                    <button onclick="likeComment('${c._id}')" style="background:none; border:none; color:${cLikeColor}; cursor:pointer; font-size:0.9rem;">
+                        <i class="${hasLikedC ? 'fas' : 'far'} fa-heart"></i> ${c.likes?.length || 0}
+                    </button>
+                    <button onclick="toggleReplyBox('${c._id}', '${c.username}')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.9rem;">
+                        <i class="fas fa-reply"></i>
+                    </button>
+                    ${(currentUserData && (currentUserData._id === ownerId || currentUserData._id === c.userId || currentUserData.role === 'admin')) ?
+                        `<button onclick="deleteComment('${c._id}')" style="color:#ff4444; background:none; border:none; cursor:pointer;"><i class="fas fa-trash"></i></button>` : ''}
+                </div>
             </div>
-            <div style="color:var(--text-main); line-height: 1.5;">${c.text}</div>
-            <div style="font-size:0.7rem; color:#666; margin-top:8px;">${new Date(c.timestamp).toLocaleString('he-IL')}</div>
+            <div style="color:var(--text-main); margin-bottom:12px; line-height:1.4;">${c.text}</div>
+            
+            <!-- שרשור תגובות (Replies) -->
+            <div id="replies-${c._id}" style="margin-left: 20px; border-left: 2px solid var(--border); padding-left: 15px; margin-top: 10px;">
+                ${c.replies ? c.replies.map(r => {
+                            const hasLikedR = r.likes && currentUserData && r.likes.map(id => id.toString()).includes(currentUserData._id.toString());
+                            return `
+                    <div style="margin-bottom:10px; font-size:0.85rem; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; position:relative;">
+                        <b style="color:var(--accent); cursor:pointer;" onclick="showUserLists('${r.userId}', '${r.username}'); document.getElementById('communityModal').classList.remove('hidden');">${r.username}</b> 
+                        ${r.replyingTo ? `<span style="color:var(--text-muted); font-size:0.75rem;">replying to @${r.replyingTo}</span>` : ''}
+                        <p style="margin:5px 0; color:var(--text-main);">${r.text}</p>
+                        <div style="display:flex; gap:15px; align-items:center;">
+                             <button onclick="likeReply('${c._id}', '${r._id}')" style="background:none; border:none; color:${hasLikedR ? '#ff4444' : '#666'}; cursor:pointer; font-size:0.75rem; padding:0;">
+                                <i class="${hasLikedR ? 'fas' : 'far'} fa-heart"></i> ${r.likes?.length || 0}
+                             </button>
+                             <button onclick="toggleReplyBox('${c._id}', '${r.username}')" style="background:none; border:none; color:var(--accent); font-size:0.7rem; cursor:pointer; padding:0;">Reply</button>
+                        </div>
+                    </div>
+                `}).join('') : ''}
+            </div>
+
+            <div id="reply-box-${c._id}" class="hidden" style="margin-top:15px; margin-left:20px; display:flex; gap:10px;">
+                <input type="text" id="reply-input-${c._id}" placeholder="Reply to ${c.username}..." style="flex:1; background:var(--bg-color); border:1px solid var(--border); color:white; padding:8px; border-radius:6px; font-size:0.85rem;">
+                <button onclick="sendReply('${c._id}')" class="btn-primary" style="width:auto; padding:0 15px; font-size:0.8rem; height:35px;">Post</button>
+            </div>
         `;
                 area.appendChild(div);
             });
@@ -588,6 +658,71 @@
                 drop.onchange = (e) => window.location.href = `/share.html?id=${e.target.value}`;
             }
         }
+
+        window.toggleReplyBox = function (cid, username) {
+                const box = document.getElementById(`reply-box-${cid}`);
+                const input = document.getElementById(`reply-input-${cid}`);
+                if (!box || !input) return;
+
+                box.classList.toggle('hidden');
+                if (!box.classList.contains('hidden')) {
+                    input.placeholder = `Replying to @${username}...`;
+                    input.dataset.replyToUser = username; // זה מה ש-sendReply מחפש
+                    input.focus();
+                }
+            };
+
+            window.sendReply = async function (cid) {
+                    const input = document.getElementById(`reply-input-${cid}`);
+                    if (!input) return;
+
+                    const text = input.value.trim();
+                    const replyingTo = input.dataset.replyToUser; // נלקח מה-Toggle
+
+                    if (!text) return;
+
+                    try {
+                        const res = await fetch(`/api/lists/${listId}/comments/${cid}/reply`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ text, replyingTo })
+                        });
+
+                        const data = await res.json();
+
+                        if (!res.ok) {
+                            alert(data.error || "Error posting reply");
+                            return;
+                        }
+
+                        // הצלחה - עדכון התצוגה
+                        currentListData.comments = data;
+                        renderComments(data, currentListData.userId);
+                    } catch (e) {
+                        console.error("Reply Error:", e);
+                    }
+                };
+
+            window.likeComment = async function (cid) {
+                if (!loggedInUser) return alert("Please Login to like.");
+                const res = await fetch(`/api/lists/${listId}/comments/${cid}/like`, { method: 'POST' });
+                if (res.ok) {
+                    currentListData.comments = await res.json();
+                    renderComments(currentListData.comments, currentListData.userId);
+                }
+            };
+
+            window.likeReply = async function (commentId, replyId) {
+                    if (!loggedInUser) return alert("Please Login");
+                    try {
+                        const res = await fetch(`/api/lists/${listId}/comments/${commentId}/replies/${replyId}/like`, { method: 'POST' });
+                        if (res.ok) {
+                            // טעינה מחדש של המידע כדי שהלב ייצבע
+                            currentListData.comments = await res.json();
+                            renderComments(currentListData.comments, currentListData.userId);
+                        }
+                    } catch (err) { console.error(err); }
+                };
 
         initPage();
     </script>
