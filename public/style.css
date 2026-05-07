@@ -888,6 +888,10 @@ select {
     background: rgba(0, 0, 0, 0.5);
     z-index: 1500;
   }
+
+    .mobile-overlay.hidden {
+      display: none;
+    }
 }
 
 

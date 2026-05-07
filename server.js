@@ -165,6 +165,8 @@ app.post('/api/lists/:id/duplicate', verifyToken, async (req, res) => {
   res.json(newList);
 });
 
+
+
 // --- INTERACTIONS (LIKES/COMMENTS) ---
 
 app.post('/api/lists/:id/like', verifyToken, async (req, res) => {
@@ -346,6 +348,15 @@ app.post('/api/admin/users/:id/reset', verifyToken, verifyAdmin, async (req, res
 app.get('/api/admin/logs', verifyToken, verifyAdmin, async (req, res) => {
   const logs = await Log.find().sort({ timestamp: -1 }).limit(200);
   res.json(logs);
+});
+
+app.get('/api/admin/users/:id/lists', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const lists = await List.find({ userId: req.params.id });
+    res.json(lists);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // --- SEARCH & EXTERNAL APIS ---

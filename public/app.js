@@ -1059,25 +1059,44 @@ function setupEvents() {
     document.getElementById('addCustomCharBtn').addEventListener('click', openCustomCharModal);
 
     document.getElementById('refreshLogsBtn').addEventListener('click', () => {
-        loadAdminLogs(false); // רענון ידני תמיד יראה "Loading"
+        loadAdminLogs(false);
     });
 
-
+    // --- לוגיקת המובייל המדויקת ---
     const menuBtn = document.getElementById('mobileMenuBtn');
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.getElementById('mobileOverlay');
 
     if (menuBtn) {
-        menuBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-            overlay.classList.toggle('active');
-        });
+        menuBtn.onclick = (e) => {
+            e.stopPropagation(); // מונע בעיות של אירועים כפולים
+            sidebar.classList.add('open');
+            overlay.classList.remove('hidden');
+        };
     }
 
     if (overlay) {
-        overlay.addEventListener('click', closeMobileMenu);
+        overlay.onclick = () => {
+            sidebar.classList.remove('open');
+            overlay.classList.add('hidden');
+        };
     }
 }
+
+// תחליף את פונקציית הבחירה כדי שהתפריט ייסגר מיד אחרי שלחצת על ליסט בטלפון
+window.selectList = function (id) {
+    state.activeListId = id;
+    renderSidebar();
+    renderCurrentList();
+
+    // סגירה אוטומטית של תפריט צד במובייל לאחר בחירת רשימה
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('mobileOverlay');
+    if (window.innerWidth <= 768) {
+        if (sidebar) sidebar.classList.remove('open');
+        if (overlay) overlay.classList.add('hidden');
+    }
+};
 
 function closeMobileMenu() {
     const sidebar = document.querySelector('.sidebar');
@@ -1478,36 +1497,60 @@ async function loadAdminUsers() {
 }
 
 window.adminManageLists = async function (userId, username) {
-    // מחליף תצוגה מ"משתמשים" ל"רשימות"
-    document.getElementById('adminUsersSection').classList.add('hidden');
-    document.getElementById('adminListsSection').classList.remove('hidden');
-    document.getElementById('adminUserListsTitle').textContent = `Lists owned by: ${username}`;
-
+    // 1. מעבר תצוגה בסשן האדמין
+    const adminUsersSection = document.getElementById('adminUsersSection');
+    const adminListsSection = document.getElementById('adminListsSection');
+    const adminUserListsTitle = document.getElementById('adminUserListsTitle');
     const grid = document.getElementById('adminListsGrid');
-    grid.innerHTML = 'Loading...';
 
-    const res = await fetch(`/api/admin/users/${userId}/lists`);
-    const lists = await res.json();
-    grid.innerHTML = '';
+    if (adminUsersSection) adminUsersSection.classList.add('hidden');
+    if (adminListsSection) adminListsSection.classList.remove('hidden');
+    if (adminUserListsTitle) adminUserListsTitle.textContent = `Lists owned by: ${username}`;
 
-    if (lists.length === 0) {
-        grid.innerHTML = '<p>This user has no lists.</p>';
-        return;
+    // 2. ניקוי הגריד והצגת Loading
+    grid.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted);">Fetching lists...</div>';
+
+    try {
+        const res = await fetch(`/api/admin/users/${userId}/lists`);
+
+        if (!res.ok) throw new Error("Failed to fetch lists");
+
+        const lists = await res.json();
+
+        // 3. ניקוי ה-Loading
+        grid.innerHTML = '';
+
+        if (!lists || lists.length === 0) {
+            grid.innerHTML = '<p style="padding:20px; color:#888;">This user has no lists yet.</p>';
+            return;
+        }
+
+        // 4. רינדור הליסטים
+        lists.forEach(l => {
+            const div = document.createElement('div');
+            // עיצוב שורה לכל ליסט באדמין
+            div.style = "display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--card-bg); border:1px solid var(--border); border-radius:8px; margin-bottom:8px;";
+
+            const privacyIcon = l.isPrivate ? '<i class="fas fa-lock" style="margin-right:8px; font-size:0.8rem; color:#888;"></i>' : '';
+            const itemsCount = l.items ? l.items.length : 0;
+
+            div.innerHTML = `
+                <div>
+                    ${privacyIcon}<strong style="color:var(--accent);">${l.name}</strong> 
+                    <span style="font-size:0.8rem; color:var(--text-muted); margin-left:10px;">(${itemsCount} characters)</span>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="window.open('/share.html?id=${l._id}', '_blank')" class="btn-primary" style="width:auto; padding:5px 12px; font-size:0.8rem; background:#4CAF50;">View</button>
+                    <button onclick="adminDeleteList('${l._id}', '${userId}', '${username}')" class="btn-primary" style="width:auto; padding:5px 12px; font-size:0.8rem; background:#ff4444;">Delete</button>
+                </div>
+            `;
+            grid.appendChild(div);
+        });
+
+    } catch (e) {
+        console.error("Admin Manage Lists Error:", e);
+        grid.innerHTML = '<p style="color:red; padding:20px;">Error loading user lists.</p>';
     }
-
-    lists.forEach(l => {
-        const div = document.createElement('div');
-        div.style = "display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg-color); border:1px solid var(--border); border-radius:4px;";
-        const privacyIcon = l.isPrivate ? "🔒 " : "";
-        div.innerHTML = `
-            <span>${privacyIcon}<strong>${l.name}</strong> (${l.items.length} items)</span>
-            <div style="display:flex; gap:5px;">
-                <button onclick="window.open('/share.html?id=${l._id}', '_blank')" class="btn-primary" style="width:auto; padding:5px 10px;">View</button>
-                <button onclick="adminDeleteList('${l._id}', '${userId}', '${username}')" class="btn-primary" style="width:auto; padding:5px 10px; background:red;">Delete</button>
-            </div>
-        `;
-        grid.appendChild(div);
-    });
 }
 
 window.adminResetPass = async function (id) {
