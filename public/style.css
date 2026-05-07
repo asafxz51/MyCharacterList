@@ -35,31 +35,168 @@ body {
   flex-direction: column;
 }
 
+/* מבנה הנאב-בר */
+/* --- נאב-בר מצב דסקטופ --- */
 .navbar {
   height: 60px;
   background: var(--sidebar-bg);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 0 20px;
+  /* ביטלנו את justify-content: space-between ועוברים לשיטת המרג'ין */
 }
 
-.logo {
-  font-weight: bold;
-  font-size: 1.2rem;
+/* הקסם: דוחף את כל מה שמימין ללוגו לצד ימין הרחוק */
+.nav-identity {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  margin-right: 15px;
+  /* רווח קטן בין השם לכפתור Logout */
+}
+
+/* עיצוב הצ'יפ של המשתמש (עם האייקון) */
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(187, 134, 252, 0.1);
+  padding: 6px 12px;
+  border-radius: 20px;
   color: var(--accent);
+  font-weight: 600;
+  border: 1px solid rgba(187, 134, 252, 0.2);
 }
 
+.nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* עיצוב כפתורי הריבוע בנאב */
 .nav-controls button {
   background: none;
   border: 1px solid var(--border);
   color: var(--text-main);
-  padding: 5px 10px;
+  height: 38px;
+  min-width: 40px;
+  /* מוודא שהם ריבועיים */
+  padding: 0 12px;
   cursor: pointer;
-  border-radius: 4px;
-  margin-left: 5px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.2s;
 }
+
+/* כפתור Logout מיוחד - נצבע בסגול ויהיה הכי שמאלי בקבוצת הימין */
+#authBtnNav {
+  background: var(--accent) !important;
+  color: white !important;
+  border: none !important;
+  font-weight: bold;
+  padding: 0 15px;
+  min-width: auto;
+}
+
+/* --- נאב-בר מצב מובייל --- */
+@media (max-width: 768px) {
+  .navbar {
+    height: auto;
+    padding: 10px;
+    flex-wrap: wrap;
+    /* מאפשר ירידת שורה */
+  }
+
+  /* לוגו למעלה משמאל */
+  .navbar a {
+    order: 1;
+  }
+
+  /* שם משתמש למעלה מימין */
+  .nav-identity {
+    order: 2;
+    margin-left: auto;
+    margin-right: 0;
+  }
+
+  /* כל הכפתורים יורדים שורה ותופסים 100% רוחב */
+  .nav-controls {
+    order: 3;
+    width: 100%;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    justify-content: space-between;
+    /* כפתורים נפרסים לכל הרוחב */
+  }
+
+  .nav-controls button,
+  #notifArea {
+    flex: 1;
+    /* גודל שווה לכל הכפתורים */
+    margin: 0 2px;
+  }
+}
+
+#authBtnNav {
+  background: var(--accent);
+  color: white !important;
+  border: none;
+  font-weight: bold;
+  padding: 0 15px;
+}
+
+/* הגדרות למובייל (מתחת ל-768px) */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 10px;
+    justify-content: space-between;
+  }
+
+  .logo {
+    font-size: 1.3rem;
+  }
+
+  /* שורה ראשונה נשמרת ללוגו ולפרטי משתמש */
+  .nav-identity {
+    order: 2;
+  }
+
+  /* הכפתורים יורדים לשורה שנייה ותופסים את כל הרוחב */
+  .nav-controls {
+    order: 3;
+    width: 100%;
+    justify-content: space-between;
+    /* כפתורים מתפזרים באופן שווה */
+    margin-top: 5px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  #authBtnNav {
+    flex: 1.5;
+    /* כפתור Logout מקבל יותר מקום */
+  }
+
+  .nav-controls button,
+  .nav-controls>div {
+    flex: 1;
+    /* כל שאר האייקונים מתחלקים שווה */
+  }
+}
+
+a .logo {
+  font-weight: bold;
+  font-size: 1.4rem;
+  color: var(--accent);
+  padding-left: 10px;
+}
+
+
 
 .list-header {
   width: 100%;
@@ -222,6 +359,8 @@ body {
   .unified-filter {
     flex-direction: column;
     height: auto;
+    min-height: 80px;
+    margin-bottom: 20px;
   }
 
   .unified-filter input {
@@ -233,6 +372,7 @@ body {
     height: 42px;
     border-left: none !important;
     width: 100%;
+      min-height: 40px;
   }
 }
 
@@ -296,15 +436,15 @@ body {
     align-items: stretch;
   }
 
-  .navbar {
+  /* .navbar {
     padding: 0 10px;
-  }
+  } */
 
-  .logo {
+  /* .logo {
     font-weight: bold;
     font-size: 1rem;
     color: var(--accent);
-  }
+  } */
 
   #reorderBtn,
   #saveOrderBtn {
@@ -710,11 +850,46 @@ select {
   border-color: var(--accent);
 }
 
-
-.mobile-only,
-.mobile-overlay {
+/* הצגת הכפתור רק במובייל */
+.mobile-only {
   display: none;
 }
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: block;
+  }
+
+  /* תיקון לסרגל הצידי שיעבוד עם הכפתור */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    /* מתחיל מחוץ למסך */
+    width: 260px;
+    height: 100vh;
+    z-index: 2000;
+    transition: left 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+  }
+
+  .sidebar.open {
+    left: 0;
+    /* נכנס למסך */
+  }
+
+  /* הכהיית המסך כשהתפריט פתוח */
+  .mobile-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1500;
+  }
+}
+
 
 #createListBtn {
   background: var(--accent);
@@ -747,11 +922,6 @@ select {
 
 @media (max-width: 768px) {
 
-  .mobile-only {
-    display: block;
-    color: var(--text-main);
-    font-size: 1.2rem;
-  }
 
   .nav-controls #shareBtn {
     font-size: 0.7rem;
@@ -766,36 +936,7 @@ select {
   }
 
 
-  .sidebar {
-    position: fixed;
-    top: 60px;
-    left: -260px;
-    width: 250px;
-    height: calc(100vh - 60px);
-    z-index: 1000;
-    transition: left 0.3s ease;
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
-  }
 
-  .sidebar.open {
-    left: 0;
-  }
-
-  .mobile-overlay {
-    display: none;
-    position: fixed;
-    top: 60px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 900;
-    backdrop-filter: blur(2px);
-  }
-
-  .mobile-overlay.active {
-    display: block;
-  }
 
   .list-header {
     flex-direction: column;

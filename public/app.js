@@ -4,6 +4,8 @@ let state = {
 };
 
 let logsAutoRefreshInterval = null;
+let visibleNotifsLimit = 5;
+let currentNotifsData = [];
 
 async function init() {
     await checkLoginStatus();
@@ -11,45 +13,77 @@ async function init() {
 }
 
 async function checkLoginStatus() {
+    // אלמנטים של הנאב-בר
+    const userChip = document.getElementById('userDisplay');
+    const nameLabel = document.getElementById('usernameLabel');
+    const authBtn = document.getElementById('authBtnNav');
+    const adminBtn = document.getElementById('adminBtn');
+    const menuBtn = document.getElementById('mobileMenuBtn');
+
+
+    // אלמנטים של מבנה הדף
     const createBtn = document.getElementById('createListBtn');
     const listHeader = document.querySelector('.list-header');
-    const adminBtn = document.getElementById('adminBtn');
-    const authBtn = document.getElementById('authBtnNav');
 
     try {
         const res = await fetch('/api/auth/check');
         if (res.ok) {
             const data = await res.json();
             state.user = data.username;
+            if (menuBtn) menuBtn.classList.remove('hidden'); // מציג כפתור אם מחובר
 
-            // --- רישום כניסה לאתר (פעם אחת לסשן) ---
+            // --- 1. רישום כניסה לאתר (לוג סשן - פעם אחת) ---
             if (!sessionStorage.getItem('entryLogged')) {
                 fetch('/api/auth/ping', { method: 'POST' });
                 sessionStorage.setItem('entryLogged', 'true');
             }
 
-            // הגדרות ממשק למחובר
-            document.getElementById('userDisplay').textContent = `Hi, ${state.user}`;
-            document.getElementById('userDisplay').style.display = 'inline';
-            authBtn.textContent = "Logout";
+            // --- 2. עדכון תצוגת משתמש (User Icon + Name) ---
+            if (nameLabel) nameLabel.textContent = data.username;
+            if (userChip) userChip.classList.remove('hidden');
 
-            document.querySelector('.sidebar').style.display = 'flex';
-            createBtn.style.display = 'block';
-            listHeader.style.display = 'flex';
+            // שינוי כפתור ל-"Logout"
+            if (authBtn) {
+                authBtn.textContent = "Logout";
+                authBtn.style.display = 'inline-block';
+            }
 
-            if (data.role === 'admin' && adminBtn) adminBtn.classList.remove('hidden');
-            fetchLists();
+            // הצגת כפתור אדמין אם המשתמש הוא אדמין
+            if (data.role === 'admin' && adminBtn) {
+                adminBtn.classList.remove('hidden');
+            }
+
+            // הצגת מבנה האתר (סרגל צד וכותרת)
+            if (document.querySelector('.sidebar')) document.querySelector('.sidebar').style.display = 'flex';
+            if (createBtn) createBtn.style.display = 'block';
+            if (listHeader) listHeader.style.display = 'flex';
+
+            if (document.getElementById('notifArea')) {
+                document.getElementById('notifArea').classList.remove('hidden');
+            }
+
+            // --- 3. הפעלת מערכות נתונים ---
+            fetchNotifications(); // טעינת התראות ראשונה
+            setInterval(fetchNotifications, 30000); // בדיקה כל 30 שניות
+
+            fetchLists(); // טעינת הרשימות של המשתמש
+
         } else {
+            // במקרה שהמשתמש מנותק
+            if (userChip) userChip.classList.add('hidden');
             if (adminBtn) adminBtn.classList.add('hidden');
             showLoggedOutState();
         }
     } catch (e) {
+        console.error("Login check failed:", e);
         showLoggedOutState();
     }
 }
 
 async function showLoggedOutState() {
     const authBtn = document.getElementById('authBtnNav');
+    const menuBtn = document.getElementById('mobileMenuBtn');
+    if (menuBtn) menuBtn.classList.add('hidden');
 
     // --- מצב מנותק ---
     document.getElementById('userDisplay').style.display = 'none'; // מעלים את ה-"Hi"
@@ -71,6 +105,10 @@ async function showLoggedOutState() {
         text = data.welcomeText.replace(/\n/g, '<br>');
     } catch (e) { }
 
+    if (document.getElementById('notifArea')) {
+        document.getElementById('notifArea').classList.add('hidden');
+    }
+
     document.getElementById('characterGrid').innerHTML = `
         <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; max-width: 600px; margin: 40px auto; background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid var(--border);">
             <i class="fas fa-star" style="font-size: 4rem; color: var(--accent); margin-bottom: 20px;"></i>
@@ -82,6 +120,104 @@ async function showLoggedOutState() {
         </div>
     `;
 }
+
+// פונקציה לפתיחת/סגירת התפריט
+function toggleNotifDropdown(e) {
+    if (e) e.stopPropagation();
+    const drop = document.getElementById('notifDropdown');
+    if (!drop) return;
+
+    const isHidden = drop.classList.contains('hidden');
+
+    if (isHidden) {
+        // --- התיקון כאן: מאתחלים ל-5 בכל פעם שפותחים את התפריט ---
+        visibleNotifsLimit = 5; 
+        renderNotifDropdownUI(); // מעדכנים את התצוגה שתציג רק 5
+        
+        drop.classList.remove('hidden');
+        
+        // סימון כנקרא
+        fetch('/api/notifications/read', { method: 'POST' });
+        const badge = document.getElementById('notifBadge');
+        if (badge) badge.classList.add('hidden');
+    } else {
+        drop.classList.add('hidden');
+    }
+}
+
+const notifBtn = document.getElementById('notifBtn');
+if (notifBtn) {
+    notifBtn.addEventListener('click', toggleNotifDropdown);
+}
+
+window.addEventListener('click', (e) => {
+    const drop = document.getElementById('notifDropdown');
+    const notifBtn = document.getElementById('notifBtn');
+
+    // אם לחצנו מחוץ לתפריט ומחוץ לכפתור הפעמון
+    if (drop && !drop.contains(e.target) && !e.target.closest('#notifBtn')) {
+        if (!drop.classList.contains('hidden')) {
+            drop.classList.add('hidden');
+            // מאתחלים ל-5 כשהתפריט נסגר
+            visibleNotifsLimit = 5;
+        }
+    }
+});
+
+async function fetchNotifications() {
+    if (!state.user) return;
+    try {
+        const res = await fetch('/api/notifications');
+        if (!res.ok) return;
+        currentNotifsData = await res.json();
+        renderNotifDropdownUI();
+    } catch (e) { console.log("Notif fetch failed"); }
+}
+
+function renderNotifDropdownUI() {
+    const dropdown = document.getElementById('notifDropdown');
+    const badge = document.getElementById('notifBadge');
+    if (!dropdown) return;
+
+    // מונה התראות שלא נקראו
+    const unreadCount = currentNotifsData.filter(n => !n.read).length;
+    if (badge) {
+        badge.textContent = unreadCount;
+        unreadCount > 0 ? badge.classList.remove('hidden') : badge.classList.add('hidden');
+    }
+
+    dropdown.innerHTML = '';
+
+    if (currentNotifsData.length === 0) {
+        dropdown.innerHTML = '<div style="padding:15px; text-align:center; color:#888;">No notifications</div>';
+        return;
+    }
+
+    // חיתוך המערך לפי המגבלה (5, 10 וכו')
+    const notifsToShow = currentNotifsData.slice(0, visibleNotifsLimit);
+
+    notifsToShow.forEach(n => {
+        const div = document.createElement('div');
+        div.style = `padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.85rem; cursor: pointer; background: ${n.read ? 'transparent' : 'rgba(187, 134, 252, 0.05)'}`;
+        const msg = n.type === 'like' ? `<b>${n.fromUser}</b> liked your list` : `<b>${n.fromUser}</b> commented`;
+        div.innerHTML = `<div>${msg}: <b>${n.listName}</b></div><div style="font-size:0.7rem; color:#666; margin-top:4px;">${new Date(n.timestamp).toLocaleString('he-IL')}</div>`;
+        div.onclick = () => window.location.href = `/share.html?id=${n.listId}`;
+        dropdown.appendChild(div);
+    });
+
+    if (currentNotifsData.length > visibleNotifsLimit) {
+        const loadMoreDiv = document.createElement('div');
+        loadMoreDiv.style = "padding: 10px; text-align: center; color: var(--accent); cursor: pointer; font-size: 0.8rem; font-weight: bold;";
+        loadMoreDiv.innerHTML = 'Show more...';
+        loadMoreDiv.onclick = (e) => {
+            e.stopPropagation(); 
+            visibleNotifsLimit += 5;
+            renderNotifDropdownUI();
+        };
+        dropdown.appendChild(loadMoreDiv);
+    }
+}
+
 
 async function fetchLists() {
     const res = await fetch('/api/lists');
@@ -282,10 +418,38 @@ function handleDragEnd(e) {
 
 function renderCurrentList() {
     const grid = document.getElementById('characterGrid');
+    const header = document.querySelector('.list-header'); // תופסים את כל שורת הפקדים
     grid.innerHTML = '';
-    const list = state.lists.find(l => l._id === state.activeListId);
 
-    if (!list) return;
+    // --- מצב שבו המשתמש מחובר אבל אין לו אף רשימה ---
+    if (state.user && state.lists.length === 0) {
+        if (header) header.style.display = 'none'; // העלמת כל שורת הכלים (חיפוש, פילטר, כפתורים)
+
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 80px 20px; max-width: 500px; margin: 60px auto; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+                <i class="fas fa-layer-group" style="font-size: 4rem; color: var(--accent); margin-bottom: 25px; display: block; opacity: 0.8;"></i>
+                <h2 style="margin-bottom: 15px; color: var(--text-main); font-size: 2rem;">Start Your Collection</h2>
+                <p style="color: var(--text-muted); margin-bottom: 35px; line-height: 1.8; font-size: 1.15rem;">
+                    It looks like you haven't created any lists yet.<br>
+                    Create your first list now to start ranking your favorite characters!
+                </p>
+                <button onclick="document.getElementById('createListBtn').click()" class="btn-primary" style="width: auto; padding: 14px 40px; border-radius: 30px; font-weight: bold; font-size: 1.1rem; box-shadow: 0 4px 10px rgba(187, 134, 252, 0.3);">
+                    <i class="fas fa-plus" style="margin-right: 10px;"></i> Create My First List
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    // --- מצב רגיל (יש רשימות) ---
+    const list = state.lists.find(l => l._id === state.activeListId);
+    if (!list) {
+        if (header) header.style.display = 'none'; // אם מסיבה כלשהי אין ליסט פעיל, נסתיר את ההדר
+        return;
+    }
+
+    // הצגת ההדר חזרה כשיש ליסט
+    if (header) header.style.display = 'flex';
 
     document.getElementById('currentListTitle').textContent = list.name;
     const editTitleBtn = document.getElementById('editListTitleBtn');
@@ -723,13 +887,39 @@ document.getElementById('authBtnNav').addEventListener('click', async () => {
     }
 });
 
-document.getElementById('authSubmitBtn').addEventListener('click', async () => {
-    const u = document.getElementById('authUsername').value, p = document.getElementById('authPassword').value;
+// פונקציית שליחה מאוחדת
+async function handleAuthAction() {
+    const u = document.getElementById('authUsername').value;
+    const p = document.getElementById('authPassword').value;
+
+    // מונע שליחה אם השדות ריקים
+    if (!u || !p) return;
+
     const url = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
-    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) });
-    if (res.ok) { isRegisterMode ? (alert("Registered!"), isRegisterMode = false, updateAuthUI()) : window.location.reload(); }
-    else { alert((await res.json()).error); }
-});
+
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, password: p })
+        });
+
+        if (res.ok) {
+            isRegisterMode ? (alert("Registered!"), isRegisterMode = false, updateAuthUI()) : window.location.reload();
+        } else {
+            const errorData = await res.json();
+            alert(errorData.error);
+        }
+    } catch (e) {
+        console.error("Auth error:", e);
+    }
+}
+
+// חיבור הכפתור לפונקציה החדשה
+document.getElementById('authSubmitBtn').onclick = (e) => {
+    e.preventDefault(); // מונע מהדפדפן לשלוח פעמיים
+    handleAuthAction();
+};
 
 document.getElementById('authSwitch').addEventListener('click', () => { isRegisterMode = !isRegisterMode; updateAuthUI(); });
 function updateAuthUI() {
@@ -896,6 +1086,47 @@ function closeMobileMenu() {
     if (sidebar) sidebar.classList.remove('open');
     if (overlay) overlay.classList.remove('active');
 }
+
+// --- 1. פונקציונליות הצגת/הסתרת סיסמה ---
+const togglePassword = document.getElementById('togglePassword');
+const passwordInput = document.getElementById('authPassword');
+
+if (togglePassword && passwordInput) {
+    togglePassword.addEventListener('click', function () {
+        // מחליף בין סוג password לסוג text
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+
+        // מחליף את האייקון (עין פתוחה/סגורה)
+        this.classList.toggle('fa-eye');
+        this.classList.toggle('fa-eye-slash');
+    });
+}
+
+// --- 2. לחיצה על Enter להתחברות ---
+// אנחנו מאזינים לכל המודאל, כך שאנטר בשדה השם או הסיסמה יעבוד
+document.getElementById('authModal').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const submitBtn = document.getElementById('authSubmitBtn');
+        if (submitBtn) submitBtn.click();
+    }
+});
+
+// --- אופציה להתחברות באמצעות מקש Enter ---
+// האזנה למקש Enter רק בתוך שדות הטקסט של ההתחברות
+const authInputs = [document.getElementById('authUsername'), document.getElementById('authPassword')];
+
+authInputs.forEach(input => {
+    if (input) {
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // עוצר את הדפדפן מלבצע פעולה טבעית
+                e.stopImmediatePropagation(); // עוצר אירועים אחרים מלהתפתח
+                handleAuthAction(); // קורא לפונקציה ישירות במקום לעשות .click()
+            }
+        });
+    }
+});
 
 document.getElementById('filterSelect').addEventListener('change', renderCurrentList);
 
@@ -1305,5 +1536,7 @@ window.adminDeleteList = async function (listId, userId, username) {
     await fetch(`/api/admin/lists/${listId}`, { method: 'DELETE' });
     adminManageLists(userId, username);
 }
+
+
 
 init();

@@ -6,7 +6,14 @@ const ListSchema = new mongoose.Schema({
  rankingType: { type: String, default: 'numbers' },
  isPrivate: { type: Boolean, default: false },
  isFreeOrder: { type: Boolean, default: false },
- order: { type: Number, default: 0 },
+ allowComments: { type: Boolean, default: true }, 
+ likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], 
+ comments: [{
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  username: String,
+  text: String,
+  timestamp: { type: Date, default: Date.now }
+ }],
  items: [{
   characterName: String,
   sourceTitle: String,

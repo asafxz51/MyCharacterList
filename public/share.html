@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer">
     <link rel="icon" type="image/png" href="/icon.png">
-    <title>Shared List</title>
+
+    <title>Shared List - MyCharacterList</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -18,8 +19,90 @@
             background-color: var(--bg-color);
         }
 
-        #mobileMenuBtn {
-            display: none !important;
+        .navbar {
+            min-height: 60px;
+            height: auto;
+            background: var(--sidebar-bg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .user-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(187, 134, 252, 0.1);
+            padding: 6px 12px;
+            border-radius: 20px;
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: 1px solid rgba(187, 134, 252, 0.2);
+        }
+
+        .user-chip i {
+            font-size: 1.1rem;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-controls button {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            height: 38px;
+            padding: 0 12px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #authBtnNav {
+            background: var(--accent);
+            color: white !important;
+            border: none;
+            font-weight: bold;
+            padding: 0 15px;
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 10px;
+                justify-content: space-between;
+            }
+
+            .logo {
+                font-size: 1.1rem;
+            }
+
+            .nav-controls {
+                width: 100%;
+                justify-content: space-between;
+                margin-top: 5px;
+                padding-top: 10px;
+                border-top: 1px solid var(--border);
+            }
+
+            #authBtnNav {
+                flex: 1.5;
+            }
+
+            .nav-controls button,
+            #notifArea {
+                flex: 1;
+            }
         }
 
         .share-wrapper {
@@ -36,76 +119,78 @@
             padding: 30px;
             border-radius: 10px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            box-sizing: border-box;
         }
 
-        .controls {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 30px;
-    padding: 0 15px;
-}
+        .unified-filter {
+            display: flex;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            height: 54px;
+            overflow: hidden;
+            width: 100%;
+            max-width: 480px;
+            align-items: center;
+            margin: 0 auto 30px auto;
+        }
 
-.unified-filter {
-    display: flex;
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    height: 42px;
-    overflow: hidden;
-    width: 100%;
-    max-width: 450px; /* רוחב נוח לתצוגה */
-}
+        .unified-filter input {
+            flex: 1;
+            height: 100%;
+            border: none !important;
+            background: transparent !important;
+            padding: 0 15px;
+            color: var(--text-main);
+            outline: none;
+            font-size: 16px;
+        }
 
-.unified-filter input {
-    flex: 2;
-    min-width: 80px;
-    border: none !important;
-    background: transparent !important;
-    padding: 0 12px;
-    color: var(--text-main);
-    outline: none;
-}
+        .unified-filter select {
+            width: 130px;
+            height: 100%;
+            border: none !important;
+            border-left: 1px solid var(--border) !important;
+            background: var(--card-bg);
+            color: var(--accent);
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0 10px;
+            appearance: none;
+        }
 
-
-  .unified-filter select {
-    flex: 1;
-    min-width: 120px;
-    border: none !important;
-    border-left: 1px solid var(--border) !important;
-    background: var(--card-bg);
-    color: var(--accent);
-    font-weight: bold;
-    cursor: pointer;
-    outline: none;
-}
-
-@media (max-width: 480px) {
-    .unified-filter { flex-direction: column; height: auto; }
-    .unified-filter input, .unified-filter select { height: 42px; width: 100%; }
-    .unified-filter input { border-bottom: 1px solid var(--border) !important; }
-
-    #userListDropdown{
-        max-width: 10px;
-    }
-}
+        #commentsSection {
+            max-width: 900px;
+            margin: 80px auto 50px auto !important;
+            padding: 30px;
+            background: var(--card-bg);
+            border-radius: 15px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
     </style>
 </head>
 
 <body class="dark-theme">
-
     <nav class="navbar">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <button id="mobileMenuBtn" class="icon-btn mobile-only">
-                <i class="fas fa-bars"></i>
-            </button>
-            <a style="text-decoration: none;" href="/">
-                <div class="logo">MyCharacterList</div>
-            </a>
+        <a href="/" style="text-decoration: none;">
+            <div class="logo">MyCharacterList</div>
+        </a>
+        <div class="nav-identity">
+            <span id="userDisplay" class="user-chip hidden"><i class="fas fa-user-circle"></i> <span
+                    id="usernameLabel"></span></span>
         </div>
-
         <div class="nav-controls">
-            <span id="userDisplay" style="margin-right:15px; font-size:0.9rem;"></span>
+            <button id="authBtnNav">Login</button>
+            <button id="adminBtn" class="icon-btn hidden" title="Admin Panel"><i class="fas fa-crown"
+                    style="color: gold;"></i></button>
+            <div id="notifArea" class="hidden" style="position: relative; display: inline-block;">
+                <button id="notifBtn" title="Notifications"><i class="fas fa-bell"></i></button>
+                <span id="notifBadge" class="hidden"
+                    style="position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; font-weight: bold;">0</span>
+                <div id="notifDropdown" class="hidden"
+                    style="position: absolute; top: 40px; right: 0; width: 280px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; z-index: 3000; max-height: 400px; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.4);">
+                </div>
+            </div>
             <button id="communityBtn" title="View Users"><i class="fas fa-users"></i></button>
             <button id="themeToggle"><i class="fas fa-moon"></i></button>
         </div>
@@ -115,7 +200,6 @@
         <div class="share-header">
             <h1 id="listTitle" style="font-size: 2.5rem; margin-bottom: 10px;">Loading...</h1>
             <p id="listAuthor" style="color:var(--text-muted); font-size: 1.1rem; margin-bottom: 15px;"></p>
-
             <div id="otherListsContainer"
                 style="display: none; justify-content: center; align-items: center; gap: 10px; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
                 <label style="color: var(--text-muted); font-size: 0.9rem;">More from this user:</label>
@@ -124,7 +208,13 @@
             </div>
         </div>
 
-        <!-- הפילטר המאוחד -->
+        <div id="listInteractions" style="display: flex; justify-content: center; gap: 20px; margin-bottom: 30px;">
+            <button id="likeBtn" class="btn-primary"
+                style="width: auto; background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 10px 25px;">
+                <i class="far fa-heart"></i> <span id="likesCount">0</span> Likes
+            </button>
+        </div>
+
         <div class="controls">
             <div class="unified-filter">
                 <input type="text" id="listFilterInput" placeholder="🔍 Search in list...">
@@ -132,285 +222,380 @@
                     <option value="all">All Categories</option>
                     <option value="Anime">Anime</option>
                     <option value="Game">Game</option>
-                    <option value="Visual Novel">Visual Novel</option>
+                    <option value="VN">Visual Novel</option>
                     <option value="TV Show">TV Shows</option>
                     <option value="Movie">Movies</option>
                     <option value="Manga">Manga</option>
                     <option value="Book">Books</option>
-                    <option value="Actor">Actors</option>
                     <option value="Other">Other</option>
                 </select>
             </div>
         </div>
 
         <div id="grid" class="grid"></div>
+
+    <div id="commentsSection" style="display: none;">
+        <h3 style="margin-bottom: 20px; color: var(--accent);"><i class="fas fa-comments"></i> Comments</h3>
+    
+        <!-- תיבת כתיבה למחוברים -->
+        <div id="commentInputArea" style="margin-bottom: 30px; display: none; gap: 10px;">
+            <input type="text" id="commentText" placeholder="Write a comment..."
+                style="flex: 1; height: 50px; padding: 0 15px; background: var(--bg-color); border: 1px solid var(--border); color: var(--text-main); border-radius: 10px;">
+            <button id="submitComment" class="btn-primary" style="width: auto; padding: 0 25px;">Post</button>
+        </div>
+    
+        <!-- הודעה למנותקים -->
+        <div id="loginToCommentNotice"
+            style="display: none; text-align: center; padding: 20px; background: rgba(187, 134, 252, 0.05); border-radius: 10px; margin-bottom: 30px; border: 1px dashed var(--accent);">
+            <p style="color: var(--text-muted); font-size: 1rem;">
+                <i class="fas fa-lock" style="margin-right: 10px;"></i>
+                Please <span style="color: var(--accent); font-weight: bold; cursor: pointer; text-decoration: underline;"
+                    onclick="document.getElementById('authModal').classList.remove('hidden')">Log In</span> to post a
+                comment.
+            </p>
+        </div>
+    
+        <div id="commentsList"></div>
+        <div id="loadMoreCommentsContainer" style="text-align: center; margin-top: 20px; display: none;">
+            <button id="loadMoreCommentsBtn" class="btn-primary"
+                style="width: auto; background: transparent; border: 1px solid var(--accent); color: var(--accent);">Load
+                More</button>
+        </div>
     </div>
 
+    <!-- Modals -->
     <div id="communityModal" class="modal hidden">
-        <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
+        <div class="modal-content">
             <span class="close-modal" id="closeCommModal">&times;</span>
-            <h3 id="communityTitle" style="margin-bottom: 15px; text-align: center;">Community</h3>
+            <h3 id="communityTitle" style="text-align: center; margin-bottom: 15px;">Community</h3>
             <button id="commBackBtn" class="btn-primary hidden"
-                style="margin-bottom: 15px; width: auto; background: #555;"><i class="fas fa-arrow-left"></i>
-                Back</button>
+                style="margin-bottom:15px; width:auto; background:#555;"><i class="fas fa-arrow-left"></i> Back</button>
             <div id="commControls">
-                <div class="search-bar-container" style="width: 100%; margin-bottom: 15px;">
-                    <input type="text" id="userSearchInput" placeholder="Search for users...">
-                </div>
-                <div id="commTabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <button id="tabAllUsers" class="btn-primary active-tab" style="flex:1;">All Users</button>
-                    <button id="tabSavedUsers" class="btn-primary inactive-tab" style="flex:1;">Following</button>
-                </div>
+                <input type="text" id="userSearchInput" placeholder="Search for users..."
+                    style="width:100%; margin-bottom:15px; padding:10px; border-radius:6px; background:var(--bg-color); border:1px solid var(--border); color:var(--text-main);">
             </div>
-            <div id="communityGrid" class="grid"
-                style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); margin: 0; width: 100%;"></div>
+            <div id="communityGrid" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
+            </div>
+        </div>
+    </div>
+
+    <div id="authModal" class="modal hidden">
+        <div class="modal-content small-modal">
+            <span class="close-modal" id="closeAuth">&times;</span>
+            <h3 id="authTitle">Login</h3>
+            <input type="text" id="authUsername" placeholder="Username"
+                style="width:100%; margin:15px 0 10px 0; padding:10px; background:var(--bg-color); color:white; border:1px solid var(--border);">
+            <div style="position: relative; width: 100%; margin-bottom: 15px;">
+                <input type="password" id="authPassword" placeholder="Password"
+                    style="width: 100%; padding: 10px; padding-right: 40px; background: var(--bg-color); color: white; border: 1px solid var(--border); border-radius: 4px;">
+                <i class="fas fa-eye" id="togglePassword"
+                    style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888; font-size: 0.9rem;"></i>
+            </div>
+            <button id="authSubmitBtn" class="btn-primary">Login</button>
+            <p id="authSwitch" style="margin-top:15px; cursor:pointer; color:#888;">Need an account? Register.</p>
         </div>
     </div>
 
     <script>
-        // --- Dark Mode ---
-        document.getElementById('themeToggle').addEventListener('click', () => {
-            document.body.classList.toggle('light-theme');
-        });
-
         const params = new URLSearchParams(window.location.search);
-        const id = params.get('id');
-        let allItems = [];
-        let listRankingType = 'numbers';
-        let isFreeOrder = false;
+        const listId = params.get('id');
+        let allItems = [], listRankingType = 'numbers', isFreeOrder = false;
+        let currentUserData = null, loggedInUser = null, currentListData = null;
+        let visibleNotifsLimit = 5, currentNotifsData = [], visibleCommentsLimit = 10;
+        let isReg = false; // הגדרת משתנה ההרשמה
+
+        document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light-theme');
 
         function getRatingDisplay(rating, type) {
             if (rating === 0) return 'No Grade';
             if (type !== 'letters') return rating + '/10';
-            if (rating >= 13) return 'SSS';
-            if (rating >= 12) return 'SS';
-            if (rating >= 11) return 'S';
-            if (rating >= 10) return 'A';
-            if (rating >= 9) return 'B';
-            if (rating >= 8) return 'C';
-            if (rating >= 7) return 'D';
-            if (rating >= 6) return 'E';
-            return 'F';
+            const tiers = { 13: 'SSS', 12: 'SS', 11: 'S', 10: 'A', 9: 'B', 8: 'C', 7: 'D', 6: 'E' };
+            return tiers[rating] || 'F';
         }
 
-        // טעינת הרשימה
-        fetch(`/api/share/${id}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.error) {
-                    document.querySelector('.share-wrapper').innerHTML = "<h1 style='text-align:center; margin-top:50px;'>List not found</h1>";
-                    return;
+        async function fetchNotifications() {
+            if (!loggedInUser) return;
+            try {
+                const res = await fetch('/api/notifications');
+                if (res.ok) { currentNotifsData = await res.json(); renderNotifDropdownUI(); }
+            } catch (e) { }
+        }
+
+        function renderNotifDropdownUI() {
+            const dropdown = document.getElementById('notifDropdown');
+            const badge = document.getElementById('notifBadge');
+            if (!dropdown) return;
+            const unread = currentNotifsData.filter(n => !n.read).length;
+            if (badge) { badge.textContent = unread; unread > 0 ? badge.classList.remove('hidden') : badge.classList.add('hidden'); }
+            dropdown.innerHTML = currentNotifsData.length === 0 ? '<div style="padding:15px;text-align:center;color:#888;">No notifications</div>' : '';
+            currentNotifsData.slice(0, visibleNotifsLimit).forEach(n => {
+                const div = document.createElement('div');
+                div.style = `padding:12px; border-bottom:1px solid var(--border); cursor:pointer; background:${n.read ? 'transparent' : 'rgba(187, 134, 252, 0.05)'}`;
+                const msg = n.type === 'like' ? `<b>${n.fromUser}</b> liked your list` : `<b>${n.fromUser}</b> commented`;
+                div.innerHTML = `<div>${msg}: <b>${n.listName}</b></div><div style="font-size:0.7rem;color:#666;margin-top:4px;">${new Date(n.timestamp).toLocaleString('he-IL')}</div>`;
+                div.onclick = () => window.location.href = `/share.html?id=${n.listId}`;
+                dropdown.appendChild(div);
+            });
+            if (currentNotifsData.length > visibleNotifsLimit) {
+                const more = document.createElement('div');
+                more.style = "padding:10px;text-align:center;color:var(--accent);cursor:pointer;font-weight:bold;";
+                more.textContent = "Show more...";
+                more.onclick = (e) => { e.stopPropagation(); visibleNotifsLimit += 5; renderNotifDropdownUI(); };
+                dropdown.appendChild(more);
+            }
+        }
+
+        async function initPage() {
+            try {
+                const authRes = await fetch('/api/auth/check').catch(() => null);
+                if (authRes && authRes.ok) {
+                    currentUserData = await authRes.json();
+                    loggedInUser = currentUserData.username;
+                    document.getElementById('usernameLabel').textContent = loggedInUser;
+                    document.getElementById('userDisplay').classList.remove('hidden');
+                    document.getElementById('authBtnNav').textContent = "Logout";
+                    document.getElementById('notifArea').classList.remove('hidden');
+                    fetchNotifications(); setInterval(fetchNotifications, 30000);
                 }
+
+                const listRes = await fetch(`/api/share/${listId}`);
+                const data = await listRes.json();
+                currentListData = data;
                 document.title = data.name;
                 document.getElementById('listTitle').textContent = data.name;
                 document.getElementById('listAuthor').textContent = `Created by: ${data.author}`;
-                listRankingType = data.rankingType || 'numbers';
-                isFreeOrder = data.isFreeOrder || false;
-                allItems = data.items;
+                listRankingType = data.rankingType; isFreeOrder = data.isFreeOrder; allItems = data.items || [];
                 renderList();
-                if (data.userId) fetchUserLists(data.userId, id);
-            })
-            .catch(err => console.error(err));
+                document.getElementById('likesCount').textContent = (data.likes || []).length;
+                if (currentUserData && (data.likes || []).includes(currentUserData._id)) document.querySelector('#likeBtn i').className = 'fas fa-heart';
+                if (data.allowComments !== false) {
+                    document.getElementById('commentsSection').style.display = 'block';
+
+                    const inputArea = document.getElementById('commentInputArea');
+                    const loginNotice = document.getElementById('loginToCommentNotice');
+
+                    if (loggedInUser) {
+                        if (inputArea) inputArea.style.display = 'flex';   // מראה את התיבה
+                        if (loginNotice) loginNotice.style.display = 'none'; // מוחק את ההודעה
+                    } else {
+                        if (inputArea) inputArea.style.display = 'none';    // מחביא את התיבה
+                        if (loginNotice) loginNotice.style.display = 'block'; // מראה את ההודעה
+                    }
+
+                    renderComments(data.comments, data.userId);
+                }
+                if (data.userId) fetchUserLists(data.userId, listId);
+            } catch (e) { console.error(e); }
+        }
 
         function renderList() {
-            const grid = document.getElementById('grid');
-            grid.innerHTML = '';
-
-            const category = document.getElementById('filterSelect').value;
-            const searchInput = document.getElementById('listFilterInput');
-            const search = searchInput ? searchInput.value.toLowerCase() : "";
-
-            let displayItems = [...allItems];
-
-            // פילטור משולב
-            displayItems = displayItems.filter(item => {
-                const matchesCategory = (category === 'all' || item.sourceType === category);
-                const matchesSearch = (
-                    item.characterName.toLowerCase().includes(search) ||
-                    item.sourceTitle.toLowerCase().includes(search)
-                );
-                return matchesCategory && matchesSearch;
-            });
-
-            if (!isFreeOrder) {
-                displayItems.sort((a, b) => b.rating - a.rating);
-            }
-
-            if (displayItems.length === 0) {
-                grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#888; font-size:1.2rem; padding: 40px;">No characters found.</p>';
-                return;
-            }
-
-            displayItems.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = 'char-card';
-                let rankClass = (index === 0) ? 'rank-1' : (index === 1) ? 'rank-2' : (index === 2) ? 'rank-3' : 'rank-other';
-                const displayRating = getRatingDisplay(item.rating, listRankingType);
-                const ratingHtml = item.rating === 0 ? '' : `<div class="char-rating">${displayRating}</div>`;
-                let displayType = item.sourceType === 'TV Show' ? 'TV' : item.sourceType;
-
-                div.innerHTML = `
-                <div class="rank-badge ${rankClass}">#${index + 1}</div>
-                ${ratingHtml}
-                <img src="${item.image}" class="char-img">
-                <div class="char-info">
-                    <div class="char-name">${item.characterName}</div>
-                    <div class="source-row">
-                        <span class="source-title" title="${item.sourceTitle}">${item.sourceTitle}</span>
-                        <span class="red-type">${displayType}</span>
-                    </div>
-                </div>
-            `;
+            const grid = document.getElementById('grid'); grid.innerHTML = '';
+            const s = document.getElementById('listFilterInput').value.toLowerCase();
+            const cat = document.getElementById('filterSelect').value;
+            const filtered = allItems.filter(i => (cat === 'all' || i.sourceType === cat) && (i.characterName.toLowerCase().includes(s) || i.sourceTitle.toLowerCase().includes(s)));
+            if (!isFreeOrder) filtered.sort((a, b) => b.rating - a.rating);
+            filtered.forEach((item, index) => {
+                const div = document.createElement('div'); div.className = 'char-card';
+                const ratingHtml = item.rating === 0 ? '' : `<div class="char-rating">${getRatingDisplay(item.rating, listRankingType)}</div>`;
+                div.innerHTML = `<div class="rank-badge ${index < 3 ? 'rank-' + (index + 1) : 'rank-other'}">#${index + 1}</div>${ratingHtml}<img src="${item.image}" class="char-img"><div class="char-info"><div class="char-name">${item.characterName}</div><div class="source-row"><span>${item.sourceTitle}</span><span class="red-type">${item.sourceType === 'TV Show' ? 'TV' : item.sourceType}</span></div></div>`;
                 grid.appendChild(div);
             });
         }
 
-        // מאזינים
-        document.getElementById('listFilterInput').addEventListener('input', renderList);
-        document.getElementById('filterSelect').addEventListener('change', renderList);
+       function renderComments(comments, ownerId) {
+            const area = document.getElementById('commentsList');
+            const loadMore = document.getElementById('loadMoreCommentsContainer');
+            if (!area) return;
 
-        // --- שאר הפונקציות (fetchUserLists, community וכו') נשארות כפי שהיו ---
-        async function fetchUserLists(userId, currentListId) {
-            try {
-                const res = await fetch(`/api/users/${userId}/lists`);
-                if (!res.ok) return;
-                const lists = await res.json();
-                if (lists.length > 1) {
-                    const container = document.getElementById('otherListsContainer');
-                    const dropdown = document.getElementById('userListsDropdown');
-                    container.style.display = 'flex';
-                    dropdown.innerHTML = '';
-                    lists.forEach(l => {
-                        const option = document.createElement('option');
-                        option.value = l._id;
-                        option.textContent = l.name;
-                        if (l._id === currentListId) option.selected = true;
-                        dropdown.appendChild(option);
-                    });
-                    dropdown.addEventListener('change', (e) => {
-                        const selectedId = e.target.value;
-                        if (selectedId !== currentListId) {
-                            window.location.href = `/share.html?id=${selectedId}`;
-                        }
-                    });
+            area.innerHTML = '';
+            const safeComments = Array.isArray(comments) ? comments : [];
+
+            if (safeComments.length === 0) {
+                area.innerHTML = '<p style="text-align:center; color:#888; padding: 20px;">No comments yet. Be the first to reply!</p>';
+                if (loadMore) loadMore.style.display = 'none';
+                return;
+            }
+
+            // הופכים את הסדר כך שהחדשות ביותר יהיו למעלה
+            const sorted = [...safeComments].reverse();
+
+            // מציגים רק את כמות התגובות שהוגדרה ב-visibleCommentsLimit
+            const toDisplay = sorted.slice(0, visibleCommentsLimit);
+
+            toDisplay.forEach(c => {
+                const div = document.createElement('div');
+                div.style = "padding:15px; background:var(--card-bg); border-radius:10px; border:1px solid var(--border); position:relative; margin-bottom:12px;";
+
+                // בדיקה: האם המשתמש המחובר רשאי למחוק את התגובה?
+                let showDelete = false;
+                if (currentUserData) {
+                    const isOwner = currentUserData._id === ownerId;
+                    const isAdmin = currentUserData.role === 'admin';
+                    const isAuthor = currentUserData._id === c.userId; // הוספת בדיקה אם המשתמש הוא המגיב
+
+                    if (isOwner || isAdmin || isAuthor) {
+                        showDelete = true;
+                    }
                 }
+
+                const delBtn = showDelete ?
+                    `<button onclick="deleteComment('${c._id}')" style="position:absolute; right:12px; top:12px; background:none; border:none; color:#ff4444; cursor:pointer; font-size:1rem;"><i class="fas fa-trash"></i></button>` : '';
+
+                div.innerHTML = `
+            ${delBtn}
+            <div style="font-weight:bold; color:var(--accent); margin-bottom:5px;">${c.username || 'User'}</div>
+            <div style="color:var(--text-main); line-height: 1.5;">${c.text}</div>
+            <div style="font-size:0.7rem; color:#666; margin-top:8px;">${new Date(c.timestamp).toLocaleString('he-IL')}</div>
+        `;
+                area.appendChild(div);
+            });
+
+            // טיפול בכפתור "טען עוד"
+            if (loadMore) {
+                if (sorted.length > visibleCommentsLimit) {
+                    loadMore.style.display = 'block';
+                } else {
+                    loadMore.style.display = 'none';
+                }
+            }
+        }
+
+        document.getElementById('listFilterInput').oninput = renderList;
+        document.getElementById('filterSelect').onchange = renderList;
+
+        document.getElementById('likeBtn').onclick = async () => {
+            if (!loggedInUser) return alert("Please Login to like.");
+            const res = await fetch(`/api/lists/${listId}/like`, { method: 'POST' });
+            const r = await res.json();
+            document.getElementById('likesCount').textContent = r.likesCount;
+            document.querySelector('#likeBtn i').className = r.isLiked ? 'fas fa-heart' : 'far fa-heart';
+            if (r.isLiked) currentListData.likes.push(currentUserData._id); else currentListData.likes = currentListData.likes.filter(id => id !== currentUserData._id);
+        };
+
+        document.getElementById('submitComment').onclick = async () => {
+                const inp = document.getElementById('commentText');
+                const text = inp.value.trim();
+
+                if (!loggedInUser) return alert("Please log in to comment.");
+                if (!text) return;
+
+                try {
+                    const res = await fetch(`/api/lists/${listId}/comment`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: text })
+                    });
+
+                    const data = await res.json();
+
+                    // אם השרת החזיר שגיאה (כמו "חכה 10 דקות")
+                    if (!res.ok) {
+                        alert(data.error || "Failed to post comment.");
+                        return; // מפסיקים כאן!
+                    }
+
+                    // הצלחה
+                    inp.value = '';
+                    currentListData.comments = data; // השרת מחזיר את כל המערך המעודכן
+                    renderComments(currentListData.comments, currentListData.userId);
+
+                } catch (e) {
+                    console.error(e);
+                    alert("An unexpected error occurred.");
+                }
+            };
+
+        document.getElementById('loadMoreCommentsBtn').onclick = () => { visibleCommentsLimit += 10; renderComments(currentListData.comments, currentListData.userId); };
+
+        window.deleteComment = async (cid) => {
+            if (confirm("Delete?") && await fetch(`/api/lists/${listId}/comments/${cid}`, { method: 'DELETE' })) {
+                currentListData.comments = currentListData.comments.filter(c => c._id !== cid); renderComments(currentListData.comments, currentListData.userId);
+            }
+        };
+
+        async function handleAuthAction() {
+            const u = document.getElementById('authUsername').value, p = document.getElementById('authPassword').value;
+            if (!u || !p) return;
+            const url = isReg ? '/api/auth/register' : '/api/auth/login';
+            try {
+                const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) });
+                if (res.ok) window.location.reload(); else alert((await res.json()).error);
             } catch (e) { console.error(e); }
         }
 
-        let loggedInUser = null;
-        let commState = { view: 'all', search: '' };
-        fetch('/api/auth/check').then(res => { if (res.ok) res.json().then(data => { loggedInUser = data.username; }); });
+        document.getElementById('authBtnNav').onclick = async () => {
+            if (loggedInUser) { await fetch('/api/auth/logout', { method: 'POST' }); window.location.reload(); }
+            else { document.getElementById('authModal').classList.remove('hidden'); }
+        };
+        document.getElementById('authSwitch').onclick = () => {
+            isReg = !isReg;
+            document.getElementById('authTitle').innerText = isReg ? "Register" : "Login";
+            document.getElementById('authSubmitBtn').innerText = isReg ? "Register" : "Login";
+        };
+        document.getElementById('authSubmitBtn').onclick = (e) => { e.preventDefault(); handleAuthAction(); };
+        document.getElementById('closeAuth').onclick = () => document.getElementById('authModal').classList.add('hidden');
 
-        document.getElementById('communityBtn').addEventListener('click', () => {
-            commState = { view: 'all', search: '' };
-            document.getElementById('userSearchInput').value = '';
-            loadCommunityUsers();
+        const authInputs = [document.getElementById('authUsername'), document.getElementById('authPassword')];
+        authInputs.forEach(input => {
+            input?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); e.stopImmediatePropagation(); handleAuthAction(); }
+            });
         });
 
+        document.getElementById('togglePassword').onclick = function () {
+            const inp = document.getElementById('authPassword');
+            const type = inp.getAttribute('type') === 'password' ? 'text' : 'password';
+            inp.setAttribute('type', type);
+            this.classList.toggle('fa-eye'); this.classList.toggle('fa-eye-slash');
+        };
+
+        document.getElementById('notifBtn').onclick = (e) => {
+            e.stopPropagation(); const drop = document.getElementById('notifDropdown');
+            if (drop.classList.contains('hidden')) {
+                visibleNotifsLimit = 5; renderNotifDropdownUI(); drop.classList.remove('hidden');
+                fetch('/api/notifications/read', { method: 'POST' });
+            } else drop.classList.add('hidden');
+        };
+
+        document.getElementById('communityBtn').onclick = () => { document.getElementById('communityModal').classList.remove('hidden'); loadCommunityUsers(); };
         document.getElementById('closeCommModal').onclick = () => document.getElementById('communityModal').classList.add('hidden');
-        document.getElementById('commBackBtn').onclick = loadCommunityUsers;
-
-        const btnAll = document.getElementById('tabAllUsers');
-        const btnSaved = document.getElementById('tabSavedUsers');
-        btnAll.onclick = () => switchCommTab('all');
-        btnSaved.onclick = () => switchCommTab('saved');
-
-        function switchCommTab(view) {
-            commState.view = view;
-            if (view === 'all') {
-                btnAll.classList.add('active-tab'); btnAll.classList.remove('inactive-tab');
-                btnSaved.classList.remove('active-tab'); btnSaved.classList.add('inactive-tab');
-            } else {
-                btnAll.classList.remove('active-tab'); btnAll.classList.add('inactive-tab');
-                btnSaved.classList.add('active-tab'); btnSaved.classList.remove('inactive-tab');
-            }
-            document.getElementById('userSearchInput').value = '';
-            commState.search = '';
-            loadCommunityUsers();
-        }
-
-        let userSearchDebounce;
-        document.getElementById('userSearchInput').addEventListener('input', (e) => {
-            clearTimeout(userSearchDebounce);
-            userSearchDebounce = setTimeout(() => { commState.search = e.target.value; loadCommunityUsers(); }, 500);
-        });
 
         async function loadCommunityUsers() {
-            const grid = document.getElementById('communityGrid');
-            const controls = document.getElementById('commControls');
-            const backBtn = document.getElementById('commBackBtn');
-            const title = document.getElementById('communityTitle');
-            const commTabs = document.getElementById('commTabs');
-            document.getElementById('communityModal').classList.remove('hidden');
-            controls.classList.remove('hidden');
-            backBtn.classList.add('hidden');
-            title.textContent = commState.view === 'all' ? "Community Users" : "Following";
-            if (!loggedInUser) commTabs.style.display = 'none';
-            else commTabs.style.display = 'flex';
-            grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Loading...</p>';
-            try {
-                const onlyFollowing = commState.view === 'saved';
-                const res = await fetch(`/api/users?search=${commState.search}&onlyFollowing=${onlyFollowing}`);
-                if (res.status === 401) {
-                    grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 20px;"><p style="margin-bottom:10px;">Please login to use this feature.</p><a href="/"><button class="btn-primary" style="width:auto;">Go to Login</button></a></div>`;
-                    return;
-                }
-                const users = await res.json();
-                grid.innerHTML = '';
-                if (users.length === 0) {
-                    grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center;">No users found.</p>';
-                    return;
-                }
-                users.forEach(u => {
-                    if (u.isMe) return;
-                    const div = document.createElement('div');
-                    div.className = 'user-card';
-                    let starHtml = loggedInUser ? `<button class="follow-btn" onclick="toggleFollow(event, '${u._id}')"><i class="${u.isFollowing ? 'fas fa-star active' : 'far fa-star'}"></i></button>` : '';
-                    div.innerHTML = `${starHtml}<i class="fas fa-user-circle user-icon"></i><div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 5px;">${u.username}</div>`;
-                    div.onclick = (e) => { if (!e.target.closest('.follow-btn')) showUserLists(u._id, u.username); };
-                    grid.appendChild(div);
-                });
-            } catch (e) { grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Error loading users.</p>'; }
+            const grid = document.getElementById('communityGrid'); grid.innerHTML = 'Loading...';
+            const users = await (await fetch(`/api/users?search=${document.getElementById('userSearchInput').value}`)).json();
+            grid.innerHTML = users.length ? '' : 'No users found';
+            users.forEach(u => {
+                const div = document.createElement('div'); div.className = 'user-card';
+                div.innerHTML = `${loggedInUser ? `<button class="follow-btn" onclick="toggleFollow(event, '${u._id}')"><i class="${u.isFollowing ? 'fas fa-star active' : 'far fa-star'}"></i></button>` : ''}<i class="fas fa-user-circle user-icon"></i><div>${u.username}</div>`;
+                div.onclick = (e) => { if (!e.target.closest('.follow-btn')) showUserLists(u._id, u.username); };
+                grid.appendChild(div);
+            });
         }
 
-        async function toggleFollow(e, userId) {
-            e.stopPropagation();
-            const btn = e.currentTarget.querySelector('i');
-            try {
-                const res = await fetch(`/api/users/follow/${userId}`, { method: 'POST' });
-                if (res.status === 401) return alert("Please login to follow users.");
-                const isFollowing = btn.classList.contains('fas');
-                btn.className = isFollowing ? 'far fa-star' : 'fas fa-star active';
-                if (commState.view === 'saved' && isFollowing) loadCommunityUsers();
-            } catch (err) { console.error(err); }
+        window.toggleFollow = async (e, uid) => { e.stopPropagation(); await fetch(`/api/users/follow/${uid}`, { method: 'POST' }); loadCommunityUsers(); };
+        async function showUserLists(uid, name) {
+            document.getElementById('commControls').classList.add('hidden'); document.getElementById('commBackBtn').classList.remove('hidden');
+            const lists = await (await fetch(`/api/users/${uid}/lists`)).json();
+            const grid = document.getElementById('communityGrid'); grid.innerHTML = lists.length ? '' : 'No lists found';
+            lists.forEach(l => {
+                const div = document.createElement('div'); div.className = 'comm-list-card';
+                div.innerHTML = `<h4>${l.name}</h4><p>${l.items.length} items</p>`;
+                div.onclick = () => window.location.href = `/share.html?id=${l._id}`;
+                grid.appendChild(div);
+            });
         }
 
-        async function showUserLists(userId, username) {
-            const grid = document.getElementById('communityGrid');
-            const controls = document.getElementById('commControls');
-            const backBtn = document.getElementById('commBackBtn');
-            const title = document.getElementById('communityTitle');
-            controls.classList.add('hidden');
-            backBtn.classList.remove('hidden');
-            title.textContent = `${username}'s Lists`;
-            grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Loading lists...</p>';
-            try {
-                const res = await fetch(`/api/users/${userId}/lists`);
-                const lists = await res.json();
-                grid.innerHTML = '';
-                if (lists.length === 0) {
-                    grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center;">No public lists.</p>';
-                    return;
-                }
-                lists.forEach(list => {
-                    const div = document.createElement('div');
-                    div.className = 'comm-list-card';
-                    div.innerHTML = `<h4 style="color:var(--accent); margin:0 0 5px 0;">${list.name}</h4><p style="color:var(--text-muted); font-size:0.9rem;">${list.items.length} items</p>`;
-                    div.onclick = () => window.location.href = `/share.html?id=${list._id}`;
-                    grid.appendChild(div);
-                });
-            } catch (e) { grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Error.</p>'; }
+        async function fetchUserLists(uid, curr) {
+            const lists = await (await fetch(`/api/users/${uid}/lists`)).json();
+            const drop = document.getElementById('userListsDropdown');
+            if (lists.length > 1 && drop) {
+                document.getElementById('otherListsContainer').style.display = 'flex';
+                drop.innerHTML = lists.map(l => `<option value="${l._id}" ${l._id === curr ? 'selected' : ''}>${l.name}</option>`).join('');
+                drop.onchange = (e) => window.location.href = `/share.html?id=${e.target.value}`;
+            }
         }
+
+        initPage();
     </script>
 </body>
 
