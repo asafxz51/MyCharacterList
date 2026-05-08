@@ -1201,4 +1201,45 @@ select {
   display: block;
 }
 
+/* עיצוב התמונה בתגובות */
+.comment-avatar {
+  width: 42px;
+  /* הגדלנו מ-30 */
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--accent);
+  padding: 2px;
+  background: var(--bg-color);
+  margin-right: 12px;
+  flex-shrink: 0;
+  /* מונע מהתמונה להתכווץ כשהטקסט ארוך */
+}
+
+/* עיצוב התמונה בתגובה לתגובה (קצת קטנה יותר) */
+.reply-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--accent);
+  padding: 1px;
+  background: var(--bg-color);
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+/* אייקון גיבוי כשיש איש אפור */
+.comment-avatar-icon {
+  font-size: 38px;
+  color: var(--text-muted);
+  margin-right: 12px;
+}
+
+.reply-avatar-icon {
+  font-size: 28px;
+  color: var(--text-muted);
+  margin-right: 10px;
+}
+
 /* סידור הכותרת: שמאל וימין */

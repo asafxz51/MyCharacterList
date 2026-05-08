@@ -11,13 +11,15 @@ const ListSchema = new mongoose.Schema({
  comments: [{
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   username: String,
+  avatar: String, // הוספה כאן
   text: String,
   role: String,
   timestamp: { type: Date, default: Date.now },
-  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // לייקים לתגובה
-  replies: [{ // תגובות לתגובה
+  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  replies: [{
    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
    username: String,
+   avatar: String, // וגם כאן
    text: String,
    role: String,
    replyingTo: String,

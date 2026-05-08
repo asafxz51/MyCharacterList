@@ -101,7 +101,12 @@ app.post('/api/auth/logout', (req, res) => res.clearCookie('token').json({ messa
 app.get('/api/auth/check', verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    res.json({ _id: user._id, username: user.username, role: user.role });
+    res.json({
+      _id: user._id,
+      username: user.username,
+      role: user.role,
+      avatar: user.avatar || '' 
+    });
   } catch (e) { res.status(401).json({ error: "Unauthorized" }); }
 });
 
@@ -163,6 +168,57 @@ app.post('/api/lists/:id/duplicate', verifyToken, async (req, res) => {
   const user = await User.findById(req.user._id);
   await saveLog(user, "Duplicate List", `From: ${original.name}`);
   res.json(newList);
+});
+
+
+// --- Profile Picture ---
+
+// עדכון תמונת פרופיל בלבד
+app.put('/api/users/avatar', verifyToken, async (req, res) => {
+  try {
+    const { avatar } = req.body;
+    const userId = req.user._id;
+
+    // 1. עדכון המשתמש עצמו - זה מהיר מאוד!
+    const user = await User.findByIdAndUpdate(userId, { avatar }, { new: true });
+
+    // 2. שליחת תגובה מיידית למשתמש כדי שלא יקבל הודעת שגיאה
+    res.json({ success: true, avatar: user.avatar });
+
+    // 3. הרצת הסנכרון הכבד ברקע (בלי 'await' לפני ה-res)
+    // זה מבטיח שהמשתמש יראה הצלחה, והשרת ימשיך לעדכן את התגובות בשקט
+    saveLog(user, "Avatar Updated", "Background sync started");
+
+    // מעדכנים תגובות וריפלייז ללא await שיעצור את התשובה
+    List.find().then(lists => {
+      lists.forEach(async (list) => {
+        let listChanged = false;
+        if (list.comments) {
+          list.comments.forEach(c => {
+            if (c.userId && c.userId.toString() === userId.toString()) {
+              c.avatar = avatar;
+              listChanged = true;
+            }
+            if (c.replies) {
+              c.replies.forEach(r => {
+                if (r.userId && r.userId.toString() === userId.toString()) {
+                  r.avatar = avatar;
+                  listChanged = true;
+                }
+              });
+            }
+          });
+        }
+        if (listChanged) await list.save();
+      });
+    });
+
+  } catch (e) {
+    console.error("Avatar save error:", e);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Server Error" });
+    }
+  }
 });
 
 
@@ -254,7 +310,7 @@ app.post('/api/lists/:id/comment', verifyToken, async (req, res) => {
     }
 
     const owner = await User.findById(list.userId);
-    list.comments.push({ userId: user._id, username: user.username, text, role: user.role });
+    list.comments.push({ userId: user._id, username: user.username, avatar: user.avatar, text, role: user.role });
     await list.save();
 
     if (owner && list.userId.toString() !== user._id.toString()) {
@@ -386,22 +442,32 @@ app.post('/api/notifications/read', verifyToken, async (req, res) => {
 // --- COMMUNITY ---
 
 app.get('/api/users', optionalToken, async (req, res) => {
-  const { search } = req.query;
-  const validUsers = await List.distinct('userId', { isPrivate: { $ne: true }, items: { $exists: true, $not: { $size: 0 } } });
-  let query = { _id: { $in: validUsers } };
-  if (search) query.username = { $regex: search, $options: 'i' };
+  try {
+    const { search } = req.query;
+    // 1. מוצאים רק משתמשים שיש להם רשימות (כפי שביקשת קודם)
+    const validUsersIds = await List.distinct('userId', { isPrivate: false, items: { $not: { $size: 0 } } });
 
-  let currentUser = req.user ? await User.findById(req.user._id) : null;
-  const users = await User.find(query, 'username');
+    let query = { _id: { $in: validUsersIds } };
+    if (search) query.username = { $regex: search, $options: 'i' };
 
-  let result = users.map(u => ({
-    _id: u._id, username: u.username,
-    isFollowing: currentUser ? currentUser.following.includes(u._id) : false,
-    isMe: currentUser ? u._id.equals(currentUser._id) : false
-  })).filter(u => !u.isMe);
+    // 2. שליפת הנתונים - קריטי להוסיף avatar!
+    const users = await User.find(query, 'username avatar');
 
-  result.sort((a, b) => (a.isFollowing === b.isFollowing ? 0 : a.isFollowing ? -1 : 1));
-  res.json(result);
+    const currentUser = req.user ? await User.findById(req.user._id) : null;
+
+    // 3. עיבוד נתונים לשליחה
+    const results = users.map(u => ({
+      _id: u._id,
+      username: u.username,
+      avatar: u.avatar || "", // מוודא שאם זה null זה יחזור כמחרוזת ריקה
+      isFollowing: currentUser ? currentUser.following.includes(u._id) : false
+    })).filter(u => !currentUser || u._id.toString() !== currentUser._id.toString());
+
+    // 4. מיון
+    results.sort((a, b) => (a.isFollowing === b.isFollowing ? 0 : a.isFollowing ? -1 : 1));
+
+    res.json(results);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/users/follow/:id', verifyToken, async (req, res) => {
@@ -540,7 +606,7 @@ app.post('/api/lists/:listId/comments/:commentId/reply', verifyToken, async (req
       return res.status(429).json({ error: "Wait 30 seconds" });
     }
 
-    comment.replies.push({ userId: user._id, username: user.username, text, role: user.role, replyingTo });
+    comment.replies.push({ userId: user._id, username: user.username, avatar: user.avatar, text, role: user.role, replyingTo });
     await list.save();
 
     // התראה לבעל התגובה המקורית
@@ -571,6 +637,77 @@ app.post('/api/lists/:listId/comments/:commentId/replies/:replyId/like', verifyT
     } else { reply.likes.splice(idx, 1); }
     await list.save(); res.json(list.comments);
   } catch (e) { res.status(500).send(e.message); }
+});
+
+app.get('/api/admin/fix-avatars', verifyToken, verifyAdmin, async (req, res) => {
+  const users = await User.find();
+  for (let u of users) {
+    await List.updateMany({}, { $set: { "comments.$[elem].avatar": u.avatar } }, { arrayFilters: [{ "elem.userId": u._id }] });
+    await List.updateMany({}, { $set: { "comments.$[].replies.$[repElem].avatar": u.avatar } }, { arrayFilters: [{ "repElem.userId": u._id }] });
+  }
+  res.send("All old avatars synced!");
+});
+
+app.get('/api/admin/rebuild-community', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const users = await User.find();
+    const lists = await List.find();
+    let updatedListsCount = 0;
+
+    for (let list of lists) {
+      let listChanged = false;
+
+      if (list.comments && Array.isArray(list.comments)) {
+        list.comments.forEach(comment => {
+          // מוצאים את המשתמש שכתב את התגובה
+          const author = users.find(u => u._id.toString() === comment.userId?.toString());
+          if (author && author.avatar) {
+            comment.avatar = author.avatar;
+            listChanged = true;
+          }
+
+          // בודקים אם יש ריפלייז ומרעננים גם אותם
+          if (comment.replies && Array.isArray(comment.replies)) {
+            comment.replies.forEach(reply => {
+              const replyAuthor = users.find(u => u._id.toString() === reply.userId?.toString());
+              if (replyAuthor && replyAuthor.avatar) {
+                reply.avatar = replyAuthor.avatar;
+                listChanged = true;
+              }
+            });
+          }
+        });
+      }
+
+      if (listChanged) {
+        await list.save();
+        updatedListsCount++;
+      }
+    }
+    res.send(`Successfully updated avatars across ${updatedListsCount} lists.`);
+  } catch (e) {
+    console.error(e);
+    res.status(500).send("Sync Error: " + e.message);
+  }
+});
+
+app.get('/api/admin/verify-users-data', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const users = await User.find();
+    let fixCount = 0;
+
+    for (let user of users) {
+      // אם השדה לא קיים או שהוא ריק, ניתן לו ערך ריק רשמי כדי שה-API יזהה אותו
+      if (user.avatar === undefined) {
+        user.avatar = "";
+        await user.save();
+        fixCount++;
+      }
+    }
+    res.send(`Verification complete. Fixed ${fixCount} user records.`);
+  } catch (e) {
+    res.status(500).send(e.message);
+  }
 });
 
 // Netlify & Production setup

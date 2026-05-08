@@ -25,9 +25,11 @@
       <div class="logo">MyCharacterList</div>
     </a>
   
-    <div class="nav-identity">
+    <div class="nav-identity" onclick="openProfileModal()" style="cursor: pointer;" title="Edit Avatar">
       <span id="userDisplay" class="user-chip hidden">
-        <i class="fas fa-user-circle"></i>
+        <img id="navAvatar" src="" class="hidden"
+          style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; margin-right: 5px; border: 1px solid var(--accent);">
+        <i id="navDefaultIcon" class="fas fa-user-circle"></i>
         <span id="usernameLabel"></span>
       </span>
     </div>
@@ -370,6 +372,40 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <div id="profileModal" class="modal hidden">
+    <div class="modal-content small-modal">
+      <span class="close-modal" onclick="closeModal('profileModal')">&times;</span>
+      <h3 style="margin-bottom: 20px;">Change Profile Picture</h3>
+  
+      <div style="text-align: center; margin-bottom: 20px; position: relative; display: inline-block; width: 100%;">
+        <!-- תמונת תצוגה מקדימה עם פלייסהולדר אם היא ריקה -->
+        <img id="profilePreviewImg" src="https://via.placeholder.com/100?text=Avatar"
+          style="width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 4px solid var(--accent); background: var(--bg-color);">
+      </div>
+  
+      <div class="form-group" style="text-align: left;">
+        <label style="font-size: 0.85rem; color: var(--text-muted);">Paste Image URL:</label>
+        <input type="text" id="avatarUrlInput" placeholder="https://..." style="margin-top: 5px;">
+      </div>
+  
+      <div style="margin: 15px 0; display: flex; align-items: center; gap: 10px;">
+        <hr style="flex: 1; border: 0; border-top: 1px solid var(--border);">
+        <span style="font-size: 0.8rem; color: #888;">OR</span>
+        <hr style="flex: 1; border: 0; border-top: 1px solid var(--border);">
+      </div>
+  
+      <div class="form-group">
+        <label for="avatarFileInput" class="btn-primary"
+          style="background: transparent; border: 1px solid var(--accent); color: var(--accent); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; height: 45px; width: 100%;">
+          <i class="fas fa-upload"></i> Upload from Device
+        </label>
+        <input type="file" id="avatarFileInput" accept="image/*" style="display: none;">
+      </div>
+  
+      <button id="saveAvatarBtn" class="btn-primary" style="margin-top: 15px; width: 100%;">Save Changes</button>
     </div>
   </div>
 

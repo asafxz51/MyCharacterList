@@ -14,15 +14,11 @@ async function init() {
 }
 
 async function checkLoginStatus() {
-    // אלמנטים של הנאב-בר
     const userChip = document.getElementById('userDisplay');
     const nameLabel = document.getElementById('usernameLabel');
     const authBtn = document.getElementById('authBtnNav');
     const adminBtn = document.getElementById('adminBtn');
     const menuBtn = document.getElementById('mobileMenuBtn');
-
-
-    // אלמנטים של מבנה הדף
     const createBtn = document.getElementById('createListBtn');
     const listHeader = document.querySelector('.list-header');
 
@@ -32,30 +28,37 @@ async function checkLoginStatus() {
             const data = await res.json();
             state.user = data.username;
             state.userId = data._id;
-            if (menuBtn) menuBtn.classList.remove('hidden'); // מציג כפתור אם מחובר
 
-            // --- 1. רישום כניסה לאתר (לוג סשן - פעם אחת) ---
+            // --- טיפול באווטאר בנאב-בר ---
+            const navAvatar = document.getElementById('navAvatar');
+            const defaultIcon = document.getElementById('navDefaultIcon');
+            // אם יש לינק תקין (לא ריק ולא שבור)
+            if (data.avatar && data.avatar.trim() !== "") {
+                navAvatar.src = data.avatar;
+                navAvatar.classList.remove('hidden');
+                if (defaultIcon) defaultIcon.classList.add('hidden');
+            } else {
+                navAvatar.classList.add('hidden');
+                if (defaultIcon) defaultIcon.classList.remove('hidden');
+            }
+
+            if (menuBtn) menuBtn.classList.remove('hidden');
+
             if (!sessionStorage.getItem('entryLogged')) {
                 fetch('/api/auth/ping', { method: 'POST' });
                 sessionStorage.setItem('entryLogged', 'true');
             }
 
-            // --- 2. עדכון תצוגת משתמש (User Icon + Name) ---
             if (nameLabel) nameLabel.textContent = data.username;
             if (userChip) userChip.classList.remove('hidden');
 
-            // שינוי כפתור ל-"Logout"
             if (authBtn) {
                 authBtn.textContent = "Logout";
                 authBtn.style.display = 'inline-block';
             }
 
-            // הצגת כפתור אדמין אם המשתמש הוא אדמין
-            if (data.role === 'admin' && adminBtn) {
-                adminBtn.classList.remove('hidden');
-            }
+            if (data.role === 'admin' && adminBtn) adminBtn.classList.remove('hidden');
 
-            // הצגת מבנה האתר (סרגל צד וכותרת)
             if (document.querySelector('.sidebar')) document.querySelector('.sidebar').style.display = 'flex';
             if (createBtn) createBtn.style.display = 'block';
             if (listHeader) listHeader.style.display = 'flex';
@@ -64,14 +67,11 @@ async function checkLoginStatus() {
                 document.getElementById('notifArea').classList.remove('hidden');
             }
 
-            // --- 3. הפעלת מערכות נתונים ---
-            fetchNotifications(); // טעינת התראות ראשונה
-            setInterval(fetchNotifications, 30000); // בדיקה כל 30 שניות
-
-            fetchLists(); // טעינת הרשימות של המשתמש
+            fetchNotifications();
+            setInterval(fetchNotifications, 30000);
+            fetchLists();
 
         } else {
-            // במקרה שהמשתמש מנותק
             if (userChip) userChip.classList.add('hidden');
             if (adminBtn) adminBtn.classList.add('hidden');
             showLoggedOutState();
@@ -1274,20 +1274,20 @@ async function loadCommunityUsers() {
     const title = document.getElementById('communityTitle');
 
     document.getElementById('communityModal').classList.remove('hidden');
-    controls.classList.remove('hidden');
-    backBtn.classList.add('hidden');
-    title.textContent = "Community";
+    if (controls) controls.classList.remove('hidden');
+    if (backBtn) backBtn.classList.add('hidden');
+    if (title) title.textContent = "Community";
 
-    grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Loading...</p>';
+    grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Loading users...</p>';
 
     try {
-        // שולחים בקשה רגילה, השרת כבר ימיין ויסנן עבורנו
-        const res = await fetch(`/api/users?search=${commState.search}`);
+        const query = document.getElementById('userSearchInput')?.value || '';
+        const res = await fetch(`/api/users?search=${query}&t=${Date.now()}`);
         const users = await res.json();
 
         grid.innerHTML = '';
         if (users.length === 0) {
-            grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color: var(--text-muted);">No users with public lists found.</p>';
+            grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center;">No users found.</p>';
             return;
         }
 
@@ -1295,33 +1295,30 @@ async function loadCommunityUsers() {
             const div = document.createElement('div');
             div.className = 'user-card';
 
-            let starHtml = '';
-            if (state.user) {
-                const starClass = u.isFollowing ? 'fas fa-star active' : 'far fa-star';
-                starHtml = `
-                    <button class="follow-btn" onclick="toggleFollow(event, '${u._id}')">
-                        <i class="${starClass}"></i>
-                    </button>
-                `;
-            }
+            const userImg = (u.avatar && u.avatar.trim() !== "") ?
+                `<img src="${u.avatar}" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); margin-bottom: 10px;">` :
+                `<i class="fas fa-user-circle user-icon" style="font-size: 55px; margin-bottom: 10px;"></i>`;
+
+            let starHtml = state.user ? `
+                <button class="follow-btn" onclick="toggleFollow(event, '${u._id}')">
+                    <i class="${u.isFollowing ? 'fas fa-star active' : 'far fa-star'}"></i>
+                </button>` : '';
 
             div.innerHTML = `
                 ${starHtml}
-                <i class="fas fa-user-circle user-icon"></i>
-                <div title="${u.username}">${u.username}</div>
+                ${userImg}
+                <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 5px;">${u.username}</div>
             `;
 
+            // התיקון כאן: הוספת u.avatar כפרמטר שלישי
             div.onclick = (e) => {
-                if (!e.target.closest('.follow-btn')) showUserLists(u._id, u.username);
+                if (!e.target.closest('.follow-btn')) {
+                    showUserLists(u._id, u.username, u.avatar);
+                }
             };
-
             grid.appendChild(div);
         });
-
-    } catch (e) {
-        console.error(e);
-        grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Error loading users.</p>';
-    }
+    } catch (e) { grid.innerHTML = '<p>Error loading.</p>'; }
 }
 
 // Toggle Follow
@@ -1343,24 +1340,44 @@ window.toggleFollow = async function (e, userId) {
     }
 }
 
-async function showUserLists(userId, username) {
+async function showUserLists(userId, username, avatar) {
     const grid = document.getElementById('communityGrid');
     const controls = document.getElementById('commControls');
     const backBtn = document.getElementById('commBackBtn');
     const title = document.getElementById('communityTitle');
 
-    controls.classList.add('hidden'); // Hide Search/Tabs
-    backBtn.classList.remove('hidden');
-    title.textContent = `${username}'s Lists`;
-    grid.innerHTML = '<p>Loading lists...</p>';
+    if (controls) controls.classList.add('hidden');
+    if (backBtn) backBtn.classList.remove('hidden');
+
+    grid.innerHTML = '<p style="text-align:center; padding: 20px;">Loading lists...</p>';
+
+    // --- לוגיקת האווטאר המוגדל ---
+    let displayAvatar = avatar;
+    // אם לחצנו על עצמנו ואין פרמטר תמונה, ניקח מהנאב-בר
+    if ((!displayAvatar || displayAvatar === "") && typeof state !== 'undefined' && state.userId === userId) {
+        displayAvatar = document.getElementById('navAvatar')?.src;
+    }
+
+    // הגדרת ה-HTML לתמונה (גדלה ל-130px)
+    const headerAvatarHtml = (displayAvatar && displayAvatar.trim() !== "" && !displayAvatar.includes('fas')) ?
+        `<img src="${displayAvatar}" style="width: 130px; height: 130px; border-radius: 50%; object-fit: cover; border: 4px solid var(--accent); margin-bottom: 15px; display: block; background: var(--bg-color); padding: 3px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">` :
+        `<i class="fas fa-user-circle" style="font-size: 130px; margin-bottom: 15px; color: var(--text-muted); display: block;"></i>`;
+
+    // עדכון הכותרת
+    title.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin-bottom: 20px;">
+            ${headerAvatarHtml}
+            <div style="font-size: 1.6rem; font-weight: bold; color: var(--text-main);">${username}'s Lists</div>
+        </div>
+    `;
 
     try {
         const res = await fetch(`/api/users/${userId}/lists`);
         const lists = await res.json();
         grid.innerHTML = '';
 
-        if (lists.length === 0) {
-            grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center;">No public lists.</p>';
+        if (!lists || lists.length === 0) {
+            grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding: 20px; color: var(--text-muted);">This user has no public lists.</p>';
             return;
         }
 
@@ -1368,13 +1385,16 @@ async function showUserLists(userId, username) {
             const div = document.createElement('div');
             div.className = 'comm-list-card';
             div.innerHTML = `
-                <h4 style="color:var(--accent);">${list.name}</h4>
-                <p style="color:var(--text-muted);">${list.items.length} items</p>
+                <h4 style="color:var(--accent); margin-bottom: 5px; font-size: 1.1rem;">${list.name}</h4>
+                <p style="color:var(--text-muted); font-size: 0.9rem;">${list.items ? list.items.length : 0} items</p>
             `;
             div.onclick = () => window.open(`/share.html?id=${list._id}`, '_blank');
             grid.appendChild(div);
         });
-    } catch (e) { grid.innerHTML = '<p>Error.</p>'; }
+    } catch (e) {
+        console.error(e);
+        grid.innerHTML = '<p style="text-align:center;">Error loading lists.</p>';
+    }
 }
 
 function getRatingDisplay(rating, type) {
@@ -1656,7 +1676,7 @@ function renderIndexComments(comments, ownerId) {
     const safeComments = Array.isArray(comments) ? comments : [];
 
     if (safeComments.length === 0) {
-        listArea.innerHTML = '<p style="text-align:center; color:#888;">No comments yet.</p>';
+        listArea.innerHTML = '<p style="text-align:center; color:#888; padding:20px;">No comments yet.</p>';
         return;
     }
 
@@ -1665,71 +1685,67 @@ function renderIndexComments(comments, ownerId) {
 
     toDisplay.forEach(c => {
         const div = document.createElement('div');
-        div.style = "padding:15px; background:var(--card-bg); border-radius:10px; border:1px solid var(--border); position:relative; margin-bottom:20px;";
+        div.style = "padding:15px; background:var(--card-bg); border-radius:12px; border:1px solid var(--border); position:relative; margin-bottom:20px;";
 
         const adminTag = c.role === 'admin' ? '<span style="color:#FFD700; font-weight:bold; font-size:0.75rem; margin-left:5px;">(Admin)</span>' : '';
-
-        // לייק לתגובה ראשית
         const hasLikedC = c.likes && state.userId && c.likes.map(id => id.toString()).includes(state.userId.toString());
-        const cHeartClass = hasLikedC ? 'fas' : 'far';
-        const cLikeColor = hasLikedC ? '#ff4444' : '#888';
+        const heartClass = hasLikedC ? 'fas' : 'far';
+        const likeColor = hasLikedC ? '#ff4444' : '#888';
+
+        // עיצוב אווטאר ראשי (42px + מסגרת)
+        const avatarHtml = (c.avatar && c.avatar.trim() !== "") ?
+            `<img src="${c.avatar}" style="width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); padding: 2px; margin-right: 12px; background: var(--bg-color); flex-shrink: 0;">` :
+            `<i class="fas fa-user-circle" style="font-size: 38px; margin-right: 12px; color: var(--text-muted); flex-shrink: 0;"></i>`;
 
         div.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-                <div style="cursor:pointer; color:var(--accent); font-weight:bold;" onclick="showUserLists('${c.userId}', '${c.username}'); document.getElementById('communityModal').classList.remove('hidden');">
-                    ${c.username}${adminTag}
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                <div style="display:flex; align-items:center; cursor:pointer;" onclick="showUserLists('${c.userId}', '${c.username}', '${c.avatar || ''}'); document.getElementById('communityModal').classList.remove('hidden');">
+                    ${avatarHtml}
+                    <b style="color:var(--accent); font-weight:bold; font-size: 1rem;">${c.username}${adminTag}</b>
                 </div>
                 <div style="display:flex; gap:12px; align-items:center;">
-                    <button onclick="likeCommentIndex('${c._id}')" style="background:none; border:none; color:${cLikeColor}; cursor:pointer; font-size:0.9rem;">
-                        <i class="${cHeartClass} fa-heart"></i> ${c.likes?.length || 0}
+                    <button onclick="likeCommentIndex('${c._id}')" style="background:none; border:none; color:${likeColor}; cursor:pointer; font-size:0.95rem;">
+                        <i class="${heartClass} fa-heart"></i> ${c.likes?.length || 0}
                     </button>
-                    <button onclick="toggleReplyBoxIndex('${c._id}', '${c.username}')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.9rem;">
+                    <button onclick="toggleReplyBoxIndex('${c._id}', '${c.username}')" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.95rem;">
                         <i class="fas fa-reply"></i>
                     </button>
                     <button onclick="deleteIndexComment('${c._id}')" style="color:#ff4444; background:none; border:none; cursor:pointer;"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
-            <div style="color:var(--text-main); margin-bottom:12px; line-height:1.4;">${c.text}</div>
+            <div style="color:var(--text-main); margin-bottom:12px; line-height:1.5; padding-left: 54px;">${c.text}</div>
             
-            <!-- הצגת Replies -->
-            <div id="index-replies-${c._id}" style="margin-left: 20px; border-left: 2px solid var(--border); padding-left: 15px; margin-top: 10px;">
+            <div style="margin-left: 54px; border-left: 2px solid var(--border); padding-left: 15px;">
                 ${c.replies ? c.replies.map(r => {
-            // בדיקת הרשאות מחיקה בריפליי (מותאם לאינדקס)
-            let showDeleteR = false;
-            if (state.userId) {
-                const isListOwner = state.userId.toString() === ownerId.toString();
-                const isReplyAuthor = state.userId.toString() === r.userId.toString();
-                const isAdmin = !document.getElementById('adminBtn').classList.contains('hidden'); // בדיקה אם המשתמש הוא אדמין
+                    const hasLikedR = r.likes && state.userId && r.likes.map(id => id.toString()).includes(state.userId.toString());
 
-                if (isListOwner || isReplyAuthor || isAdmin) showDeleteR = true;
-            }
+                    // --- הוספת תג אדמין מוזהב בריפליי (חדש) ---
+                    const rAdminTag = r.role === 'admin' ? '<span style="color:#FFD700; font-weight:bold; font-size:0.75rem; margin-left:5px;">(Admin)</span>' : '';
 
-            const delBtnR = showDeleteR ? `<button onclick="deleteReplyIndex('${c._id}', '${r._id}')" style="background:none; border:none; color:#ff4444; cursor:pointer; font-size:0.75rem; padding:0;"><i class="fas fa-trash"></i></button>` : '';
+                    const rAvatar = (r.avatar && r.avatar.trim() !== "") ? `<img src="${r.avatar}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); padding: 1px; margin-right: 10px; background: var(--bg-color); flex-shrink: 0;">` : `<i class="fas fa-user-circle" style="font-size: 28px; margin-right: 10px; color: var(--text-muted); flex-shrink: 0;"></i>`;
 
-            const hasLikedR = r.likes && state.userId && r.likes.map(id => id.toString()).includes(state.userId.toString());
-
-            return `
-                        <div style="margin-bottom:10px; font-size:0.85rem; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; position:relative;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <b style="color:var(--accent); cursor:pointer;" onclick="showUserLists('${r.userId}', '${r.username}'); document.getElementById('communityModal').classList.remove('hidden');">${r.username}</b>
-                                ${delBtnR}
-                            </div>
-                            ${r.replyingTo ? `<span style="color:var(--text-muted); font-size:0.7rem;">replying to @${r.replyingTo}</span>` : ''}
-                            <p style="margin:5px 0; color:var(--text-main);">${r.text}</p>
-                            <div style="display:flex; gap:15px; align-items:center;">
-                                 <button onclick="likeReplyIndex('${c._id}', '${r._id}')" style="background:none; border:none; color:${hasLikedR ? '#ff4444' : '#888'}; font-size:0.75rem; cursor:pointer; padding:0;">
-                                    <i class="${hasLikedR ? 'fas' : 'far'} fa-heart"></i> ${r.likes?.length || 0}
-                                 </button>
-                                 <button onclick="toggleReplyBoxIndex('${c._id}', '${r.username}')" style="background:none; border:none; color:var(--accent); font-size:0.7rem; cursor:pointer; padding:0;">Reply</button>
-                            </div>
-                        </div>
-                    `;
-        }).join('') : ''}
+                    return `
+    <div style="margin-bottom:10px; font-size:0.85rem; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; position:relative;">
+        <div style="display:flex; align-items:center; margin-bottom:8px;">
+            ${rAvatar}
+            <b style="color:var(--accent); cursor:pointer;" onclick="showUserLists('${r.userId}', '${r.username}'); document.getElementById('communityModal').classList.remove('hidden');">${r.username}${rAdminTag}</b> 
+            ${r.replyingTo ? `<span style="color:var(--text-muted); font-size:0.7rem; margin-left:5px;">replied to @${r.replyingTo}</span>` : ''}
+        </div>
+        <p style="margin:5px 0; color:var(--text-main); padding-left: 42px;">${r.text}</p>
+        <div style="display:flex; gap:15px; margin-left: 42px; margin-top: 5px;">
+             <button onclick="likeReplyIndex('${c._id}', '${r._id}')" style="background:none; border:none; color:${hasLikedR ? '#ff4444' : '#666'}; cursor:pointer; font-size:0.75rem; padding:0;">
+                <i class="${hasLikedR ? 'fas' : 'far'} fa-heart"></i> ${r.likes?.length || 0}
+             </button>
+             <button onclick="toggleReplyBoxIndex('${c._id}', '${r.username}')" style="background:none; border:none; color:var(--accent); font-size:0.7rem; cursor:pointer; padding:0;">Reply</button>
+             <button onclick="deleteReplyIndex('${c._id}', '${r._id}')" style="background:none; border:none; color:#ff4444; cursor:pointer; font-size:0.7rem;"><i class="fas fa-trash"></i></button>
+        </div>
+    </div>`;
+                }).join('') : ''}
             </div>
 
-            <div id="index-reply-box-${c._id}" class="hidden" style="margin-top:15px; margin-left:20px; display:flex; gap:10px;">
-                <input type="text" id="index-reply-input-${c._id}" style="flex:1; background:var(--bg-color); border:1px solid var(--border); color:white; padding:8px; border-radius:6px; font-size:0.85rem;">
-                <button onclick="sendReplyIndex('${c._id}')" class="btn-primary" style="width:auto; padding:0 15px; font-size:0.8rem; height:35px;">Post</button>
+            <div id="index-reply-box-${c._id}" class="hidden" style="margin-top:15px; margin-left:54px; display:flex; gap:10px;">
+                <input type="text" id="index-reply-input-${c._id}" style="flex:1; background:var(--bg-color); border:1px solid var(--border); color:white; padding:10px; border-radius:8px; font-size:0.9rem;">
+                <button onclick="sendReplyIndex('${c._id}')" class="btn-primary" style="width:auto; padding:0 20px; font-size:0.85rem; height:42px;">Post</button>
             </div>
         `;
         listArea.appendChild(div);
@@ -1867,6 +1883,81 @@ window.deleteReplyIndex = async function (commentId, replyId) {
             renderIndexComments(data, currentList.userId);
         }
     } catch (err) { console.error(err); }
+};
+
+
+const DEFAULT_AVATAR = "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y";
+
+function openProfileModal() {
+    const navAvatar = document.getElementById('navAvatar');
+    const previewImg = document.getElementById('profilePreviewImg');
+
+    // אם כבר יש למשתמש תמונה בנאב, נציג אותה ב-Preview
+    if (navAvatar && navAvatar.src && !navAvatar.classList.contains('hidden')) {
+        previewImg.src = navAvatar.src;
+    } else {
+        previewImg.src = DEFAULT_AVATAR; // אחרת נראה פלייסהולדר נקי
+    }
+
+    document.getElementById('avatarUrlInput').value = '';
+    document.getElementById('profileModal').classList.remove('hidden');
+}
+
+// עדכון ה-Preview ברגע שמדביקים URL
+document.getElementById('avatarUrlInput').addEventListener('input', (e) => {
+    const url = e.target.value.trim();
+    document.getElementById('profilePreviewImg').src = url || DEFAULT_AVATAR;
+});
+
+// עדכון ה-Preview כשבוחרים קובץ
+document.getElementById('avatarFileInput').onchange = function (e) {
+    const file = e.target.files[0];
+    if (file) {
+        if (file.size > 1024 * 1024) return alert("File too large (Max 1MB)");
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            document.getElementById('profilePreviewImg').src = ev.target.result;
+            document.getElementById('avatarUrlInput').value = '';
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
+// שמירה סופית מול השרת
+document.getElementById('saveAvatarBtn').onclick = async () => {
+    const btn = document.getElementById('saveAvatarBtn');
+    const avatarData = document.getElementById('profilePreviewImg').src;
+
+    if (!avatarData || avatarData.includes('placeholder')) {
+        return alert("Please choose a picture first");
+    }
+
+    // נטרול הכפתור בזמן השליחה כדי למנוע כפילויות
+    btn.disabled = true;
+    btn.textContent = "Saving...";
+
+    try {
+        const res = await fetch('/api/users/avatar', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ avatar: avatarData })
+        });
+
+        if (res.ok) {
+            // השרת עכשיו יחזיר תשובה מהירה מאוד
+            alert("Profile Picture Updated Successfully!");
+            window.location.reload();
+        } else {
+            const err = await res.json();
+            alert("Failed to update: " + (err.error || "Unknown error"));
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Server timeout - but don't worry, your image is being processed! Refresh in a few seconds.");
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Save Changes";
+    }
 };
 
 
