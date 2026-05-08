@@ -900,14 +900,9 @@ select {
 }
 
 /* הצגת הכפתור רק במובייל */
-.mobile-only {
-  display: none;
-}
 
 @media (max-width: 768px) {
-  .mobile-only {
-    display: block;
-  }
+
 
   /* תיקון לסרגל הצידי שיעבוד עם הכפתור */
   .sidebar {
@@ -1307,7 +1302,11 @@ select {
 
 /* כפתור הפרופיל במובייל - מוסתר כברירת מחדל */
 .mobile-only-btn {
-  display: none;
+  display: none !important;
+}
+
+.hidden {
+  display: none !important;
 }
 
 @media (max-width: 768px) {
@@ -1318,9 +1317,19 @@ select {
   }
 
   /* 2. מראים את כפתור הפרופיל (האיש) בתוך שורת הכפתורים */
-  .mobile-only-btn {
-    display: flex !important;
-  }
+    .mobile-only-btn:not(.hidden) {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+    }
+
+            .nav-controls {
+              width: 100%;
+              display: flex;
+              justify-content: space-between;
+            }
+
+      
 
   /* 3. מוודאים שכל הכפתורים בשורה מתחלקים יפה */
   .nav-controls button,
@@ -1329,4 +1338,15 @@ select {
     /* מחלק מקום שווה לכל האייקונים */
     min-width: 0;
   }
+
+        .nav-controls .hidden,
+        #notifArea.hidden {
+          flex: 0 0 0 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          border: none !important;
+          display: none !important;
+        }
+  
 }
+

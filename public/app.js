@@ -33,7 +33,9 @@ async function checkLoginStatus() {
             const navAvatar = document.getElementById('navAvatar');
             const defaultIcon = document.getElementById('navDefaultIcon');
             const mobProfileBtn = document.getElementById('mobileProfileBtn');
-            if (mobProfileBtn) mobProfileBtn.classList.remove('hidden');
+            if (document.getElementById('mobileProfileBtn')) {
+                document.getElementById('mobileProfileBtn').classList.remove('hidden');
+            }
             // אם יש לינק תקין (לא ריק ולא שבור)
             if (data.avatar && data.avatar.trim() !== "") {
                 navAvatar.src = data.avatar;
@@ -1372,7 +1374,9 @@ async function showUserLists(userId, username, avatar) {
     }
 
     // הגדרת ה-HTML לתמונה (גדלה ל-130px)
-    const headerAvatarHtml = (displayAvatar && displayAvatar.trim() !== "" && !displayAvatar.includes('fas')) ?
+    const isImage = displayAvatar && (displayAvatar.startsWith('http') || displayAvatar.startsWith('data:image'));
+
+    const headerAvatarHtml = isImage ?
         `<img src="${displayAvatar}" style="width: 130px; height: 130px; border-radius: 50%; object-fit: cover; border: 4px solid var(--accent); margin-bottom: 15px; display: block; background: var(--bg-color); padding: 3px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">` :
         `<i class="fas fa-user-circle" style="font-size: 130px; margin-bottom: 15px; color: var(--text-muted); display: block;"></i>`;
 
@@ -1972,8 +1976,6 @@ document.getElementById('saveAvatarBtn').onclick = async () => {
         btn.textContent = "Save Changes";
     }
 };
-
-
 
 
 init();

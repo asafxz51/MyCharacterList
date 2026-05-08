@@ -104,6 +104,10 @@
     pointer-events: none; /* מבטיח שהלחיצה תעבור לכפתור שמתחת */
 }
 
+.mobile-only-btn {
+    display: none; /* כבוי בדסקטופ */
+}
+
         @media (max-width: 768px) {
             .navbar {
                 padding: 10px;
@@ -142,13 +146,20 @@
         right: 15%; /* הצמדה לפינת האייקון במובייל */
     }
 
-    
-
                #otherListsContainer {
             display: flex;
             flex-direction: column;
         }
         }
+
+         .nav-identity {
+        display: none !important;
+    }
+
+    .mobile-only-btn:not(.hidden) {
+        display: flex !important;
+    }
+
 
         .share-wrapper {
             max-width: 1200px;
@@ -214,28 +225,12 @@
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
 
+        .hidden {
+    display: none !important;
+}
+
         /* כפתור הפרופיל במובייל - מוסתר כברירת מחדל */
-.mobile-only-btn {
-    display: none;
-}
 
-@media (max-width: 768px) {
-    /* 1. מסתירים את הצ'יפ עם השם בשורה הראשונה */
-    .nav-identity {
-        display: none !important;
-    }
-
-    /* 2. מראים את כפתור הפרופיל (האיש) בתוך שורת הכפתורים */
-    .mobile-only-btn {
-        display: flex !important;
-    }
-
-    /* 3. מוודאים שכל הכפתורים בשורה מתחלקים יפה */
-    .nav-controls button, #notifArea {
-        flex: 1; /* מחלק מקום שווה לכל האייקונים */
-        min-width: 0;
-    }
-}
     </style>
 </head>
 
@@ -494,15 +489,16 @@
 
         async function initPage() {
                 try {
-                    console.log("Checking authentication...");
+                    console.log("Checking authentication and UI security...");
 
-                    // 1. הגנה מיידית: מחביאים את כל אלמנטי המשתמש בתחילת הריצה
+                    // 1. הגנה מיידית: נעלים הכל בצורה קשיחה (אונס תצוגה)
                     const sensitiveElements = ['notifArea', 'mobileProfileBtn', 'userDisplay', 'shareBtn', 'adminBtn'];
                     sensitiveElements.forEach(id => {
                         const el = document.getElementById(id);
                         if (el) {
                             el.classList.add('hidden');
-                            el.style.display = 'none'; // הסתרה כפולה למניעת תקלות CSS
+                            // הוספת setProperty כדי לנצח כל הגדרת flex ב-CSS
+                            el.style.setProperty('display', 'none', 'important');
                         }
                     });
 
@@ -514,32 +510,31 @@
                     if (authRes && authRes.ok) {
                         currentUserData = await authRes.json();
                         loggedInUser = currentUserData.username;
-                        console.log("Logged in as:", loggedInUser);
+                        console.log("Verified Member:", loggedInUser);
 
-                        // עדכון השם
+                        // עדכון פרטי מחובר
                         const usernameLabel = document.getElementById('usernameLabel');
                         if (usernameLabel) usernameLabel.textContent = loggedInUser;
 
                         const userDisplay = document.getElementById('userDisplay');
                         if (userDisplay) {
                             userDisplay.classList.remove('hidden');
-                            userDisplay.style.display = 'inline-flex';
+                            userDisplay.style.setProperty('display', 'inline-flex', 'important');
                         }
 
                         if (authBtnNav) authBtnNav.textContent = "Logout";
 
-                        // הדלקת הכלים למשתמש מחובר
+                        // החזרת הכלים למשתמש מחובר (ביטול ההסתרה הכפויה משלב 1)
                         const toShow = ['notifArea', 'mobileProfileBtn', 'shareBtn'];
                         toShow.forEach(id => {
                             const el = document.getElementById(id);
                             if (el) {
                                 el.classList.remove('hidden');
-                                // אם אנחנו במובייל (לפי ה-CSS), המערכת תדע לבד להפוך את זה ל-flex
-                                el.style.display = '';
+                                el.style.display = ''; // נותן ל-CSS (מובייל/דסקטופ) לקבוע את העיצוב שוב
                             }
                         });
 
-                        // בדיקת הרשאת אדמין
+                        // הרשאת אדמין
                         if (currentUserData.role === 'admin') {
                             const adminBtn = document.getElementById('adminBtn');
                             if (adminBtn) {
@@ -548,7 +543,7 @@
                             }
                         }
 
-                        // אוואטר בנאב
+                        // טיפול באווטאר בנאב
                         const navAvatar = document.getElementById('navAvatar');
                         const navDefaultIcon = document.getElementById('navDefaultIcon');
                         if (navAvatar && currentUserData.avatar && currentUserData.avatar.trim() !== "") {
@@ -560,16 +555,17 @@
                         fetchNotifications();
                         setInterval(fetchNotifications, 30000);
                     } else {
-                        console.log("Confirmed Guest Mode - UI locked.");
+                        console.log("Confirmed Guest: User buttons blocked.");
                         if (authBtnNav) authBtnNav.textContent = "Login";
                     }
 
-                    // 3. טעינת תוכן הרשימה (עבור כולם)
+                    // 3. טעינת תוכן הרשימה (עובד עבור כולם)
                     const listRes = await fetch(`/api/share/${listId}`);
                     const data = await listRes.json();
 
                     if (data.error) {
-                        document.getElementById('listTitle').textContent = "List Not Found";
+                        const titleEl = document.getElementById('listTitle');
+                        if (titleEl) titleEl.textContent = "List Not Found";
                         return;
                     }
 
@@ -578,19 +574,20 @@
                     document.getElementById('listTitle').textContent = data.name;
                     document.getElementById('listAuthor').textContent = `Created by: ${data.author}`;
 
-                    listRankingType = data.rankingType;
-                    isFreeOrder = data.isFreeOrder;
+                    listRankingType = data.rankingType || 'numbers';
+                    isFreeOrder = data.isFreeOrder || false;
                     allItems = data.items || [];
 
                     renderList();
 
-                    // מונה לייקים
-                    document.getElementById('likesCount').textContent = (data.likes || []).length;
+                    // לייקים
+                    if (document.getElementById('likesCount')) {
+                        document.getElementById('likesCount').textContent = (data.likes || []).length;
+                    }
 
-                    // סימון לייק אישי (בטוח)
                     if (currentUserData && data.likes) {
-                        const hasLiked = data.likes.some(id => id.toString() === currentUserData._id.toString());
-                        if (hasLiked) {
+                        const currentVisitorId = currentUserData._id.toString();
+                        if (data.likes.map(id => id.toString()).includes(currentVisitorId)) {
                             const icon = document.querySelector('#likeBtn i');
                             if (icon) icon.className = 'fas fa-heart';
                         }
@@ -616,7 +613,8 @@
 
                 } catch (e) {
                     console.error("Initialization Failed:", e);
-                    document.getElementById('listTitle').textContent = "Server busy, try again";
+                    const titleEl = document.getElementById('listTitle');
+                    if (titleEl) titleEl.textContent = "Connection Timeout - Please Refresh";
                 }
             }
 
@@ -920,8 +918,9 @@
             `;
 
                         // התיקון כאן: הוספת u.avatar כפרמטר שלישי
-                        div.onclick = (e) => {
+                      div.onclick = (e) => {
                             if (!e.target.closest('.follow-btn')) {
+                                // שולחים את האוואטר כפרמטר בצורה בטוחה
                                 showUserLists(u._id, u.username, u.avatar);
                             }
                         };
@@ -951,9 +950,11 @@
             }
 
             // הגדרת ה-HTML לתמונה (גדלה ל-130px)
-            const headerAvatarHtml = (displayAvatar && displayAvatar.trim() !== "" && !displayAvatar.includes('fas')) ?
-                `<img src="${displayAvatar}" style="width: 130px; height: 130px; border-radius: 50%; object-fit: cover; border: 4px solid var(--accent); margin-bottom: 15px; display: block; background: var(--bg-color); padding: 3px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">` :
-                `<i class="fas fa-user-circle" style="font-size: 130px; margin-bottom: 15px; color: var(--text-muted); display: block;"></i>`;
+             const isImage = displayAvatar && (displayAvatar.startsWith('http') || displayAvatar.startsWith('data:image'));
+
+          const headerAvatarHtml = isImage ?
+              `<img src="${displayAvatar}" style="width: 130px; height: 130px; border-radius: 50%; object-fit: cover; border: 4px solid var(--accent); margin-bottom: 15px; display: block; background: var(--bg-color); padding: 3px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">` :
+              `<i class="fas fa-user-circle" style="font-size: 130px; margin-bottom: 15px; color: var(--text-muted); display: block;"></i>`;
 
             // עדכון הכותרת
             title.innerHTML = `
