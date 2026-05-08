@@ -213,6 +213,29 @@
             border: 1px solid var(--border);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
+
+        /* כפתור הפרופיל במובייל - מוסתר כברירת מחדל */
+.mobile-only-btn {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    /* 1. מסתירים את הצ'יפ עם השם בשורה הראשונה */
+    .nav-identity {
+        display: none !important;
+    }
+
+    /* 2. מראים את כפתור הפרופיל (האיש) בתוך שורת הכפתורים */
+    .mobile-only-btn {
+        display: flex !important;
+    }
+
+    /* 3. מוודאים שכל הכפתורים בשורה מתחלקים יפה */
+    .nav-controls button, #notifArea {
+        flex: 1; /* מחלק מקום שווה לכל האייקונים */
+        min-width: 0;
+    }
+}
     </style>
 </head>
 
@@ -233,6 +256,9 @@
             <button id="authBtnNav">Login</button>
             <button id="adminBtn" class="icon-btn hidden" title="Admin Panel"><i class="fas fa-crown"
                     style="color: gold;"></i></button>
+                    <button id="mobileProfileBtn" class="mobile-only-btn hidden" onclick="openProfileModal()" title="Profile">
+                        <i class="fas fa-user"></i>
+                    </button>
             <button id="communityBtn" title="View Users"><i class="fas fa-users"></i></button>
             <div id="notifArea" class="hidden" style="position: relative; display: inline-block;">
                 <button id="notifBtn" title="Notifications"><i class="fas fa-bell"></i></button>
@@ -467,63 +493,132 @@
         }
 
         async function initPage() {
-            try {
-                const authRes = await fetch('/api/auth/check').catch(() => null);
-                if (authRes && authRes.ok) {
-                    currentUserData = await authRes.json();
-                    loggedInUser = currentUserData.username;
-                    document.getElementById('usernameLabel').textContent = loggedInUser;
-                    document.getElementById('userDisplay').classList.remove('hidden');
-                    document.getElementById('authBtnNav').textContent = "Logout";
-                    document.getElementById('notifArea').classList.remove('hidden');
-                    fetchNotifications(); setInterval(fetchNotifications, 30000);
-                     const navAvatar = document.getElementById('navAvatar');
-                    const navDefaultIcon = document.getElementById('navDefaultIcon');
-                    if (currentUserData.avatar && currentUserData.avatar.trim() !== "") {
-                        navAvatar.src = currentUserData.avatar;
-                        navAvatar.classList.remove('hidden');
-                        if (navDefaultIcon) navDefaultIcon.classList.add('hidden');
-                    }
-                }
+                try {
+                    console.log("Checking authentication...");
 
+                    // 1. הגנה מיידית: מחביאים את כל אלמנטי המשתמש בתחילת הריצה
+                    const sensitiveElements = ['notifArea', 'mobileProfileBtn', 'userDisplay', 'shareBtn', 'adminBtn'];
+                    sensitiveElements.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) {
+                            el.classList.add('hidden');
+                            el.style.display = 'none'; // הסתרה כפולה למניעת תקלות CSS
+                        }
+                    });
 
-                const listRes = await fetch(`/api/share/${listId}`);
-                const data = await listRes.json();
-                currentListData = data;
-                document.title = data.name;
-                document.getElementById('listTitle').textContent = data.name;
-                document.getElementById('listAuthor').textContent = `Created by: ${data.author}`;
-                listRankingType = data.rankingType; isFreeOrder = data.isFreeOrder; allItems = data.items || [];
-                renderList();
-                document.getElementById('likesCount').textContent = (data.likes || []).length;
+                    const authBtnNav = document.getElementById('authBtnNav');
 
-                const userLikes = data.likes || [];
-                const user_id = currentUserData ? currentUserData._id : null;
+                    // 2. בדיקה מול השרת
+                    const authRes = await fetch('/api/auth/check').catch(() => null);
 
-                if (user_id && userLikes.map(l => l.toString()).includes(user_id.toString())) {
-                    const likeIcon = document.querySelector('#likeBtn i');
-                    if (likeIcon) likeIcon.className = 'fas fa-heart';
-                }
+                    if (authRes && authRes.ok) {
+                        currentUserData = await authRes.json();
+                        loggedInUser = currentUserData.username;
+                        console.log("Logged in as:", loggedInUser);
 
-                if (data.allowComments !== false) {
-                    document.getElementById('commentsSection').style.display = 'block';
+                        // עדכון השם
+                        const usernameLabel = document.getElementById('usernameLabel');
+                        if (usernameLabel) usernameLabel.textContent = loggedInUser;
 
-                    const inputArea = document.getElementById('commentInputArea');
-                    const loginNotice = document.getElementById('loginToCommentNotice');
+                        const userDisplay = document.getElementById('userDisplay');
+                        if (userDisplay) {
+                            userDisplay.classList.remove('hidden');
+                            userDisplay.style.display = 'inline-flex';
+                        }
 
-                    if (loggedInUser) {
-                        if (inputArea) inputArea.style.display = 'flex';   // מראה את התיבה
-                        if (loginNotice) loginNotice.style.display = 'none'; // מוחק את ההודעה
+                        if (authBtnNav) authBtnNav.textContent = "Logout";
+
+                        // הדלקת הכלים למשתמש מחובר
+                        const toShow = ['notifArea', 'mobileProfileBtn', 'shareBtn'];
+                        toShow.forEach(id => {
+                            const el = document.getElementById(id);
+                            if (el) {
+                                el.classList.remove('hidden');
+                                // אם אנחנו במובייל (לפי ה-CSS), המערכת תדע לבד להפוך את זה ל-flex
+                                el.style.display = '';
+                            }
+                        });
+
+                        // בדיקת הרשאת אדמין
+                        if (currentUserData.role === 'admin') {
+                            const adminBtn = document.getElementById('adminBtn');
+                            if (adminBtn) {
+                                adminBtn.classList.remove('hidden');
+                                adminBtn.style.display = '';
+                            }
+                        }
+
+                        // אוואטר בנאב
+                        const navAvatar = document.getElementById('navAvatar');
+                        const navDefaultIcon = document.getElementById('navDefaultIcon');
+                        if (navAvatar && currentUserData.avatar && currentUserData.avatar.trim() !== "") {
+                            navAvatar.src = currentUserData.avatar;
+                            navAvatar.classList.remove('hidden');
+                            if (navDefaultIcon) navDefaultIcon.classList.add('hidden');
+                        }
+
+                        fetchNotifications();
+                        setInterval(fetchNotifications, 30000);
                     } else {
-                        if (inputArea) inputArea.style.display = 'none';    // מחביא את התיבה
-                        if (loginNotice) loginNotice.style.display = 'block'; // מראה את ההודעה
+                        console.log("Confirmed Guest Mode - UI locked.");
+                        if (authBtnNav) authBtnNav.textContent = "Login";
                     }
 
-                    renderComments(data.comments, data.userId);
+                    // 3. טעינת תוכן הרשימה (עבור כולם)
+                    const listRes = await fetch(`/api/share/${listId}`);
+                    const data = await listRes.json();
+
+                    if (data.error) {
+                        document.getElementById('listTitle').textContent = "List Not Found";
+                        return;
+                    }
+
+                    currentListData = data;
+                    document.title = data.name;
+                    document.getElementById('listTitle').textContent = data.name;
+                    document.getElementById('listAuthor').textContent = `Created by: ${data.author}`;
+
+                    listRankingType = data.rankingType;
+                    isFreeOrder = data.isFreeOrder;
+                    allItems = data.items || [];
+
+                    renderList();
+
+                    // מונה לייקים
+                    document.getElementById('likesCount').textContent = (data.likes || []).length;
+
+                    // סימון לייק אישי (בטוח)
+                    if (currentUserData && data.likes) {
+                        const hasLiked = data.likes.some(id => id.toString() === currentUserData._id.toString());
+                        if (hasLiked) {
+                            const icon = document.querySelector('#likeBtn i');
+                            if (icon) icon.className = 'fas fa-heart';
+                        }
+                    }
+
+                    // תגובות
+                    if (data.allowComments !== false) {
+                        document.getElementById('commentsSection').style.display = 'block';
+                        const inputArea = document.getElementById('commentInputArea');
+                        const loginNotice = document.getElementById('loginToCommentNotice');
+
+                        if (loggedInUser) {
+                            if (inputArea) inputArea.style.display = 'flex';
+                            if (loginNotice) loginNotice.style.display = 'none';
+                        } else {
+                            if (inputArea) inputArea.style.display = 'none';
+                            if (loginNotice) loginNotice.style.display = 'block';
+                        }
+                        renderComments(data.comments, data.userId);
+                    }
+
+                    if (data.userId) fetchUserLists(data.userId, listId);
+
+                } catch (e) {
+                    console.error("Initialization Failed:", e);
+                    document.getElementById('listTitle').textContent = "Server busy, try again";
                 }
-                if (data.userId) fetchUserLists(data.userId, listId);
-            } catch (e) { console.error(e); }
-        }
+            }
 
         function renderList() {
             const grid = document.getElementById('grid'); grid.innerHTML = '';

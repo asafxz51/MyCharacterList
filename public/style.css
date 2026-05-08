@@ -129,50 +129,74 @@ body {
 
 /* --- נאב-בר מצב מובייל --- */
 @media (max-width: 768px) {
+
+  /* המבנה הראשי של הנאב - מאפשר שבירת שורות */
   .navbar {
-    height: auto;
-    padding: 10px;
+    padding: 8px 12px;
+    display: flex;
     flex-wrap: wrap;
-    /* מאפשר ירידת שורה */
+    align-items: center;
+    justify-content: space-between;
+    height: auto;
+    /* מאפשר לו לגדול בגובה כדי להכיל שתי שורות */
   }
 
-  /* לוגו למעלה משמאל */
-  .navbar a {
+  /* לוגו ואם יש המבורגר - צד שמאל בשורה הראשונה */
+  .navbar>a,
+  .navbar>div:first-child {
     order: 1;
+    flex: 1;
+    display: flex;
+    align-items: center;
   }
 
-  /* שם משתמש למעלה מימין */
+  .logo {
+    font-size: 1.1rem;
+  }
+
+  /* המזהה (השם/התמונה) - צד ימין בשורה הראשונה */
   .nav-identity {
     order: 2;
     margin-left: auto;
-    margin-right: 0;
+    display: flex !important;
+    /* מבטיח שהוא לא יעלם */
+    padding-right: 0;
   }
 
-  /* כל הכפתורים יורדים שורה ותופסים 100% רוחב */
+  /* צ'יפ המשתמש במובייל - נעשה אותו מעט יותר קומפקטי שייכנס בשורה */
+  .user-chip {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+  }
+
+  /* כל שאר הלחצנים (Logout, Bell, Community) - יורדים שורה (שורה שנייה) */
   .nav-controls {
     order: 3;
     width: 100%;
+    /* תופס 100% רוחב כדי להכריח ירידת שורה */
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px solid var(--border);
-    justify-content: space-between;
-    /* כפתורים נפרסים לכל הרוחב */
+    justify-content: space-around;
+    /* כפתורים מתפרסים ברווחים שווים */
   }
 
+  /* כפתורי האייקונים במובייל יראו כמו ריבועים לחיצים */
   .nav-controls button,
   #notifArea {
     flex: 1;
-    /* גודל שווה לכל הכפתורים */
-    margin: 0 2px;
+    margin: 0 4px;
+    height: 42px;
+    /* גובה נוח ללחיצה עם האצבע */
   }
-}
 
-#authBtnNav {
-  background: var(--accent);
-  color: white !important;
-  border: none;
-  font-weight: bold;
-  padding: 0 15px;
+     .nav-controls .hidden,
+     #notifArea.hidden {
+       flex: 0 0 0 !important;
+       margin: 0 !important;
+       padding: 0 !important;
+       border: none !important;
+     }
 }
 
 /* הגדרות למובייל (מתחת ל-768px) */
@@ -1242,4 +1266,67 @@ select {
   margin-right: 10px;
 }
 
-/* סידור הכותרת: שמאל וימין */
+/* תיקון קריטי למובייל - מניעת חריגת תגובות */
+/* --- תיקון מוחלט לחריגת תגובות במובייל --- */
+/* --- תיקון סופי למרג'ין שיוצא מה-JS במובייל --- */
+@media (max-width: 600px) {
+
+  /* מבטל את הדחיפה של 54 פיקסלים שמוגדרת בתוך ה-style של ה-HTML */
+  [style*="margin-left: 54px"],
+  [style*="margin-left:54px"],
+  [id^="replies-"],
+  [id^="index-replies-"],
+  [id^="reply-box-"],
+  [id^="index-reply-box-"] {
+    margin-left: 10px !important;
+    /* משאיר רק רווח קטן כדי לראות שזה שרשור */
+  }
+
+  /* מבטל גם את הפדינג שדוחף את הטקסט ימינה מדי */
+  [style*="padding-left: 54px"],
+  [style*="padding-left: 40px"],
+  div[style*="line-height:1.5"] {
+    padding-left: 50px !important;
+    margin-top: 5px;
+  }
+
+  /* תיקון לשרשור הפנימי (הפס האפור בצד) */
+  div[style*="border-left: 2px solid"] {
+    margin-left: 5px !important;
+    padding-left: 5px !important;
+  }
+
+  /* מוודא שהטקסט בתוך הריפליי לא נמעך */
+  [id^="replies-"] p,
+  [id^="index-replies-"] p {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+}
+
+/* כפתור הפרופיל במובייל - מוסתר כברירת מחדל */
+.mobile-only-btn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+
+  /* 1. מסתירים את הצ'יפ עם השם בשורה הראשונה */
+  .nav-identity {
+    display: none !important;
+  }
+
+  /* 2. מראים את כפתור הפרופיל (האיש) בתוך שורת הכפתורים */
+  .mobile-only-btn {
+    display: flex !important;
+  }
+
+  /* 3. מוודאים שכל הכפתורים בשורה מתחלקים יפה */
+  .nav-controls button,
+  #notifArea {
+    flex: 1;
+    /* מחלק מקום שווה לכל האייקונים */
+    min-width: 0;
+  }
+}

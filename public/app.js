@@ -32,6 +32,8 @@ async function checkLoginStatus() {
             // --- טיפול באווטאר בנאב-בר ---
             const navAvatar = document.getElementById('navAvatar');
             const defaultIcon = document.getElementById('navDefaultIcon');
+            const mobProfileBtn = document.getElementById('mobileProfileBtn');
+            if (mobProfileBtn) mobProfileBtn.classList.remove('hidden');
             // אם יש לינק תקין (לא ריק ולא שבור)
             if (data.avatar && data.avatar.trim() !== "") {
                 navAvatar.src = data.avatar;
@@ -66,6 +68,8 @@ async function checkLoginStatus() {
             if (document.getElementById('notifArea')) {
                 document.getElementById('notifArea').classList.remove('hidden');
             }
+            if (document.getElementById('mobileProfileBtn')) document.getElementById('mobileProfileBtn').classList.remove('hidden');
+            if (document.getElementById('shareBtn')) document.getElementById('shareBtn').classList.remove('hidden');
 
             fetchNotifications();
             setInterval(fetchNotifications, 30000);
@@ -84,8 +88,15 @@ async function checkLoginStatus() {
 
 async function showLoggedOutState() {
     const authBtn = document.getElementById('authBtnNav');
+    const elementsToHide = ['mobileProfileBtn', 'notifArea', 'adminBtn', 'shareBtn', 'userDisplay'];
+    elementsToHide.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    });
     const menuBtn = document.getElementById('mobileMenuBtn');
     if (menuBtn) menuBtn.classList.add('hidden');
+    const mobProfileBtn = document.getElementById('mobileProfileBtn');
+    if (mobProfileBtn) mobProfileBtn.classList.add('hidden');
 
     // --- מצב מנותק ---
     document.getElementById('userDisplay').style.display = 'none'; // מעלים את ה-"Hi"
@@ -121,6 +132,8 @@ async function showLoggedOutState() {
             </button>
         </div>
     `;
+    if (document.getElementById('mobileProfileBtn')) document.getElementById('mobileProfileBtn').classList.add('hidden');
+    if (document.getElementById('shareBtn')) document.getElementById('shareBtn').classList.add('hidden');
 }
 
 // פונקציה לפתיחת/סגירת התפריט
