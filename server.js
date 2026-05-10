@@ -12,6 +12,7 @@ const User = require('./models/User');
 const List = require('./models/List');
 const Settings = require('./models/Settings');
 const Log = require('./models/Log');
+const LeaderboardOverride = require('./models/LeaderboardOverride');
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
@@ -72,6 +73,24 @@ async function saveLog(user, action, details) {
   } catch (e) { console.error("Log error:", e); }
 }
 
+// --- ADMIN: LEADERBOARD OVERRIDE EDIT ---
+app.put('/api/admin/character/global-edit', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { oldCharId, characterName, sourceTitle, sourceType, image, isHidden } = req.body;
+
+    await LeaderboardOverride.findOneAndUpdate(
+      { charId: oldCharId },
+      { characterName, sourceTitle, sourceType, image, isHidden },
+      { upsert: true, new: true }
+    );
+
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
 // --- AUTH ROUTES ---
 
 app.post('/api/auth/register', async (req, res) => {
@@ -127,20 +146,37 @@ app.get('/api/lists', verifyToken, async (req, res) => {
 
 app.post('/api/lists', verifyToken, async (req, res) => {
   try {
-    const { _id, name, items, rankingType, isPrivate, isFreeOrder, logAction, logDetails, allowComments } = req.body;
+    const data = req.body;
     const user = await User.findById(req.user._id);
 
-    await saveLog(user, logAction || (_id ? "Update List" : "Create List"), logDetails || `List: ${name}`);
-
-    if (_id) {
-      const updated = await List.findByIdAndUpdate(_id, { name, items, isPrivate, rankingType, isFreeOrder, allowComments }, { new: true });
-      res.json(updated);
-    } else {
-      const newList = new List({ userId: req.user._id, name, items: items || [], rankingType: rankingType || 'numbers', isPrivate, isFreeOrder, allowComments: true });
-      await newList.save();
-      res.json(newList);
+    // חסימה: אף אחד לא מקבל מעל 10 או מתחת ל-0
+    if (data.items && Array.isArray(data.items)) {
+      data.items.forEach(item => {
+        if (item.rating > 10) item.rating = 10;
+        if (item.rating < 0) item.rating = 0;
+      });
     }
-  } catch (error) { res.status(500).json({ error: "Server error" }); }
+
+    await saveLog(user, data.logAction || (data._id ? "Update" : "Create"), data.logDetails || data.name);
+
+    // מסמנים את הרשימה כ"מעודכנת לסולם החדש"
+    data.scaleUpdated = true;
+
+    if (data._id) {
+      const updated = await List.findByIdAndUpdate(data._id, data, { new: true });
+      return res.json(updated);
+    }
+
+    // יצירת רשימה חדשה
+    data.userId = req.user._id;
+    data.allowComments = data.allowComments !== false;
+    const newList = new List(data);
+    await newList.save();
+
+    return res.json(newList);
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 app.delete('/api/lists/:id', verifyToken, async (req, res) => {
@@ -170,6 +206,81 @@ app.post('/api/lists/:id/duplicate', verifyToken, async (req, res) => {
   res.json(newList);
 });
 
+// --- GLOBAL LEADERBOARD ---
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const pipeline = [
+      { $match: { isPrivate: { $ne: true } } }, // רק רשימות ציבוריות
+      { $unwind: "$items" }, // פירוק הרשימות לדמויות בודדות
+      {
+        $match: {
+          "items.rating": { $gt: 0 }, // ציון גדול מ-0
+          // חוק 1: חייב להיות API ID תקין (שולל לחלוטין דמויות קאסטום)
+          "items.apiId": { $nin: [null, "", "null", "undefined"] },
+          // חוק 2: חייב להיות מסווג כדמות ולא כסדרה (מונע מסדרות להיכנס)
+          "items.entityType": { $ne: "series" }
+        }
+      },
+      {
+        // המרת ה-ID לטקסט אחיד למקרה שנשמר כמספר
+        $addFields: {
+          charId: { $toString: "$items.apiId" }
+        }
+      },
+      {
+        // קיבוץ לפי משתמש (כדי שמשתמש לא ידרג את אותה דמות פעמיים וישפיע על הממוצע)
+        $group: {
+          _id: { userId: "$userId", charId: "$charId" },
+          maxRating: { $max: "$items.rating" },
+          characterName: { $first: "$items.characterName" },
+          sourceTitle: { $first: "$items.sourceTitle" },
+          sourceType: { $first: "$items.sourceType" },
+          image: { $max: "$items.image" }
+        }
+      },
+      {
+        // הקיבוץ הגלובלי של הלידרבורד - עכשיו אך ורק לפי charId (שזה ה-API ID)
+        $group: {
+          _id: "$_id.charId",
+          characterName: { $first: "$characterName" },
+          sourceTitle: { $first: "$sourceTitle" },
+          sourceType: { $first: "$sourceType" },
+          image: { $max: "$image" },
+          avgRating: { $avg: "$maxRating" },
+          rankedByCount: { $sum: 1 }
+        }
+      },
+      { $match: { rankedByCount: { $gte: 2 } } }, // כאן תוכל לשנות ל-3 מינימום דירוגים מתי שתרצה
+      { $sort: { avgRating: -1, rankedByCount: -1 } }, // מיון לפי ציון ואז לפי כמות מדרגים
+      { $limit: 100 }
+    ];
+
+    const leaderboardRaw = await List.aggregate(pipeline);
+
+    // מפעיל את השכתוב של האדמין (אם שינית שם/תמונה של משהו)
+    const overrides = await LeaderboardOverride.find({});
+    const overrideMap = {};
+    overrides.forEach(o => { overrideMap[o.charId] = o; });
+
+    // מעבר סופי להחלת שינויי אדמין ולהסתרת דמויות שקיבלו באן
+    const finalLeaderboard = leaderboardRaw.map(item => {
+      const override = overrideMap[item._id];
+      if (override) {
+        if (override.isHidden) return null; // האדמין הסתיר את הדמות
+        item.characterName = override.characterName || item.characterName;
+        item.sourceTitle = override.sourceTitle || item.sourceTitle;
+        item.sourceType = override.sourceType || item.sourceType;
+        item.image = override.image || item.image;
+      }
+      return item;
+    }).filter(item => item !== null);
+
+    res.json(finalLeaderboard);
+  } catch (e) {
+    console.error("Leaderboard Error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // --- Profile Picture ---
 
@@ -522,38 +633,252 @@ app.get('/api/admin/users/:id/lists', verifyToken, verifyAdmin, async (req, res)
   }
 });
 
-// --- SEARCH & EXTERNAL APIS ---
+app.get('/api/tmdb/credits', async (req, res) => {
+  try {
+    const { type, id } = req.query;
+    if (!type || !id) return res.json([]);
+    const r = await axios.get(`https://api.themoviedb.org/3/${type}/${id}/credits`, {
+      params: { api_key: process.env.TMDB_API_KEY }
+    });
+    const cast = r.data.cast.slice(0, 15).map(c => ({
+      characterName: c.character,
+      actorName: c.name,
+      image: c.profile_path ? `https://image.tmdb.org/t/p/w200${c.profile_path}` : null
+    }));
+    res.json(cast);
+  } catch (e) { res.json([]); }
+});
 
 app.get('/api/search/jikan', async (req, res) => {
   try {
+    await new Promise(r => setTimeout(r, 500));
     const r = await axios.get(`https://api.jikan.moe/v4/characters`, { params: { q: req.query.query, limit: 15 } });
-    res.json(r.data.data.map(i => ({ id: i.mal_id, title: i.name, image: i.images?.jpg?.image_url, type: 'character' })));
+    res.json(r.data.data.map(i => ({
+      id: i.mal_id, title: i.name, image: i.images?.jpg?.image_url, type: 'character', description: 'Anime Character'
+    })));
   } catch (e) { res.json([]); }
 });
 
 app.get('/api/jikan/details/:id', async (req, res) => {
   try {
-    const r = await axios.get(`https://api.jikan.moe/v4/characters/${req.params.id}/full`);
-    const data = r.data.data;
-    let sourceTitle = data.anime?.length > 0 ? data.anime[0]?.anime?.title : (data.manga?.length > 0 ? data.manga[0]?.manga?.title : '');
-    res.json({ sourceTitle, sourceType: data.anime?.length > 0 ? 'Anime' : 'Manga' });
-  } catch (e) { res.json({ sourceTitle: '', sourceType: 'Anime' }); }
-});
+    const { id } = req.params;
+    console.log(`Fetching Jikan Details for ID: ${id}...`);
 
-app.get('/api/tmdb/credits', async (req, res) => {
-  try {
-    const { type, id } = req.query;
-    const r = await axios.get(`https://api.themoviedb.org/3/${type}/${id}/credits`, { params: { api_key: process.env.TMDB_API_KEY } });
-    const cast = r.data.cast.slice(0, 15).map(c => ({ characterName: c.character, actorName: c.name, image: c.profile_path ? `https://image.tmdb.org/t/p/w200${c.profile_path}` : null }));
-    res.json(cast);
-  } catch (e) { res.json([]); }
+    const response = await axios.get(`https://api.jikan.moe/v4/characters/${id}/full`);
+    const data = response.data.data;
+
+    let sourceTitle = '';
+    let sourceType = 'Anime';
+
+    if (data.anime && data.anime.length > 0) {
+      sourceTitle = data.anime[0]?.anime?.title;
+      sourceType = 'Anime';
+    }
+
+    else if (data.manga && data.manga.length > 0) {
+      sourceTitle = data.manga[0]?.manga?.title;
+      sourceType = 'Manga';
+    }
+
+    if (!sourceTitle) {
+      sourceTitle = '';
+    }
+
+    console.log(`Success: ${sourceTitle} (${sourceType})`);
+    res.json({ sourceTitle, sourceType });
+
+  } catch (e) {
+    console.error("Jikan Error:", e.message);
+    res.json({ sourceTitle: '', sourceType: 'Anime' });
+  }
 });
 
 app.get('/api/image-proxy', async (req, res) => {
   try {
-    const response = await axios.get(req.query.url, { responseType: 'arraybuffer', headers: { 'User-Agent': 'Mozilla/5.0' } });
-    res.set('Content-Type', 'image/jpeg'); res.send(response.data);
-  } catch (e) { res.status(404).send('Image not found'); }
+    const { url } = req.query;
+    if (!url) return res.status(400).send('No URL');
+
+    const response = await axios.get(url, { responseType: 'arraybuffer' });
+
+    res.set('Content-Type', 'image/jpeg');
+    res.send(response.data);
+  } catch (e) {
+    res.status(404).send('Image not found');
+  }
+});
+
+app.get('/api/search/fandom', async (req, res) => {
+  try {
+    const { query } = req.query;
+
+    const searchWiki = async (subdomain) => {
+      const apiUrl = `https://${subdomain}.fandom.com/api.php`;
+
+      const searchRes = await axios.get(apiUrl, {
+        params: { action: 'query', list: 'search', srsearch: query, srlimit: 4, format: 'json' }
+      });
+      if (!searchRes.data.query) return [];
+      const pageIds = searchRes.data.query.search.map(i => i.pageid).join('|');
+      if (!pageIds) return [];
+
+      const detailsRes = await axios.get(apiUrl, {
+        params: {
+          action: 'query',
+          pageids: pageIds,
+          prop: 'pageimages|extracts|categories',
+          pithumbsize: 600,
+          exchars: 200,
+          exintro: true,
+          explaintext: true,
+          cllimit: 20,
+          format: 'json'
+        }
+      });
+
+      const pages = detailsRes.data.query.pages;
+
+      return Object.values(pages).map(p => {
+        let detectedSource = "";
+
+        if (p.categories) {
+          const validCats = p.categories.filter(c =>
+            !c.title.includes("Males") &&
+            !c.title.includes("Females") &&
+            !c.title.includes("Articles") &&
+            !c.title.includes("living") &&
+            !c.title.includes("deceased")
+          );
+
+          const bestCat = validCats.find(c =>
+            c.title.match(/(Characters|Villains|Heroes|Antagonists|Protagonists)/i)
+          );
+
+          if (bestCat) {
+            detectedSource = bestCat.title
+              .replace("Category:", "")
+              .replace(/ Characters/i, "")
+              .replace(/ Villains/i, "")
+              .replace(/ Heroes/i, "")
+              .replace(/ Antagonists/i, "")
+              .replace(/ Protagonists/i, "")
+              .trim();
+          }
+        }
+
+        let rawImageUrl = p.thumbnail ? p.thumbnail.source : (p.original ? p.original.source : null);
+        let proxyUrl = null;
+
+        if (rawImageUrl) {
+          proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(rawImageUrl)}`;
+        }
+
+        return {
+          id: p.pageid,
+          title: p.title,
+          image: proxyUrl,
+          type: 'wiki_character',
+          sourceTitle: detectedSource,
+          description: p.extract || '',
+          wiki: subdomain
+        };
+      });
+    };
+
+    const [heroes, villains] = await Promise.all([
+      searchWiki('heroes'),
+      searchWiki('villains')
+    ]);
+
+    res.json([...heroes, ...villains]);
+  } catch (e) {
+    console.error("Fandom Error:", e.message);
+    res.json([]);
+  }
+});
+
+let igdbToken = null;
+let tokenExpiresAt = 0;
+
+async function getIgdbToken() {
+  if (igdbToken && Date.now() < tokenExpiresAt) return igdbToken;
+
+  try {
+    const response = await axios.post('https://id.twitch.tv/oauth2/token', null, {
+      params: {
+        client_id: process.env.TWITCH_CLIENT_ID,
+        client_secret: process.env.TWITCH_SECRET,
+        grant_type: 'client_credentials'
+      }
+    });
+    igdbToken = response.data.access_token;
+    tokenExpiresAt = Date.now() + (response.data.expires_in * 1000);
+    return igdbToken;
+  } catch (e) {
+    console.error("Twitch Token Error:", e.message);
+    return null;
+  }
+}
+
+app.get('/api/search/igdb', async (req, res) => {
+  try {
+    const token = await getIgdbToken();
+    if (!token) return res.json([]);
+
+    // IGDB uses a weird text-based query format
+    const response = await axios.post('https://api.igdb.com/v4/characters',
+      `search "${req.query.query}"; fields name, mug_shot.image_id; limit 10;`,
+      {
+        headers: {
+          'Client-ID': process.env.TWITCH_CLIENT_ID,
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+
+    const results = response.data.map(item => ({
+      id: item.id,
+      title: item.name,
+      image: item.mug_shot ? `https://images.igdb.com/igdb/image/upload/t_720p/${item.mug_shot.image_id}.jpg` : null,
+      type: 'game_character',
+      description: 'Video Game Character'
+    }));
+
+    res.json(results);
+  } catch (e) {
+    console.error("IGDB Search Error:", e.message);
+    res.json([]);
+  }
+});
+
+app.get('/api/igdb/details/:id', async (req, res) => {
+  try {
+    const token = await getIgdbToken();
+    const { id } = req.params;
+
+    const response = await axios.post('https://api.igdb.com/v4/characters',
+      `where id = ${id}; fields name, games.name;`,
+      {
+        headers: {
+          'Client-ID': process.env.TWITCH_CLIENT_ID,
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+
+
+    const data = response.data[0];
+    let sourceTitle = '';
+
+    if (data.games && data.games.length > 0) {
+      sourceTitle = data.games[0].name;
+    }
+
+    res.json({ sourceTitle, sourceType: 'Game' });
+
+  } catch (e) {
+    console.error("IGDB Details Error:", e.message);
+    res.json({ sourceTitle: '', sourceType: 'Game' });
+  }
 });
 
 // --- SETTINGS ---
@@ -707,6 +1032,474 @@ app.get('/api/admin/verify-users-data', verifyToken, verifyAdmin, async (req, re
     res.send(`Verification complete. Fixed ${fixCount} user records.`);
   } catch (e) {
     res.status(500).send(e.message);
+  }
+});
+
+// נתיב זמני להזרקת נתוני דמה לבדיקת הלידרבורד
+app.get('/api/admin/generate-dummies', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    // רשימת דמויות דמה שניתן להם ציונים שונים
+    const dummyCharacters = [
+      { name: "Super Mario", source: "Nintendo", apiId: "dummy_1", img: "https://placehold.co/150x150/252525/bb86fc?text=Mario" },
+      { name: "Master Chief", source: "Halo", apiId: "dummy_2", img: "https://placehold.co/150x150/252525/bb86fc?text=Chief" },
+      { name: "Pikachu", source: "Naruto", apiId: "dummy_3", img: "https://placehold.co/150x150/252525/bb86fc?text=Pika" },
+      { name: "Kratos", source: "God of War", apiId: "dummy_4", img: "https://placehold.co/150x150/252525/bb86fc?text=Kratos" }
+    ];
+
+    let createdCount = 0;
+
+    // יוצרים 3 משתמשים פיקטיביים
+    for (let i = 1; i <= 3; i++) {
+      const dummyUser = new User({
+        username: `DummyTester_${i}_${Date.now().toString().slice(-4)}`,
+        password: '123' // סיסמה סתמית, לא נשתמש בה
+      });
+      await dummyUser.save();
+
+      // יוצרים רשימה לכל משתמש עם ציונים מוגרלים (בין 6 ל-10)
+      const dummyList = new List({
+        userId: dummyUser._id,
+        name: `My Top Games (Dummy ${i})`,
+        isPrivate: false, // חייב להיות ציבורי כדי להיכנס ללידרבורד!
+        items: dummyCharacters.map(c => ({
+          characterName: c.name,
+          sourceTitle: c.source,
+          sourceType: "Game",
+          image: c.img,
+          rating: Math.floor(Math.random() * 5) + 6, // ציון אקראי: 6, 7, 8, 9 או 10
+          apiId: c.apiId,
+          entityType: 'character' // חייב להיות character ולא series
+        }))
+      });
+      await dummyList.save();
+      createdCount++;
+    }
+
+    res.send(`<h1>Success!</h1><p>Created ${createdCount} dummy users and lists. Go back to the site and check the Leaderboard.</p>`);
+  } catch (e) {
+    console.error(e);
+    res.status(500).send("Error: " + e.message);
+  }
+});
+
+// --- ADMIN: FIX CORRUPTED CHARACTERS (DATABASE CLEANUP) ---
+app.get('/api/admin/fix-corrupted-characters', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const lists = await List.find();
+    let fixedNulls = 0;
+    let fixedConflicts = 0;
+
+    // שלב א: מיפוי המזהים כדי לגלות איזה מהם נדפקו מהבאג
+    const idToNames = {};
+
+    for (let list of lists) {
+      list.items.forEach(item => {
+        // ניקוי מזהים מזויפים שנשמרו כטקסט
+        if (item.apiId === "null" || item.apiId === "undefined" || item.apiId === "") {
+          item.apiId = null;
+        }
+
+        if (item.apiId) {
+          const id = item.apiId.toString();
+          if (!idToNames[id]) idToNames[id] = new Set();
+          // שומרים את השם כדי לבדוק אחר כך אם יש כפילויות תחת אותו ID
+          idToNames[id].add(item.characterName.trim().toLowerCase());
+        }
+      });
+    }
+
+    // מציאת המזהים שיש להם יותר משם אחד (זה אומר שהבאג קרה שם ואיחד דמויות שונות!)
+    const corruptedIds = new Set();
+    for (let id in idToNames) {
+      if (idToNames[id].size > 1) {
+        corruptedIds.add(id);
+      }
+    }
+
+    // שלב ב: מעבר על כל הרשימות, מחיקת המזהים המקולקלים והחלת תיקונים
+    for (let list of lists) {
+      let modified = false;
+      list.items.forEach(item => {
+        // מחיקת טקסט "null" 
+        if (item.apiId === "null" || item.apiId === "undefined" || item.apiId === "") {
+          item.apiId = null;
+          modified = true;
+          fixedNulls++;
+        }
+
+        // מחיקת ID מקולקל! זה יכריח את הלידרבורד להשתמש בשם של הדמות במקום
+        if (item.apiId && corruptedIds.has(item.apiId.toString())) {
+          item.apiId = null;
+          modified = true;
+          fixedConflicts++;
+        }
+
+        // וידוא שיש לדמויות ישנות הגדרה כדי שלא יסוננו בטעות מהלידרבורד
+        if (!item.entityType) {
+          item.entityType = 'character';
+          modified = true;
+        }
+      });
+
+      if (modified) await list.save();
+    }
+
+    res.send(`
+      <div style="font-family: Arial, sans-serif; padding: 40px; text-align: center; background: #121212; color: white; height: 100vh;">
+        <h1 style="color: #bb86fc; font-size: 3rem; margin-bottom: 20px;"><i class="fas fa-check-circle"></i> Database Cleaned!</h1>
+        <div style="background: #252525; border: 1px solid #333; border-radius: 10px; padding: 20px; max-width: 600px; margin: 0 auto; font-size: 1.2rem; line-height: 1.8;">
+            <p>Fixed <b>${fixedNulls}</b> false ID strings.</p>
+            <p style="color: #ff4444;">Removed <b>${fixedConflicts}</b> corrupted IDs that caused characters to swap.</p>
+            <p style="color: #4CAF50; margin-top: 20px;"><b>Result:</b> The leaderboard will now perfectly group old characters by their Name and Source.</p>
+        </div>
+        <button onclick="window.location.href='/'" style="padding: 15px 30px; background: #bb86fc; border: none; border-radius: 30px; color: #000; cursor: pointer; font-weight: bold; margin-top: 30px; font-size: 1.1rem;">Back to Home</button>
+      </div>
+    `);
+  } catch (e) {
+    console.error(e);
+    res.status(500).send("Error: " + e.message);
+  }
+});
+
+// --- ADMIN: BRUTE FORCE REFRESH ALL CHARACTERS ---
+app.get('/api/admin/refresh-all-characters', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const lists = await List.find();
+    let listsUpdated = 0;
+    let charactersFixed = 0;
+
+    for (let list of lists) {
+      // בניה מחדש של כל דמות ברשימה (בדיוק כמו הלחיצה בממשק)
+      list.items = list.items.map(item => {
+        let obj = item.toObject ? item.toObject() : item;
+
+        // ניקוי מזהים
+        if (obj.apiId === "null" || obj.apiId === "undefined" || obj.apiId === "") {
+          obj.apiId = null;
+        }
+
+        // הבטחת טקסטים נקיים ללא רווחים נסתרים בקצוות (הסרת Whitespaces)
+        obj.characterName = obj.characterName ? String(obj.characterName).trim() : "Unknown Character";
+        obj.sourceTitle = obj.sourceTitle ? String(obj.sourceTitle).trim() : "Unknown Source";
+        obj.sourceType = obj.sourceType || "Other";
+        obj.entityType = obj.entityType || "character";
+        obj.rating = Number(obj.rating) || 0;
+
+        charactersFixed++;
+        return obj;
+      });
+
+      // מסמנים למסד הנתונים ששינינו הכל ומכריחים אותו לשמור
+      list.markModified('items');
+      await list.save();
+      listsUpdated++;
+    }
+
+    res.send(`
+      <div style="font-family: Arial, sans-serif; padding: 40px; text-align: center; background: #121212; color: white; height: 100vh;">
+        <h1 style="color: #bb86fc; font-size: 3rem; margin-bottom: 20px;"><i class="fas fa-hammer"></i> Brute Force Refresh Complete!</h1>
+        <div style="background: #252525; border: 1px solid #333; border-radius: 10px; padding: 30px; max-width: 600px; margin: 0 auto; font-size: 1.2rem; line-height: 1.8;">
+            <p style="color: #4CAF50; font-size: 1.5rem;">Overwritten and saved <b>${listsUpdated}</b> lists.</p>
+            <p>Forced clean data formats on <b>${charactersFixed}</b> characters.</p>
+            <p style="color: #888; font-size: 1rem; margin-top: 15px;">All old characters have now been technically "updated" in the background.</p>
+        </div>
+        <button onclick="window.location.href='/'" style="padding: 15px 30px; background: #bb86fc; border: none; border-radius: 30px; color: #000; cursor: pointer; font-weight: bold; margin-top: 30px; font-size: 1.1rem;">Back to Home</button>
+      </div>
+    `);
+  } catch (e) {
+    console.error(e);
+    res.status(500).send("Error: " + e.message);
+  }
+});
+
+// --- ADMIN: RESCUE OLD DATA (LEGACY ID GENERATOR) ---
+app.get('/api/admin/rescue-old-data', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const lists = await List.find();
+    let listsUpdated = 0;
+    let charactersRescued = 0;
+
+    for (let list of lists) {
+      let isModified = false;
+
+      list.items.forEach(item => {
+        // אם לדמות אין apiId (כי היא נוצרה לפני השדרוג של האתר)
+        if (!item.apiId || item.apiId === "null" || item.apiId === "undefined" || item.apiId === "") {
+
+          const safeName = item.characterName ? item.characterName.trim().toLowerCase() : "unknown";
+          const safeSource = item.sourceTitle ? item.sourceTitle.trim().toLowerCase() : "unknown";
+
+          // מייצרים לה "תעודת זהות" וירטואלית כדי שהלידרבורד החדש יקבל אותה
+          item.apiId = `legacy_${safeName}___${safeSource}`;
+
+          isModified = true;
+          charactersRescued++;
+        }
+      });
+
+      if (isModified) {
+        list.markModified('items');
+        await list.save();
+        listsUpdated++;
+      }
+    }
+
+    res.send(`
+      <div style="font-family: Arial, sans-serif; padding: 40px; text-align: center; background: #121212; color: white; height: 100vh;">
+        <h1 style="color: #bb86fc; font-size: 3rem; margin-bottom: 20px;"><i class="fas fa-life-ring"></i> Old Data Rescued!</h1>
+        <div style="background: #252525; border: 1px solid #333; border-radius: 10px; padding: 30px; max-width: 600px; margin: 0 auto; font-size: 1.2rem; line-height: 1.8;">
+            <p>We successfully generated Legacy API IDs for old characters.</p>
+            <p style="color: #4CAF50; font-size: 1.5rem;">Updated <b>${listsUpdated}</b> lists.</p>
+            <p>Rescued <b>${charactersRescued}</b> old characters.</p>
+            <p style="color: #888; font-size: 1rem; margin-top: 15px;">Your leaderboard should now be full of your classic characters!</p>
+        </div>
+        <button onclick="window.location.href='/'" style="padding: 15px 30px; background: #bb86fc; border: none; border-radius: 30px; color: #000; cursor: pointer; font-weight: bold; margin-top: 30px; font-size: 1.1rem;">Back to Home</button>
+      </div>
+    `);
+  } catch (e) {
+    console.error(e);
+    res.status(500).send("Error: " + e.message);
+  }
+});
+
+app.get('/api/admin/remove-legacy', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const lists = await List.find();
+    let cleanedCharacters = 0;
+
+    for (let list of lists) {
+      let modified = false;
+      list.items.forEach(item => {
+        // אם לדמות יש מזהה מזויף שהתחלנו עם המילה legacy_
+        if (item.apiId && item.apiId.toString().startsWith('legacy_')) {
+          item.apiId = null; // מוחקים את המזהה המזויף כדי שתחזור להיות קאסטום
+          modified = true;
+          cleanedCharacters++;
+        }
+      });
+
+      if (modified) {
+        list.markModified('items');
+        await list.save();
+      }
+    }
+
+    res.send(`
+      <div style="font-family: Arial, sans-serif; padding: 40px; text-align: center; background: #121212; color: white;">
+        <h1 style="color: #ff4444;"><i class="fas fa-trash"></i> Cleanup Complete!</h1>
+        <p style="font-size: 1.2rem;">Removed fake legacy IDs from <b>${cleanedCharacters}</b> characters.</p>
+        <p>The leaderboard is now strictly restricted to REAL API characters only.</p>
+      </div>
+    `);
+  } catch (e) {
+    res.status(500).send("Error: " + e.message);
+  }
+});
+
+const delay = ms => new Promise(res => setTimeout(res, ms));
+
+// פונקציית התאמה חכמה שמתעלמת מסדר המילים
+const isExactMatch = (dbName, apiName) => {
+  if (!dbName || !apiName) return false;
+
+  // פונקציית עזר: מנקה סמלים, מפרקת למילים, ממיינת אלפביתית, ומחברת למחרוזת אחת
+  const normalizeAndSort = (name) => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9א-ת\s]/g, ' ') // הופך סמלים ופסיקים לרווחים
+      .split(/\s+/)                     // מפרק למערך של מילים
+      .filter(word => word.length > 0)  // מנקה רווחים כפולים
+      .sort()                           // ממיין את המילים אלפביתית!
+      .join('');                        // מחבר הכל חזרה למקשה אחת
+  };
+
+  const sortedDbName = normalizeAndSort(dbName);
+  const sortedApiName = normalizeAndSort(apiName);
+
+  return sortedDbName === sortedApiName;
+};
+
+// --- ADMIN: AUTO-MATCH MISSING API IDs (V3.1 - BULLETPROOF) ---
+app.get('/api/admin/auto-match-ids', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const lists = await List.find();
+    let matchedCount = 0;
+    const uniqueChars = new Map();
+
+    // 1. איסוף כל הדמויות
+    lists.forEach(list => {
+      list.items.forEach(item => {
+        const apiStr = item.apiId ? item.apiId.toString() : "";
+        if (!apiStr || apiStr === "null" || apiStr === "undefined" || apiStr.startsWith('legacy_')) {
+          const key = `${item.characterName.toLowerCase()}|||${item.sourceTitle}`;
+          if (!uniqueChars.has(key)) {
+            uniqueChars.set(key, {
+              name: item.characterName,
+              source: item.sourceTitle,
+              foundId: null
+            });
+          }
+        }
+      });
+    });
+
+    const totalUnique = uniqueChars.size;
+    console.log(`[START] Found ${totalUnique} unique characters. Searching across ALL APIs...`);
+
+    const PORT = process.env.PORT || 3000;
+    const localBaseUrl = `http://127.0.0.1:${PORT}`;
+
+    // הוספת טיימאאוט (Timeout) של 6 שניות - מונע מהמערכת להיתקע לנצח!
+    const safeFetch = async (endpoint) => {
+      try {
+        const r = await axios.get(`${localBaseUrl}${endpoint}`, { timeout: 6000 });
+        return Array.isArray(r.data) ? r.data : [];
+      } catch (e) {
+        return [];
+      }
+    };
+
+    // 2. חיפוש
+    for (let [key, charData] of uniqueChars.entries()) {
+      // סינון שמות שהם נטו סימני שאלה או סמלים
+      const cleanNameCheck = charData.name.replace(/[^a-zA-Z0-9א-ת]/g, '');
+      if (!cleanNameCheck || cleanNameCheck.length === 0) {
+        console.log(` ---> [SKIP] Invalid name format: ${charData.name}`);
+        continue;
+      }
+
+      const query = encodeURIComponent(charData.name);
+      console.log(`Searching globally for: ${charData.name}...`);
+
+      try {
+        // שימוש ב-allSettled כדי שגם אם שרת נופל, זה לא יתקע את שאר השרתים
+        const promises = [
+          safeFetch(`/api/search/jikan?query=${query}`),
+          safeFetch(`/api/search/igdb?query=${query}`),
+          safeFetch(`/api/search/tmdb?query=${query}`),
+          safeFetch(`/api/search/tmdb/person?query=${query}`),
+          safeFetch(`/api/search/fandom?query=${query}`),
+          safeFetch(`/api/search/rawg?query=${query}`),
+          safeFetch(`/api/search/books?query=${query}`)
+        ];
+
+        const responses = await Promise.allSettled(promises);
+
+        let combined = [];
+        responses.forEach(r => {
+          if (r.status === 'fulfilled') {
+            combined = combined.concat(r.value);
+          }
+        });
+
+        const exactMatch = combined.find(r => isExactMatch(charData.name, r.title));
+
+        if (exactMatch) {
+          charData.foundId = exactMatch.id.toString();
+          console.log(` ---> [V] MATCHED! ${charData.name} = ID ${charData.foundId} (Type: ${exactMatch.type})`);
+        } else {
+          console.log(` ---> [X] No exact match in any API.`);
+        }
+      } catch (apiErr) {
+        console.log(` ---> [!] Global Error for ${charData.name}:`, apiErr.message);
+      }
+
+      await delay(1000);
+    }
+
+    // 3. עדכון הדאטהבייס
+    let listsUpdated = 0;
+    for (let list of lists) {
+      let isModified = false;
+      list.items.forEach(item => {
+        const apiStr = item.apiId ? item.apiId.toString() : "";
+        if (!apiStr || apiStr === "null" || apiStr === "undefined" || apiStr.startsWith('legacy_')) {
+          const key = `${item.characterName.toLowerCase()}|||${item.sourceTitle}`;
+          const mappedData = uniqueChars.get(key);
+
+          if (mappedData && mappedData.foundId) {
+            item.apiId = mappedData.foundId;
+            item.entityType = 'character';
+            isModified = true;
+            matchedCount++;
+          }
+        }
+      });
+
+      if (isModified) {
+        list.markModified('items');
+        await list.save();
+        listsUpdated++;
+      }
+    }
+
+    res.send(`
+      <div style="font-family: Arial; padding: 40px; text-align: center; background: #121212; color: white;">
+        <h1 style="color: #bb86fc;"><i class="fas fa-shield-alt"></i> V3.1 Safe Scan Complete!</h1>
+        <div style="background: #252525; padding: 30px; border-radius: 10px; max-width: 600px; margin: 0 auto; line-height: 1.8;">
+            <p>Scanned <b>${totalUnique}</b> characters securely.</p>
+            <p style="color: #4CAF50; font-size: 1.3rem;">Successfully found exact matches for <b>${matchedCount}</b> instances!</p>
+            <p>Updated <b>${listsUpdated}</b> lists.</p>
+            <p style="color:#888; font-size: 0.9rem; margin-top: 15px;">Check the VS Code Terminal to see how many weird names were skipped.</p>
+        </div>
+        <button onclick="window.location.href='/'" style="margin-top: 30px; padding: 10px 20px; cursor: pointer;">Back to Home</button>
+      </div>
+    `);
+  } catch (e) {
+    res.status(500).send("Error: " + e.message);
+  }
+});
+
+// --- ADMIN: SAFE MIGRATE RATINGS ---
+app.get('/api/admin/fix-ratings', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    // מביא *רק* רשימות שעוד לא עודכנו לסולם החדש!
+    const lists = await List.find({ scaleUpdated: { $ne: true } });
+    let listsFixed = 0;
+
+    for (let list of lists) {
+      let modified = false;
+
+      if (list.rankingType === 'letters') {
+        // תרגום חכם מהסולם הישן לחדש
+        list.items.forEach(item => {
+          if (item.rating === 13) { item.rating = 10; modified = true; }
+          else if (item.rating === 12) { item.rating = 9; modified = true; }
+          else if (item.rating === 11) { item.rating = 8; modified = true; }
+          else if (item.rating === 10) { item.rating = 7; modified = true; }
+          else if (item.rating === 9) { item.rating = 6; modified = true; }
+          else if (item.rating === 8) { item.rating = 5; modified = true; }
+          else if (item.rating === 7) { item.rating = 4; modified = true; }
+          else if (item.rating === 6) { item.rating = 3; modified = true; }
+          else if (item.rating === 5) { item.rating = 2; modified = true; }
+          else if (item.rating > 10) { item.rating = 10; modified = true; }
+        });
+      } else {
+        // רשימות מספרים - מוריד טרולים
+        list.items.forEach(item => {
+          if (item.rating > 10) {
+            item.rating = 10;
+            modified = true;
+          }
+        });
+      }
+
+      // נועל את הרשימה כדי שהיא לא תעודכן שוב בטעות בעתיד!
+      list.scaleUpdated = true;
+      list.markModified('items');
+      await list.save();
+      listsFixed++;
+    }
+
+    res.send(`
+      <div style="font-family: Arial; padding: 40px; text-align: center; background: #121212; color: white;">
+        <h1 style="color: #bb86fc;"><i class="fas fa-shield-alt"></i> Safe Migration Complete!</h1>
+        <p style="font-size: 1.2rem;">Fixed and protected <b>${listsFixed}</b> legacy lists.</p>
+        <button onclick="window.location.href='/'" style="margin-top: 30px; padding: 10px 20px; cursor: pointer;">Back to Home</button>
+      </div>
+    `);
+  } catch (e) {
+    res.status(500).send("Error: " + e.message);
   }
 });
 

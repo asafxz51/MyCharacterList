@@ -411,16 +411,33 @@
     </div>
 
     <!-- Modals -->
+    <!-- COMMUNITY MODAL -->
     <div id="communityModal" class="modal hidden">
-        <div class="modal-content">
+        <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
             <span class="close-modal" id="closeCommModal">&times;</span>
+    
             <h3 id="communityTitle" style="text-align: center; margin-bottom: 15px;">Community</h3>
-            <button id="commBackBtn" class="btn-primary hidden"
-                style="margin-bottom:15px; width:auto; background:#555;"><i class="fas fa-arrow-left"></i> Back</button>
+    
+            <!-- כפתור חזור כשאנחנו בתוך פרופיל של מישהו -->
+            <button id="commBackBtn" class="btn-primary hidden" style="margin-bottom:15px; width:auto; background:#555;">
+                <i class="fas fa-arrow-left"></i> Back
+            </button>
+    
+            <!-- הטאבים החדשים: משתמשים מול לידרבורד -->
+            <div id="commTabsContainer" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button id="tabUsers" class="btn-primary active-tab" style="flex:1;">Users</button>
+                <button id="tabLeaderboard" class="btn-primary inactive-tab" style="flex:1;">
+                    <i class="fas fa-trophy" style="color:gold;"></i> Leaderboard
+                </button>
+            </div>
+    
+            <!-- שורת חיפוש המשתמשים -->
             <div id="commControls">
                 <input type="text" id="userSearchInput" placeholder="Search for users..."
                     style="width:100%; margin-bottom:15px; padding:10px; border-radius:6px; background:var(--bg-color); border:1px solid var(--border); color:var(--text-main);">
             </div>
+    
+            <!-- הגריד שבו ירונדרו המשתמשים או הלידרבורד -->
             <div id="communityGrid" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
             </div>
         </div>
@@ -472,6 +489,52 @@
         </div>
     </div>
 
+    <div id="adminCharEditModal" class="modal hidden">
+        <div class="modal-content small-modal">
+            <span class="close-modal"
+                onclick="document.getElementById('adminCharEditModal').classList.add('hidden')">&times;</span>
+            <h3 style="margin-bottom: 15px; color: gold;"><i class="fas fa-edit"></i> Edit Leaderboard Character</h3>
+    
+            <input type="hidden" id="adminEditCharId">
+    
+            <div class="form-group">
+                <label>Character Name (Global Display):</label>
+                <input type="text" id="adminEditCharName">
+            </div>
+            <div class="form-group">
+                <label>Source Title:</label>
+                <input type="text" id="adminEditCharSource">
+            </div>
+            <div class="form-group">
+                <label>Source Type:</label>
+                <select id="adminEditCharType">
+                    <option value="Anime">Anime</option>
+                    <option value="Manga">Manga</option>
+                    <option value="VN">Visual Novel</option>
+                    <option value="Game">Game</option>
+                    <option value="TV Show">TV Show</option>
+                    <option value="Movie">Movie</option>
+                    <option value="Book">Book</option>
+                    <option value="Comic">Comic</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Image URL:</label>
+                <input type="text" id="adminEditCharImage">
+            </div>
+    
+            <div class="form-group"
+                style="display:flex; align-items:center; gap:10px; margin-top: 15px; background: rgba(255, 68, 68, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(255, 68, 68, 0.3);">
+                <input type="checkbox" id="adminEditIsHidden" style="width: auto; transform: scale(1.2);">
+                <label for="adminEditIsHidden" style="color: #ff4444; font-weight: bold; cursor: pointer;">Hide from
+                    Leaderboard (Ban Item)</label>
+            </div>
+    
+            <button onclick="saveGlobalCharacter()" class="btn-primary" style="margin-top: 20px;">Save Changes</button>
+        </div>
+    </div>
+
     <script>
         const params = new URLSearchParams(window.location.search);
         const listId = params.get('id');
@@ -485,7 +548,7 @@
         function getRatingDisplay(rating, type) {
             if (rating === 0) return 'No Grade';
             if (type !== 'letters') return rating + '/10';
-            const tiers = { 13: 'SSS', 12: 'SS', 11: 'S', 10: 'A', 9: 'B', 8: 'C', 7: 'D', 6: 'E' };
+            const tiers = { 10: 'SSS', 9: 'SS', 8: 'S', 7: 'A', 6: 'B', 5: 'C', 4: 'D', 3: 'E' };
             return tiers[rating] || 'F';
         }
 
@@ -705,17 +768,20 @@
                 if (!isFreeOrder) filtered.sort((a, b) => b.rating - a.rating);
 
                 filtered.forEach((item, index) => {
-                    const div = document.createElement('div');
-                    div.className = 'char-card';
+                const div = document.createElement('div');
+                div.className = 'char-card';
 
-                    const ratingHtml = item.rating === 0 ? '' : `<div class="char-rating">${getRatingDisplay(item.rating, listRankingType)}</div>`;
-                    const displayType = item.sourceType === 'TV Show' ? 'TV' : item.sourceType;
+                const ratingHtml = item.rating === 0 ? '' : `<div class="char-rating">${getRatingDisplay(item.rating, listRankingType)}</div>`;
+                const displayType = item.sourceType === 'TV Show' ? 'TV' : item.sourceType;
 
-                    // התיקון כאן: הוספתי class="source-title" ואת המאפיין title לטקסט של המקור
-                    div.innerHTML = `
+                let validImg = item.image && !item.image.includes('via.placeholder.com')
+                    ? item.image
+                    : 'https://placehold.co/200x300/252525/bb86fc?text=No+Image';
+
+                div.innerHTML = `
             <div class="rank-badge ${index < 3 ? 'rank-' + (index + 1) : 'rank-other'}">#${index + 1}</div>
             ${ratingHtml}
-            <img src="${item.image}" class="char-img">
+            <img src="${validImg}" class="char-img" onerror="this.src='https://placehold.co/200x300/252525/bb86fc?text=No+Image'">
             <div class="char-info">
                 <div class="char-name">${item.characterName}</div>
                 <div class="source-row">
@@ -970,95 +1036,220 @@
             } else drop.classList.add('hidden');
         };
 
-        document.getElementById('communityBtn').onclick = () => { document.getElementById('communityModal').classList.remove('hidden'); loadCommunityUsers(); };
+       // --- COMMUNITY & LEADERBOARD LOGIC ---
+        let currentCommTab = 'users';
 
-        document.getElementById('commBackBtn').onclick = loadCommunityUsers;
+        // פתיחת מודאל הקהילה
+        document.getElementById('communityBtn').onclick = () => {
+            document.getElementById('communityModal').classList.remove('hidden');
+            document.getElementById('commTabsContainer').classList.remove('hidden'); // מוודאים שהטאבים גלויים
+            document.getElementById('commBackBtn').classList.add('hidden');
+            switchCommTab(currentCommTab); // טוען את הטאב האחרון שהיינו בו
+        };
 
         document.getElementById('closeCommModal').onclick = () => document.getElementById('communityModal').classList.add('hidden');
 
-        async function loadCommunityUsers() {
-                const modal = document.getElementById('communityModal');
+        // כפתור חזור (מתוך צפייה ברשימות של מישהו)
+        document.getElementById('commBackBtn').onclick = () => {
+            document.getElementById('commTabsContainer').classList.remove('hidden');
+            switchCommTab(currentCommTab);
+        };
+
+        // מעבר בין טאבים
+        document.getElementById('tabUsers').onclick = () => switchCommTab('users');
+        document.getElementById('tabLeaderboard').onclick = () => switchCommTab('leaderboard');
+
+        function switchCommTab(tab) {
+                currentCommTab = tab;
+                const btnUsers = document.getElementById('tabUsers');
+                const btnLeaderboard = document.getElementById('tabLeaderboard');
+                const commControls = document.getElementById('commControls');
                 const grid = document.getElementById('communityGrid');
-                const backBtn = document.getElementById('commBackBtn');
                 const title = document.getElementById('communityTitle');
 
-                modal.classList.remove('hidden');
-                if (backBtn) backBtn.classList.add('hidden');
-                title.textContent = "Community";
+                if (tab === 'users') {
+                    btnUsers.className = 'btn-primary active-tab';
+                    btnLeaderboard.className = 'btn-primary inactive-tab';
+                    if (commControls) commControls.style.display = 'block'; // מציגים חיפוש
 
-                grid.innerHTML = '<p style="text-align:center; grid-column:1/-1;">Loading...</p>';
+                    // מחזירים את התצוגה לגריד של משתמשים
+                    grid.style.display = 'grid';
+                    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
+                    title.textContent = "Community";
+                    loadCommunityUsers();
+                } else {
+                    btnUsers.className = 'btn-primary inactive-tab';
+                    btnLeaderboard.className = 'btn-primary active-tab';
+                    if (commControls) commControls.style.display = 'none'; // מסתירים חיפוש בלידרבורד
 
-                try {
-                    const query = document.getElementById('userSearchInput')?.value || '';
-                    const res = await fetch(`/api/users?search=${query}&t=${Date.now()}`);
-                    const users = await res.json();
-                    grid.innerHTML = '';
+                    // משנים את התצוגה לבלוק (שורות אנכיות) במקום גריד!
+                    grid.style.display = 'block';
+                    title.innerHTML = '<i class="fas fa-trophy" style="color:gold;"></i> Global Leaderboard';
+                    loadLeaderboard();
+                }
+            }
 
-                    users.forEach(u => {
-                        const div = document.createElement('div');
-                        div.className = 'user-card';
+        // חיפוש בקהילה
+        let userSearchDebounce;
+        document.getElementById('userSearchInput').addEventListener('input', (e) => {
+            clearTimeout(userSearchDebounce);
+            userSearchDebounce = setTimeout(() => { loadCommunityUsers(); }, 500);
+        });
 
-                        const userImg = (u.avatar && u.avatar.trim() !== "") ?
-                            `<img src="${u.avatar}" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); margin-bottom: 10px;">` :
-                            `<i class="fas fa-user-circle user-icon" style="font-size: 55px; margin-bottom: 10px;"></i>`;
+        // טעינת משתמשים (הטאב הראשון)
+        async function loadCommunityUsers() {
+            const grid = document.getElementById('communityGrid');
+            grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Loading users...</p>';
 
-                        let star = loggedInUser ? `
+            try {
+                const query = document.getElementById('userSearchInput')?.value || '';
+                const res = await fetch(`/api/users?search=${query}&t=${Date.now()}`);
+                const users = await res.json();
+
+                grid.innerHTML = users.length ? '' : '<p style="grid-column: 1/-1; text-align:center;">No users found.</p>';
+
+                users.forEach(u => {
+                    const div = document.createElement('div');
+                    div.className = 'user-card';
+
+                    const userImg = (u.avatar && u.avatar.trim() !== "") ?
+                        `<img src="${u.avatar}" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); margin-bottom: 10px;">` :
+                        `<i class="fas fa-user-circle user-icon" style="font-size: 55px; margin-bottom: 10px;"></i>`;
+
+                    // בדיקת התחברות חסינה גם לאינדקס (state.user) וגם לשייר (loggedInUser)
+                    const isUserLoggedIn = (typeof state !== 'undefined' && state.user) || (typeof loggedInUser !== 'undefined' && loggedInUser);
+                    let starHtml = isUserLoggedIn ? `
                 <button class="follow-btn" onclick="toggleFollow(event, '${u._id}')">
                     <i class="${u.isFollowing ? 'fas fa-star active' : 'far fa-star'}"></i>
                 </button>` : '';
 
-                        div.innerHTML = `
-                ${star}
+                    div.innerHTML = `
+                ${starHtml}
                 ${userImg}
-                <div style="font-weight:bold;">${u.username}</div>
+                <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 5px;">${u.username}</div>
             `;
 
-                        // התיקון כאן: הוספת u.avatar כפרמטר שלישי
-                      div.onclick = (e) => {
-                            if (!e.target.closest('.follow-btn')) {
-                                // שולחים את האוואטר כפרמטר בצורה בטוחה
-                                showUserLists(u._id, u.username, u.avatar);
-                            }
-                        };
+                    div.onclick = (e) => {
+                        if (!e.target.closest('.follow-btn')) showUserLists(u._id, u.username, u.avatar);
+                    };
+                    grid.appendChild(div);
+                });
+            } catch (e) { grid.innerHTML = '<p style="grid-column: 1/-1;">Error loading.</p>'; }
+        }
+
+        // טעינת הלידרבורד (הטאב השני)
+        async function loadLeaderboard() {
+                const grid = document.getElementById('communityGrid');
+                grid.innerHTML = '<p style="text-align: center; padding: 40px; font-size: 1.1rem; color: var(--text-muted);">Calculating global rankings...</p>';
+
+                try {
+                    const res = await fetch('/api/leaderboard');
+                    const data = await res.json();
+
+                    grid.innerHTML = '';
+
+                    if (data.length === 0) {
+                        grid.innerHTML = '<p style="text-align: center; padding: 40px; color: #888;">No characters ranked yet.</p>';
+                        return;
+                    }
+
+                    // בדיקה האם המשתמש המחובר הוא אדמין (חסין ועובד גם באינדקס וגם בשייר)
+                    const isCurrentUserAdmin = (typeof currentUserData !== 'undefined' && currentUserData?.role === 'admin') ||
+                        (typeof state !== 'undefined' && state.role === 'admin') ||
+                        (typeof state !== 'undefined' && state.user === 'admin'); // גיבוי למקרה שלא הגדרת state.role
+
+                    data.forEach((item, index) => {
+                        const div = document.createElement('div');
+                        div.className = 'leaderboard-row';
+
+                        // הגדרת צבעים וכתרים למקומות הראשונים
+                        let rankClass = 'lb-rank-other';
+                        let rankText = `#${index + 1}`;
+
+                        if (index === 0) { rankClass = 'lb-rank-1'; rankText = '<i class="fas fa-crown" style="margin-right: 4px;"></i>1'; }
+                        else if (index === 1) { rankClass = 'lb-rank-2'; }
+                        else if (index === 2) { rankClass = 'lb-rank-3'; }
+
+                        const formattedScore = item.avgRating.toFixed(1);
+                        const displayType = item.sourceType === 'TV Show' ? 'TV' : (item.sourceType || 'Other');
+
+                        let validImg = item.image && !item.image.includes('via.placeholder.com')
+                            ? item.image
+                            : 'https://placehold.co/60x60/252525/bb86fc?text=?';
+
+                        // הוספת גלגל השיניים רק לאדמינים
+                        let adminGearHtml = '';
+                        if (isCurrentUserAdmin) {
+                            // מונע שגיאות JS במקרה שיש גרש (') בשם הדמות או המקור
+                            const safeName = item.characterName ? item.characterName.replace(/'/g, "\\'") : '';
+                            const safeSource = item.sourceTitle ? item.sourceTitle.replace(/'/g, "\\'") : '';
+
+                            adminGearHtml = `<button onclick="openGlobalEdit('${item._id}', '${safeName}', '${safeSource}', '${item.sourceType}', '${item.image}')" style="background:none; border:none; color: var(--accent); cursor: pointer; font-size: 1.1rem; margin-left: 10px;" title="Admin Edit"><i class="fas fa-cog"></i></button>`;
+                        }
+
+                        div.innerHTML = `
+                <div class="leaderboard-rank ${rankClass}">${rankText}</div>
+                <img src="${validImg}" class="leaderboard-img" onerror="this.src='https://placehold.co/60x60/252525/bb86fc?text=?'">
+                <div class="leaderboard-info">
+                    <div class="leaderboard-name">${item.characterName}</div>
+                    <div class="leaderboard-source" style="display: flex; align-items: center;">
+                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;" title="${item.sourceTitle}">${item.sourceTitle}</span>
+                        <span style="color:var(--accent); font-size:0.75rem; margin-left:5px; font-weight:bold; flex-shrink: 0;">• ${displayType}</span>
+                    </div>
+                </div>
+                <div class="leaderboard-stats">
+                    <div class="leaderboard-score">
+                        <span style="color: #FFD700; font-weight: 900; font-size: 1.1rem; display: flex; align-items: center;">
+                            <i class="fas fa-star" style="font-size:0.8rem; margin-right:5px;"></i> ${formattedScore}
+                        </span>
+                        <span style="color: var(--text-muted); font-size: 0.8rem; border-left: 1px solid rgba(255,255,255,0.15); margin-left: 10px; padding-left: 10px; display: flex; align-items: center;">
+                            <i class="fas fa-users" style="margin-right:4px;"></i> ${item.rankedByCount}
+                        </span>
+                        ${adminGearHtml}
+                    </div>
+                </div>
+            `;
                         grid.appendChild(div);
                     });
-                } catch (e) { grid.innerHTML = 'Error.'; }
+
+                } catch (e) {
+                    console.error("Leaderboard error:", e);
+                    grid.innerHTML = '<p style="text-align: center; color: #ff4444; padding: 20px;">Failed to load leaderboard.</p>';
+                }
             }
 
-        window.toggleFollow = async (e, uid) => { e.stopPropagation(); await fetch(`/api/users/follow/${uid}`, { method: 'POST' }); loadCommunityUsers(); };
-
-      async function showUserLists(userId, username, avatar) {
+        // פתיחת הפרופיל של מישהו
+        async function showUserLists(userId, username, avatar) {
             const grid = document.getElementById('communityGrid');
-            const controls = document.getElementById('commControls');
+            const commControls = document.getElementById('commControls');
+            const tabsContainer = document.getElementById('commTabsContainer');
             const backBtn = document.getElementById('commBackBtn');
             const title = document.getElementById('communityTitle');
 
-            if (controls) controls.classList.add('hidden');
+            // מסתיר טאבים וחיפוש כשצופים במשתמש ספציפי
+            if (tabsContainer) tabsContainer.classList.add('hidden');
+            if (commControls) commControls.style.display = 'none';
             if (backBtn) backBtn.classList.remove('hidden');
 
-            grid.innerHTML = '<p style="text-align:center; padding: 20px;">Loading lists...</p>';
-
-            // --- לוגיקת האווטאר המוגדל ---
+            // לוגיקת האווטאר המוגדל
             let displayAvatar = avatar;
-            // אם לחצנו על עצמנו ואין פרמטר תמונה, ניקח מהנאב-בר
             if ((!displayAvatar || displayAvatar === "") && typeof state !== 'undefined' && state.userId === userId) {
                 displayAvatar = document.getElementById('navAvatar')?.src;
             }
 
-            // הגדרת ה-HTML לתמונה (גדלה ל-130px)
-             const isImage = displayAvatar && (displayAvatar.startsWith('http') || displayAvatar.startsWith('data:image'));
+            const isImage = displayAvatar && (displayAvatar.startsWith('http') || displayAvatar.startsWith('data:image'));
+            const headerAvatarHtml = isImage ?
+                `<img src="${displayAvatar}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--accent); margin-bottom: 15px; display: block; background: var(--bg-color); padding: 2px;">` :
+                `<i class="fas fa-user-circle" style="font-size: 100px; margin-bottom: 15px; color: var(--text-muted); display: block;"></i>`;
 
-          const headerAvatarHtml = isImage ?
-              `<img src="${displayAvatar}" style="width: 130px; height: 130px; border-radius: 50%; object-fit: cover; border: 4px solid var(--accent); margin-bottom: 15px; display: block; background: var(--bg-color); padding: 3px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">` :
-              `<i class="fas fa-user-circle" style="font-size: 130px; margin-bottom: 15px; color: var(--text-muted); display: block;"></i>`;
-
-            // עדכון הכותרת
             title.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin-bottom: 20px;">
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin-bottom: 10px;">
             ${headerAvatarHtml}
-            <div style="font-size: 1.6rem; font-weight: bold; color: var(--text-main);">${username}'s Lists</div>
+            <div style="font-size: 1.5rem; font-weight: bold; color: var(--text-main);">${username}'s Lists</div>
         </div>
     `;
+
+            grid.innerHTML = '<p style="text-align:center; padding: 20px; grid-column: 1/-1;">Loading lists...</p>';
 
             try {
                 const res = await fetch(`/api/users/${userId}/lists`);
@@ -1080,11 +1271,19 @@
                     div.onclick = () => window.open(`/share.html?id=${list._id}`, '_blank');
                     grid.appendChild(div);
                 });
-            } catch (e) {
-                console.error(e);
-                grid.innerHTML = '<p style="text-align:center;">Error loading lists.</p>';
-            }
+            } catch (e) { grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Error loading lists.</p>'; }
         }
+
+        window.toggleFollow = async function (e, userId) {
+            e.stopPropagation();
+            const btn = e.currentTarget.querySelector('i');
+            const wasFollowing = btn.classList.contains('fas');
+            btn.className = wasFollowing ? 'far fa-star' : 'fas fa-star active';
+            try {
+                await fetch(`/api/users/follow/${userId}`, { method: 'POST' });
+                loadCommunityUsers();
+            } catch (err) { }
+        };
 
         async function fetchUserLists(uid, curr) {
             const lists = await (await fetch(`/api/users/${uid}/lists`)).json();
@@ -1232,6 +1431,52 @@
                             } catch (e) { alert("Server timeout, your image is being processed."); }
                             finally { btn.disabled = false; btn.textContent = "Save Changes"; }
                         };
+
+                        // --- פונקציות עריכת לידרבורד לאדמין ---
+
+                            // 1. פותח את המודאל וממלא אותו בפרטים הנוכחיים של הדמות
+                            window.openGlobalEdit = function (id, name, source, type, img) {
+                                    document.getElementById('adminEditCharId').value = id;
+                                    document.getElementById('adminEditCharName').value = name;
+                                    document.getElementById('adminEditCharSource').value = source;
+                                    document.getElementById('adminEditCharType').value = type;
+                                    document.getElementById('adminEditCharImage').value = img;
+
+                                    // ניקוי אוטומטי של צ'קבוקס ההסתרה בכל פתיחה
+                                    document.getElementById('adminEditIsHidden').checked = false;
+
+                                    document.getElementById('adminCharEditModal').classList.remove('hidden');
+                                };
+
+                                window.saveGlobalCharacter = async function () {
+                                    const id = document.getElementById('adminEditCharId').value;
+                                    const name = document.getElementById('adminEditCharName').value;
+                                    const source = document.getElementById('adminEditCharSource').value;
+                                    const type = document.getElementById('adminEditCharType').value;
+                                    const img = document.getElementById('adminEditCharImage').value;
+                                    const isHidden = document.getElementById('adminEditIsHidden').checked;
+
+                                    if (!name || !source) return alert("Name and Source are required");
+
+                                    try {
+                                        const res = await fetch('/api/admin/character/global-edit', {
+                                            method: 'PUT',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ oldCharId: id, characterName: name, sourceTitle: source, sourceType: type, image: img, isHidden: isHidden })
+                                        });
+
+                                        if (res.ok) {
+                                            alert("Leaderboard display updated successfully!");
+                                            document.getElementById('adminCharEditModal').classList.add('hidden');
+                                            loadLeaderboard();
+                                        } else {
+                                            alert("Error saving character.");
+                                        }
+                                    } catch (e) {
+                                        console.error(e);
+                                        alert("Server Error");
+                                    }
+                                };
 
         initPage();
     </script>

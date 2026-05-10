@@ -7,11 +7,12 @@ const ListSchema = new mongoose.Schema({
  isPrivate: { type: Boolean, default: false },
  isFreeOrder: { type: Boolean, default: false },
  allowComments: { type: Boolean, default: true }, 
+ scaleUpdated: { type: Boolean, default: false },
  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], 
  comments: [{
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   username: String,
-  avatar: String, // הוספה כאן
+  avatar: String, 
   text: String,
   role: String,
   timestamp: { type: Date, default: Date.now },
@@ -34,7 +35,9 @@ const ListSchema = new mongoose.Schema({
   sourceType: String,
   image: String,
   rating: Number,
-  description: String
+  description: String,
+  apiId: String,
+  entityType: { type: String, default: 'character' }
  }]
 });
 

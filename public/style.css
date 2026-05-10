@@ -703,6 +703,12 @@ a .logo {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+  /* מאפשר לטקסט לתפוס את המקום הפנוי */
+  min-width: 0;
+  /* קריטי: מכריח את הטקסט להיחתך עם 3 נקודות */
+  margin-right: 10px;
+  /* מרווח מהקטגוריה */
 }
 
 .card-actions {
@@ -1360,5 +1366,108 @@ select {
     align-items: center;
     justify-content: center;
   }
+}
+
+/* =====================================
+   LEADERBOARD ROW STYLES
+   ===================================== */
+/* =====================================
+   LEADERBOARD ROW STYLES (UPDATED)
+   ===================================== */
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 15px;
+  margin-bottom: 12px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  gap: 15px;
+}
+
+/* .leaderboard-row:hover {
+  transform: translateX(5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-color: var(--accent);
+} */
+
+/* עיצוב המיקום - נקי ובלי רקע */
+.leaderboard-rank {
+  font-size: 1.3rem;
+  font-weight: 900;
+  min-width: 40px;
+  text-align: center;
+  background: transparent !important;
+}
+
+.lb-rank-1 {
+  color: #FFD700;
+  font-size: 1.6rem;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+}
+
+.lb-rank-2 {
+  color: #C0C0C0;
+  font-size: 1.4rem;
+}
+
+.lb-rank-3 {
+  color: #CD7F32;
+  font-size: 1.3rem;
+}
+
+.lb-rank-other {
+  color: var(--text-muted);
+}
+
+.leaderboard-img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+}
+
+.leaderboard-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.leaderboard-name {
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+
+.leaderboard-source {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* הגלולה שמשלבת את הציון וכמות המשתמשים */
+.leaderboard-stats {
+  display: flex;
+  align-items: center;
+}
+
+.leaderboard-score {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 215, 0, 0.08);
+  /* רקע זהוב עדין לכל הבלוק */
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 215, 0, 0.2);
 }
 
