@@ -104,6 +104,28 @@
     pointer-events: none; /* מבטיח שהלחיצה תעבור לכפתור שמתחת */
 }
 
+/* מבנה השורה של המקור והסוג */
+.source-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-top: 5px;
+    overflow: hidden; /* מונע מהשורה להתרחב */
+}
+
+.source-title {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    white-space: nowrap;      
+    overflow: hidden;         
+    text-overflow: ellipsis;  
+    flex: 1;                 
+    min-width: 0;             
+    margin-right: 10px;       
+}
+
+
 .mobile-only-btn {
     display: none; /* כבוי בדסקטופ */
 }
@@ -202,18 +224,74 @@
             font-size: 16px;
         }
 
-        .unified-filter select {
-            width: 130px;
-            height: 100%;
-            border: none !important;
-            border-left: 1px solid var(--border) !important;
-            background: var(--card-bg);
-            color: var(--accent);
-            font-weight: bold;
-            cursor: pointer;
-            padding: 0 10px;
-            appearance: none;
-        }
+  /* --- עיצוב הפילטר המאוחד (דסקטופ) --- */
+.unified-filter {
+    display: flex;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    height: 54px;
+    overflow: hidden;
+    width: 100%;
+    max-width: 480px;
+    align-items: center;
+    margin: 0 auto 30px auto;
+}
+
+.unified-filter input {
+    flex: 1;
+    height: 100% !important;
+    border: none !important;
+    background: transparent !important;
+    padding: 0 15px !important;
+    color: var(--text-main);
+    outline: none;
+    font-size: 16px;
+}
+
+.unified-filter select {
+    width: 140px !important; /* רוחב לדסקטופ */
+    height: 100% !important;
+    flex-shrink: 0;
+    border: none !important;
+    border-left: 1px solid var(--border) !important;
+    background-color: var(--card-bg) !important;
+    color: var(--accent) !important;
+    font-weight: 800 !important;
+    cursor: pointer;
+    padding-left: 15px !important;
+    padding-right: 35px !important;
+    outline: none;
+    font-size: 14px !important;
+    
+    /* מחיקת חץ ישן וציור חץ סגול */
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23bb86fc' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    background-size: 16px !important;
+}
+
+/* --- תיקון למובייל (חייב להופיע מתחת לקוד הקודם!) --- */
+@media (max-width: 500px) {
+    .unified-filter {
+        flex-direction: column !important;
+        height: auto !important;
+    }
+    
+    .unified-filter input {
+        height: 48px !important;
+        width: 100% !important;
+    }
+    
+    .unified-filter select {
+        width: 100% !important; 
+        height: 48px !important;
+        border-left: none !important;
+        border-top: 1px solid var(--border) !important;
+    }
+}
 
         #commentsSection {
             max-width: 900px;
@@ -249,8 +327,6 @@
         </div>
         <div class="nav-controls">
             <button id="authBtnNav">Login</button>
-            <button id="adminBtn" class="icon-btn hidden" title="Admin Panel"><i class="fas fa-crown"
-                    style="color: gold;"></i></button>
                     <button id="mobileProfileBtn" class="mobile-only-btn hidden" onclick="openProfileModal()" title="Profile">
                         <i class="fas fa-user"></i>
                     </button>
@@ -619,18 +695,38 @@
             }
 
         function renderList() {
-            const grid = document.getElementById('grid'); grid.innerHTML = '';
-            const s = document.getElementById('listFilterInput').value.toLowerCase();
-            const cat = document.getElementById('filterSelect').value;
-            const filtered = allItems.filter(i => (cat === 'all' || i.sourceType === cat) && (i.characterName.toLowerCase().includes(s) || i.sourceTitle.toLowerCase().includes(s)));
-            if (!isFreeOrder) filtered.sort((a, b) => b.rating - a.rating);
-            filtered.forEach((item, index) => {
-                const div = document.createElement('div'); div.className = 'char-card';
-                const ratingHtml = item.rating === 0 ? '' : `<div class="char-rating">${getRatingDisplay(item.rating, listRankingType)}</div>`;
-                div.innerHTML = `<div class="rank-badge ${index < 3 ? 'rank-' + (index + 1) : 'rank-other'}">#${index + 1}</div>${ratingHtml}<img src="${item.image}" class="char-img"><div class="char-info"><div class="char-name">${item.characterName}</div><div class="source-row"><span>${item.sourceTitle}</span><span class="red-type">${item.sourceType === 'TV Show' ? 'TV' : item.sourceType}</span></div></div>`;
-                grid.appendChild(div);
-            });
-        }
+                const grid = document.getElementById('grid');
+                grid.innerHTML = '';
+                const s = document.getElementById('listFilterInput').value.toLowerCase();
+                const cat = document.getElementById('filterSelect').value;
+
+                const filtered = allItems.filter(i => (cat === 'all' || i.sourceType === cat) && (i.characterName.toLowerCase().includes(s) || i.sourceTitle.toLowerCase().includes(s)));
+
+                if (!isFreeOrder) filtered.sort((a, b) => b.rating - a.rating);
+
+                filtered.forEach((item, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'char-card';
+
+                    const ratingHtml = item.rating === 0 ? '' : `<div class="char-rating">${getRatingDisplay(item.rating, listRankingType)}</div>`;
+                    const displayType = item.sourceType === 'TV Show' ? 'TV' : item.sourceType;
+
+                    // התיקון כאן: הוספתי class="source-title" ואת המאפיין title לטקסט של המקור
+                    div.innerHTML = `
+            <div class="rank-badge ${index < 3 ? 'rank-' + (index + 1) : 'rank-other'}">#${index + 1}</div>
+            ${ratingHtml}
+            <img src="${item.image}" class="char-img">
+            <div class="char-info">
+                <div class="char-name">${item.characterName}</div>
+                <div class="source-row">
+                    <span class="source-title" title="${item.sourceTitle}">${item.sourceTitle}</span>
+                    <span class="red-type">${displayType}</span>
+                </div>
+            </div>`;
+
+                    grid.appendChild(div);
+                });
+            }
 
       function renderComments(comments, ownerId) {
             const area = document.getElementById('commentsList');

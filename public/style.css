@@ -242,7 +242,6 @@ a .logo {
   font-weight: bold;
   font-size: 1.4rem;
   color: var(--accent);
-  padding-left: 10px;
 }
 
 
@@ -1311,12 +1310,10 @@ select {
 
 @media (max-width: 768px) {
 
-  /* 1. מסתירים את הצ'יפ עם השם בשורה הראשונה */
   .nav-identity {
     display: none !important;
   }
 
-  /* 2. מראים את כפתור הפרופיל (האיש) בתוך שורת הכפתורים */
     .mobile-only-btn:not(.hidden) {
       display: flex !important;
       align-items: center;
@@ -1348,5 +1345,20 @@ select {
           display: none !important;
         }
   
+}
+
+/* 1. מסתיר את כפתור ההמבורגר תמיד בדסקטופ (לא משנה מה ה-JS עושה) */
+#mobileMenuBtn {
+  display: none !important;
+    padding-right: 10px;
+}
+
+/* 2. מציג אותו רק במסכים קטנים, ורק אם הוא לא מוסתר על ידי ה-JS (כלומר, מחובר) */
+@media (max-width: 768px) {
+  #mobileMenuBtn:not(.hidden) {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
