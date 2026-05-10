@@ -1296,83 +1296,70 @@ app.get('/api/admin/remove-legacy', verifyToken, verifyAdmin, async (req, res) =
   }
 });
 
+// פונקציית השהייה
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
-// פונקציית התאמה חכמה שמתעלמת מסדר המילים
 const isExactMatch = (dbName, apiName) => {
   if (!dbName || !apiName) return false;
-
-  // פונקציית עזר: מנקה סמלים, מפרקת למילים, ממיינת אלפביתית, ומחברת למחרוזת אחת
-  const normalizeAndSort = (name) => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9א-ת\s]/g, ' ') // הופך סמלים ופסיקים לרווחים
-      .split(/\s+/)                     // מפרק למערך של מילים
-      .filter(word => word.length > 0)  // מנקה רווחים כפולים
-      .sort()                           // ממיין את המילים אלפביתית!
-      .join('');                        // מחבר הכל חזרה למקשה אחת
-  };
-
-  const sortedDbName = normalizeAndSort(dbName);
-  const sortedApiName = normalizeAndSort(apiName);
-
-  return sortedDbName === sortedApiName;
+  const cleanDb = dbName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const cleanApi = apiName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const reversedApi = apiName.toLowerCase().split(',').reverse().map(s => s.trim()).join('').replace(/[^a-z0-9]/g, '');
+  return cleanDb === cleanApi || cleanDb === reversedApi;
 };
 
-// --- ADMIN: AUTO-MATCH MISSING API IDs (V3.1 - BULLETPROOF) ---
+// --- ADMIN: AUTO-MATCH IN BATCHES (Netlify Safe!) ---
 app.get('/api/admin/auto-match-ids', verifyToken, verifyAdmin, async (req, res) => {
   try {
     const lists = await List.find();
     let matchedCount = 0;
     const uniqueChars = new Map();
 
-    // 1. איסוף כל הדמויות
+    // 1. איסוף הדמויות
     lists.forEach(list => {
       list.items.forEach(item => {
         const apiStr = item.apiId ? item.apiId.toString() : "";
         if (!apiStr || apiStr === "null" || apiStr === "undefined" || apiStr.startsWith('legacy_')) {
           const key = `${item.characterName.toLowerCase()}|||${item.sourceTitle}`;
           if (!uniqueChars.has(key)) {
-            uniqueChars.set(key, {
-              name: item.characterName,
-              source: item.sourceTitle,
-              foundId: null
-            });
+            uniqueChars.set(key, { name: item.characterName, source: item.sourceTitle, foundId: null });
           }
         }
       });
     });
 
     const totalUnique = uniqueChars.size;
-    console.log(`[START] Found ${totalUnique} unique characters. Searching across ALL APIs...`);
+
+    // אם אין יותר מה לסרוק - סיימנו!
+    if (totalUnique === 0) {
+      return res.send(`
+        <div style="font-family: Arial; padding: 40px; text-align: center; background: #121212; color: white; height:100vh;">
+            <h1 style="color: #4CAF50;"><i class="fas fa-check-circle"></i> All Done!</h1>
+            <p style="font-size: 1.2rem;">There are 0 characters left to scan.</p>
+            <button onclick="window.location.href='/'" style="margin-top: 30px; padding: 10px 20px; cursor: pointer; background: #bb86fc; border: none; border-radius: 8px; font-weight: bold;">Back to Home</button>
+        </div>
+        `);
+    }
+
+    // לוקחים רק את ה-10 דמויות הראשונות! (כדי ש-Netlify לא יקרוס מ-Timeout)
+    const chunk = Array.from(uniqueChars.entries()).slice(0, 10);
+    const remaining = totalUnique - chunk.length;
 
     const PORT = process.env.PORT || 3000;
     const localBaseUrl = `http://127.0.0.1:${PORT}`;
-
-    // הוספת טיימאאוט (Timeout) של 6 שניות - מונע מהמערכת להיתקע לנצח!
     const safeFetch = async (endpoint) => {
       try {
-        const r = await axios.get(`${localBaseUrl}${endpoint}`, { timeout: 6000 });
+        const r = await axios.get(`${localBaseUrl}${endpoint}`, { timeout: 4000 }); // טיימאאוט קצר של 4 שניות
         return Array.isArray(r.data) ? r.data : [];
-      } catch (e) {
-        return [];
-      }
+      } catch (e) { return []; }
     };
 
-    // 2. חיפוש
-    for (let [key, charData] of uniqueChars.entries()) {
-      // סינון שמות שהם נטו סימני שאלה או סמלים
+    // 2. חיפוש (רק ל-10 הדמויות שבחרנו)
+    for (let [key, charData] of chunk) {
       const cleanNameCheck = charData.name.replace(/[^a-zA-Z0-9א-ת]/g, '');
-      if (!cleanNameCheck || cleanNameCheck.length === 0) {
-        console.log(` ---> [SKIP] Invalid name format: ${charData.name}`);
-        continue;
-      }
+      if (!cleanNameCheck || cleanNameCheck.length === 0) continue;
 
       const query = encodeURIComponent(charData.name);
-      console.log(`Searching globally for: ${charData.name}...`);
-
       try {
-        // שימוש ב-allSettled כדי שגם אם שרת נופל, זה לא יתקע את שאר השרתים
         const promises = [
           safeFetch(`/api/search/jikan?query=${query}`),
           safeFetch(`/api/search/igdb?query=${query}`),
@@ -1384,44 +1371,34 @@ app.get('/api/admin/auto-match-ids', verifyToken, verifyAdmin, async (req, res) 
         ];
 
         const responses = await Promise.allSettled(promises);
-
         let combined = [];
-        responses.forEach(r => {
-          if (r.status === 'fulfilled') {
-            combined = combined.concat(r.value);
-          }
-        });
+        responses.forEach(r => { if (r.status === 'fulfilled') combined = combined.concat(r.value); });
 
         const exactMatch = combined.find(r => isExactMatch(charData.name, r.title));
+        if (exactMatch) charData.foundId = exactMatch.id.toString();
 
-        if (exactMatch) {
-          charData.foundId = exactMatch.id.toString();
-          console.log(` ---> [V] MATCHED! ${charData.name} = ID ${charData.foundId} (Type: ${exactMatch.type})`);
-        } else {
-          console.log(` ---> [X] No exact match in any API.`);
-        }
-      } catch (apiErr) {
-        console.log(` ---> [!] Global Error for ${charData.name}:`, apiErr.message);
-      }
-
+      } catch (apiErr) { }
       await delay(1000);
     }
 
-    // 3. עדכון הדאטהבייס
-    let listsUpdated = 0;
+    // 3. שמירת ה-10 שסרקנו לדאטהבייס
     for (let list of lists) {
       let isModified = false;
       list.items.forEach(item => {
         const apiStr = item.apiId ? item.apiId.toString() : "";
         if (!apiStr || apiStr === "null" || apiStr === "undefined" || apiStr.startsWith('legacy_')) {
           const key = `${item.characterName.toLowerCase()}|||${item.sourceTitle}`;
-          const mappedData = uniqueChars.get(key);
+          const mappedData = chunk.find(c => c[0] === key); // מחפשים רק בתוך המנה שלנו
 
-          if (mappedData && mappedData.foundId) {
-            item.apiId = mappedData.foundId;
+          if (mappedData && mappedData[1].foundId) {
+            item.apiId = mappedData[1].foundId;
             item.entityType = 'character';
             isModified = true;
             matchedCount++;
+          } else if (mappedData) {
+            // אם סרקנו ולא מצאנו, נסמן את זה כ"נכשל" כדי שלא נסרוק את זה שוב ושוב במנות הבאות
+            item.apiId = "failed_match";
+            isModified = true;
           }
         }
       });
@@ -1429,20 +1406,20 @@ app.get('/api/admin/auto-match-ids', verifyToken, verifyAdmin, async (req, res) 
       if (isModified) {
         list.markModified('items');
         await list.save();
-        listsUpdated++;
       }
     }
 
     res.send(`
-      <div style="font-family: Arial; padding: 40px; text-align: center; background: #121212; color: white;">
-        <h1 style="color: #bb86fc;"><i class="fas fa-shield-alt"></i> V3.1 Safe Scan Complete!</h1>
+      <div style="font-family: Arial; padding: 40px; text-align: center; background: #121212; color: white; height:100vh;">
+        <h1 style="color: #bb86fc;"><i class="fas fa-sync fa-spin"></i> Processing Batch...</h1>
         <div style="background: #252525; padding: 30px; border-radius: 10px; max-width: 600px; margin: 0 auto; line-height: 1.8;">
-            <p>Scanned <b>${totalUnique}</b> characters securely.</p>
-            <p style="color: #4CAF50; font-size: 1.3rem;">Successfully found exact matches for <b>${matchedCount}</b> instances!</p>
-            <p>Updated <b>${listsUpdated}</b> lists.</p>
-            <p style="color:#888; font-size: 0.9rem; margin-top: 15px;">Check the VS Code Terminal to see how many weird names were skipped.</p>
+            <p>We just scanned <b>${chunk.length}</b> characters.</p>
+            <p style="color: #4CAF50; font-size: 1.3rem;">Found exact matches for: <b>${matchedCount}</b></p>
+            <hr style="border:1px solid #444; margin: 20px 0;">
+            <p style="color: #ff9800; font-size: 1.5rem; font-weight:bold;">${remaining} Characters Remaining!</p>
+            <p>Please refresh this page (F5) to process the next batch.</p>
         </div>
-        <button onclick="window.location.href='/'" style="margin-top: 30px; padding: 10px 20px; cursor: pointer;">Back to Home</button>
+        <button onclick="window.location.reload()" style="margin-top: 30px; padding: 15px 30px; cursor: pointer; background: #bb86fc; border: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem;">Scan Next 10 Characters</button>
       </div>
     `);
   } catch (e) {
