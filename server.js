@@ -226,36 +226,45 @@ app.post('/api/lists/:id/duplicate', verifyToken, async (req, res) => {
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const pipeline = [
-      { $match: { isPrivate: { $ne: true } } }, // רק רשימות ציבוריות
-      { $unwind: "$items" }, // פירוק הרשימות לדמויות בודדות
+      { $match: { isPrivate: { $ne: true } } },
+      { $unwind: "$items" },
       {
         $match: {
-          "items.rating": { $gt: 0 }, // ציון גדול מ-0
-          // חוק 1: חייב להיות API ID תקין (שולל לחלוטין דמויות קאסטום)
+          "items.rating": { $gt: 0 },
           "items.apiId": { $nin: [null, "", "null", "undefined"] },
-          // חוק 2: חייב להיות מסווג כדמות ולא כסדרה (מונע מסדרות להיכנס)
           "items.entityType": { $ne: "series" }
         }
       },
       {
-        // המרת ה-ID לטקסט אחיד למקרה שנשמר כמספר
         $addFields: {
           charId: { $toString: "$items.apiId" }
         }
       },
+      // התיקון החדש: משיכת פרטי המשתמש שהרשימה שייכת לו
       {
-        // קיבוץ לפי משתמש (כדי שמשתמש לא ידרג את אותה דמות פעמיים וישפיע על הממוצע)
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "userInfo"
+        }
+      },
+      { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
+      {
+        // קיבוץ לפי משתמש ודמות, כולל שמירת השם והתמונה של המשתמש
         $group: {
           _id: { userId: "$userId", charId: "$charId" },
           maxRating: { $max: "$items.rating" },
           characterName: { $first: "$items.characterName" },
           sourceTitle: { $first: "$items.sourceTitle" },
           sourceType: { $first: "$items.sourceType" },
-          image: { $max: "$items.image" }
+          image: { $max: "$items.image" },
+          username: { $first: "$userInfo.username" },
+          avatar: { $first: "$userInfo.avatar" }
         }
       },
       {
-        // הקיבוץ הגלובלי של הלידרבורד - עכשיו אך ורק לפי charId (שזה ה-API ID)
+        // קיבוץ גלובלי - והפעם דוחפים את כל המצביעים לתוך מערך (voters)
         $group: {
           _id: "$_id.charId",
           characterName: { $first: "$characterName" },
@@ -263,26 +272,31 @@ app.get('/api/leaderboard', async (req, res) => {
           sourceType: { $first: "$sourceType" },
           image: { $max: "$image" },
           avgRating: { $avg: "$maxRating" },
-          rankedByCount: { $sum: 1 }
+          rankedByCount: { $sum: 1 },
+          voters: {
+            $push: {
+              username: "$username",
+              avatar: "$avatar",
+              rating: "$maxRating"
+            }
+          }
         }
       },
-      { $match: { rankedByCount: { $gte: 2 } } }, // כאן תוכל לשנות ל-3 מינימום דירוגים מתי שתרצה
-      { $sort: { avgRating: -1, rankedByCount: -1 } }, // מיון לפי ציון ואז לפי כמות מדרגים
+      { $match: { rankedByCount: { $gte: 2 } } },
+      { $sort: { avgRating: -1, rankedByCount: -1 } },
       { $limit: 100 }
     ];
 
     const leaderboardRaw = await List.aggregate(pipeline);
 
-    // מפעיל את השכתוב של האדמין (אם שינית שם/תמונה של משהו)
     const overrides = await LeaderboardOverride.find({});
     const overrideMap = {};
     overrides.forEach(o => { overrideMap[o.charId] = o; });
 
-    // מעבר סופי להחלת שינויי אדמין ולהסתרת דמויות שקיבלו באן
     const finalLeaderboard = leaderboardRaw.map(item => {
       const override = overrideMap[item._id];
       if (override) {
-        if (override.isHidden) return null; // האדמין הסתיר את הדמות
+        if (override.isHidden) return null;
         item.characterName = override.characterName || item.characterName;
         item.sourceTitle = override.sourceTitle || item.sourceTitle;
         item.sourceType = override.sourceType || item.sourceType;

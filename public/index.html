@@ -302,7 +302,6 @@
   </div>
 
   <!-- COMMUNITY MODAL -->
-  <!-- COMMUNITY MODAL -->
   <div id="communityModal" class="modal hidden">
     <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
       <span class="close-modal" id="closeCommModal">&times;</span>
@@ -467,7 +466,19 @@
     </div>
   </div>
 
-
+  <!-- VOTERS MODAL -->
+  <div id="votersModal" class="modal hidden">
+    <div class="modal-content small-modal">
+      <span class="close-modal" onclick="document.getElementById('votersModal').classList.add('hidden')">&times;</span>
+      <h3 id="votersModalTitle" style="margin-bottom: 15px; color: var(--accent);"><i class="fas fa-users"></i> Ranked By
+      </h3>
+      <div id="votersList"
+        style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
+        <!-- פה יופיעו המשתמשים -->
+      </div>
+    </div>
+  </div>
+  
 
   <script src="app.js?v=3"></script>
 </body>

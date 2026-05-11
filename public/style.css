@@ -1403,18 +1403,15 @@ select {
 
 .lb-rank-1 {
   color: #FFD700;
-  font-size: 1.6rem;
   text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
 }
 
 .lb-rank-2 {
   color: #C0C0C0;
-  font-size: 1.4rem;
 }
 
 .lb-rank-3 {
   color: #CD7F32;
-  font-size: 1.3rem;
 }
 
 .lb-rank-other {
@@ -1435,24 +1432,34 @@ select {
   flex-direction: column;
   justify-content: center;
   overflow: hidden;
+  min-width: 0;
+  /* קריטי */
+  width: 100%;
 }
 
 .leaderboard-name {
   font-size: 1.05rem;
   font-weight: bold;
   color: var(--text-main);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal !important;
+  word-break: break-word;
   margin-bottom: 3px;
+  line-height: 1.2;
 }
 
 .leaderboard-source {
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.leaderboard-source-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 /* הגלולה שמשלבת את הציון וכמות המשתמשים */
@@ -1469,5 +1476,92 @@ select {
   padding: 6px 12px;
   border-radius: 8px;
   border: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+/* עטיפה חדשה לתוכן הלידרבורד */
+.leaderboard-content-wrapper {
+  display: flex;
+  flex: 1;
+  justify-content: space-between;
+  align-items: center;
+  overflow: hidden;
+  gap: 10px;
+  min-width: 0;
+  /* קריטי: מונע פריצה מחוץ לכרטיסייה */
+  width: 100%;
+}
+
+/* התאמה מיוחדת למסכי מובייל - סידור אחד מעל השני */
+@media (max-width: 600px) {
+.leaderboard-row {
+    gap: 10px;
+    padding: 12px 10px;
+  }
+
+      .leaderboard-content-wrapper {
+          flex-direction: column;
+          align-items: flex-start;
+          justify-content: center;
+          gap: 8px;
+          width: 100%;
+        }
+
+.leaderboard-name {
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: var(--text-main);
+  white-space: normal !important;
+  word-break: break-word;
+  line-height: 1.2;
+  margin-bottom: 0;
+}
+
+     .leaderboard-score {
+       padding: 4px 10px;
+     }
+    .leaderboard-rank {
+      min-width: 30px;
+      font-size: 1.1rem;
+    }
+}
+
+/* =====================================
+   CUSTOM SCROLLBAR (אגרסיבי ובולט)
+   ===================================== */
+
+::-webkit-scrollbar {
+  width: 12px !important;
+  height: 12px !important;
+  background-color: transparent !important;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a !important;
+  /* רקע שחור-אפור למסלול */
+  border-radius: 10px !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #b3b3b3 !important;
+  /* אפור בהיר מאוד - חייב לבלוט! */
+  border-radius: 10px !important;
+  border: 3px solid #1a1a1a !important;
+  /* מסגרת שחורה שיוצרת אשליה של פס דק ויפה */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent) !important;
+  /* הופך לסגול במעבר עכבר */
+}
+
+/* הגדרה ספציפית למודאלים (למקרה שהם דורסים את ההגדרה הגלובלית) */
+.modal-content::-webkit-scrollbar-thumb,
+#votersList::-webkit-scrollbar-thumb {
+  background: #b3b3b3 !important;
+}
+
+* {
+  scrollbar-width: auto !important;
+  scrollbar-color: #b3b3b3 #1a1a1a !important;
 }
 
