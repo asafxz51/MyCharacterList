@@ -222,12 +222,12 @@ app.post('/api/lists/:id/duplicate', verifyToken, async (req, res) => {
   res.json(newList);
 });
 
-// --- GLOBAL LEADERBOARD (OPTIMIZED) ---
-// --- GLOBAL LEADERBOARD (ULTRA FAST - NO LOOKUP) ---
+// --- GLOBAL LEADERBOARD (OPTIMIZED & LIGHTWEIGHT) ---
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const pipeline = [
       { $match: { isPrivate: { $ne: true } } },
+      { $project: { userId: 1, items: 1 } }, // אופטימיזציה קריטית: חוסך 90% מהזיכרון של מונגו
       { $unwind: "$items" },
       {
         $match: {
@@ -242,7 +242,6 @@ app.get('/api/leaderboard', async (req, res) => {
         }
       },
       {
-        // קיבוץ ראשוני לפי משתמש
         $group: {
           _id: { userId: "$userId", charId: "$charId" },
           maxRating: { $max: "$items.rating" },
@@ -253,7 +252,6 @@ app.get('/api/leaderboard', async (req, res) => {
         }
       },
       {
-        // קיבוץ סופי ללידרבורד (שומרים רק את ה-userId של המצביע)
         $group: {
           _id: "$_id.charId",
           characterName: { $first: "$characterName" },
@@ -261,13 +259,7 @@ app.get('/api/leaderboard', async (req, res) => {
           sourceType: { $first: "$sourceType" },
           image: { $max: "$image" },
           avgRating: { $avg: "$maxRating" },
-          rankedByCount: { $sum: 1 },
-          voters: {
-            $push: {
-              userId: "$_id.userId",
-              rating: "$maxRating"
-            }
-          }
+          rankedByCount: { $sum: 1 }
         }
       },
       { $match: { rankedByCount: { $gte: 2 } } },
@@ -275,30 +267,12 @@ app.get('/api/leaderboard', async (req, res) => {
       { $limit: 100 }
     ];
 
-    // 1. הרצת חישוב הלידרבורד (בלי להעמיס על המסד עם פקודות פיצול מתקדמות)
     const leaderboardRaw = await List.aggregate(pipeline);
 
-    // 2. שליפת השכתובים של האדמין
     const overrides = await LeaderboardOverride.find({});
     const overrideMap = {};
     overrides.forEach(o => { overrideMap[o.charId] = o; });
 
-    // 3. איסוף כל ה-IDs של המשתמשים שהצביעו לעשירייה הפותחת
-    const userIdsToFetch = new Set();
-    leaderboardRaw.forEach(item => {
-      item.voters.forEach(v => {
-        if (v.userId) userIdsToFetch.add(v.userId.toString());
-      });
-    });
-
-    // 4. שליפת כל השמות והתמונות בשאילתה אחת בודדת ומהירה!
-    const users = await User.find({ _id: { $in: Array.from(userIdsToFetch) } }, 'username avatar');
-    const userMap = {};
-    users.forEach(u => {
-      userMap[u._id.toString()] = { username: u.username, avatar: u.avatar };
-    });
-
-    // 5. חיבור הכל ביחד לפני השליחה ללקוח
     const finalLeaderboard = leaderboardRaw.map(item => {
       const override = overrideMap[item._id];
       if (override) {
@@ -308,23 +282,48 @@ app.get('/api/leaderboard', async (req, res) => {
         item.sourceType = override.sourceType || item.sourceType;
         item.image = override.image || item.image;
       }
-
-      // הזרקת שם ותמונה לכל מצביע מתוך הזיכרון (מהיר פי 1000 מלעשות את זה במסד)
-      item.voters = item.voters.map(v => {
-        const uInfo = userMap[v.userId ? v.userId.toString() : ''] || {};
-        return {
-          username: uInfo.username || 'Unknown',
-          avatar: uInfo.avatar || '',
-          rating: v.rating
-        };
-      });
-
       return item;
     }).filter(item => item !== null);
 
     res.json(finalLeaderboard);
   } catch (e) {
-    console.error("Leaderboard Error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// --- NEW: GET SPECIFIC CHARACTER VOTERS ---
+app.get('/api/leaderboard/voters/:charId', async (req, res) => {
+  try {
+    const charId = req.params.charId;
+
+    // משיכת הרשימות שבהן הדמות מופיעה
+    const lists = await List.find({ isPrivate: { $ne: true }, "items.apiId": charId })
+      .populate('userId', 'username avatar');
+
+    const userBestRating = {};
+
+    lists.forEach(list => {
+      if (!list.userId) return;
+      const user = list.userId;
+
+      list.items.forEach(item => {
+        if (item.apiId && item.apiId.toString() === charId && item.rating > 0) {
+          const currentMax = userBestRating[user._id] ? userBestRating[user._id].rating : 0;
+          if (item.rating > currentMax) {
+            userBestRating[user._id] = {
+              username: user.username,
+              avatar: user.avatar,
+              rating: item.rating
+            };
+          }
+        }
+      });
+    });
+
+    // מיון המצביעים מהציון הגבוה לנמוך
+    const voters = Object.values(userBestRating).sort((a, b) => b.rating - a.rating);
+    res.json(voters);
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });

@@ -1371,7 +1371,12 @@ async function loadLeaderboard() {
     try {
         const res = await fetch('/api/leaderboard');
         const data = await res.json();
-        globalLeaderboardData = data; // שמירת המידע בזיכרון
+
+        // הגנה קריטית! מוודא שקיבלנו רשימה ולא הודעת שגיאה מהשרת
+        if (!Array.isArray(data)) {
+            grid.innerHTML = '<p style="text-align: center; color: #ff4444; padding: 20px;">Failed to load leaderboard. Server is busy.</p>';
+            return;
+        }
 
         grid.innerHTML = '';
 
@@ -1415,12 +1420,9 @@ async function loadLeaderboard() {
                 <div class="leaderboard-rank ${rankClass}">${rankText}</div>
                 <img src="${validImg}" class="leaderboard-img" onerror="this.src='https://placehold.co/60x60/252525/bb86fc?text=?'">
                 
-                <!-- התחלנו עטיפה חדשה שתסדר את זה חכם במובייל -->
                 <div class="leaderboard-content-wrapper">
-                   <div class="leaderboard-info">
+                    <div class="leaderboard-info">
                         <div class="leaderboard-name">${item.characterName}</div>
-                        
-                        <!-- השורה של המקור והקטגוריה מתוקנת! -->
                         <div class="leaderboard-source">
                             <span class="leaderboard-source-text" title="${item.sourceTitle}">${item.sourceTitle}</span>
                             <span style="color:var(--accent); font-size:0.75rem; margin-left:5px; font-weight:bold; flex-shrink: 0;">• ${displayType}</span>
@@ -1432,7 +1434,9 @@ async function loadLeaderboard() {
                             <span style="color: #FFD700; font-weight: 900; font-size: 1.1rem; display: flex; align-items: center;">
                                 <i class="fas fa-star" style="font-size:0.8rem; margin-right:5px;"></i> ${formattedScore}
                             </span>
-                            <span onclick="openVotersModal('${item._id}')" style="cursor: pointer; color: var(--text-muted); font-size: 0.8rem; border-left: 1px solid rgba(255,255,255,0.15); margin-left: 10px; padding-left: 10px; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" title="View who ranked this">
+                            
+                            <!-- לחיצה שפותחת את החלון ושולחת בקשה לשרת -->
+                            <span onclick="openVotersModal('${item._id}', '${item.characterName.replace(/'/g, "\\'")}')" style="cursor: pointer; color: var(--text-muted); font-size: 0.8rem; border-left: 1px solid rgba(255,255,255,0.15); margin-left: 10px; padding-left: 10px; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" title="View who ranked this">
                                 <i class="fas fa-users" style="margin-right:4px;"></i> ${item.rankedByCount}
                             </span>
                             ${adminGearHtml}
@@ -1449,39 +1453,46 @@ async function loadLeaderboard() {
     }
 }
 
-// הפונקציה שפותחת את החלון וממלאת אותו בפרטים של המצביעים
-window.openVotersModal = function (charId) {
-    const charData = globalLeaderboardData.find(c => c._id === charId);
-    if (!charData || !charData.voters) return;
-
-    // מעדכן את הכותרת לשם הדמות
-    document.getElementById('votersModalTitle').innerHTML = `<i class="fas fa-users"></i> Ranked By (${charData.characterName})`;
-
+// פונקציית טעינה עצלה למצביעים!
+window.openVotersModal = async function (charId, charName) {
+    document.getElementById('votersModalTitle').innerHTML = `<i class="fas fa-users"></i> Ranked By (${charName})`;
     const listDiv = document.getElementById('votersList');
-    listDiv.innerHTML = '';
 
-    // ממיין את המצביעים מהציון הגבוה לנמוך
-    const sortedVoters = [...charData.voters].sort((a, b) => b.rating - a.rating);
-
-    sortedVoters.forEach(v => {
-        const avatarHtml = (v.avatar && v.avatar.trim() !== "") ?
-            `<img src="${v.avatar}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">` :
-            `<i class="fas fa-user-circle" style="font-size: 35px; color: var(--text-muted);"></i>`;
-
-        listDiv.innerHTML += `
-            <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    ${avatarHtml}
-                    <span style="font-weight: bold; color: var(--text-main);">${v.username || 'Unknown'}</span>
-                </div>
-                <div style="color: #FFD700; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center;">
-                    ${v.rating} <i class="fas fa-star" style="font-size: 0.8rem; margin-left: 4px;"></i>
-                </div>
-            </div>
-        `;
-    });
-
+    // מראה אנימציית טעינה בזמן שהוא מביא את הנתונים
+    listDiv.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading users...</div>';
     document.getElementById('votersModal').classList.remove('hidden');
+
+    try {
+        const res = await fetch(`/api/leaderboard/voters/${charId}`);
+        const voters = await res.json();
+
+        listDiv.innerHTML = '';
+
+        if (!voters || voters.length === 0) {
+            listDiv.innerHTML = '<div style="text-align:center; color:#888;">No users found.</div>';
+            return;
+        }
+
+        voters.forEach(v => {
+            const avatarHtml = (v.avatar && v.avatar.trim() !== "") ?
+                `<img src="${v.avatar}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">` :
+                `<i class="fas fa-user-circle" style="font-size: 35px; color: var(--text-muted);"></i>`;
+
+            listDiv.innerHTML += `
+                <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        ${avatarHtml}
+                        <span style="font-weight: bold; color: var(--text-main);">${v.username || 'Unknown'}</span>
+                    </div>
+                    <div style="color: #FFD700; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center;">
+                        ${v.rating} <i class="fas fa-star" style="font-size: 0.8rem; margin-left: 4px;"></i>
+                    </div>
+                </div>
+            `;
+        });
+    } catch (e) {
+        listDiv.innerHTML = '<div style="color:#ff4444; text-align:center;">Error loading voters.</div>';
+    }
 }
 
 // פתיחת הפרופיל של מישהו
