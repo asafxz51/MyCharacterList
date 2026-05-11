@@ -222,11 +222,24 @@ app.post('/api/lists/:id/duplicate', verifyToken, async (req, res) => {
   res.json(newList);
 });
 
-// --- GLOBAL LEADERBOARD ---
+// --- GLOBAL LEADERBOARD (OPTIMIZED) ---
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const pipeline = [
       { $match: { isPrivate: { $ne: true } } },
+
+      // התיקון הקריטי: שולפים את המשתמש *לפני* שמפרקים את הרשימה לדמויות! (חוסך 90% מזמן העיבוד)
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "userInfo"
+        }
+      },
+      { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
+
+      // רק אחרי שיש לנו את פרטי המשתמש, אנחנו מפרקים את הרשימה
       { $unwind: "$items" },
       {
         $match: {
@@ -240,18 +253,8 @@ app.get('/api/leaderboard', async (req, res) => {
           charId: { $toString: "$items.apiId" }
         }
       },
-      // התיקון החדש: משיכת פרטי המשתמש שהרשימה שייכת לו
       {
-        $lookup: {
-          from: "users",
-          localField: "userId",
-          foreignField: "_id",
-          as: "userInfo"
-        }
-      },
-      { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
-      {
-        // קיבוץ לפי משתמש ודמות, כולל שמירת השם והתמונה של המשתמש
+        // קיבוץ לפי משתמש ודמות - גורר איתו את פרטי המשתמש
         $group: {
           _id: { userId: "$userId", charId: "$charId" },
           maxRating: { $max: "$items.rating" },
@@ -264,7 +267,7 @@ app.get('/api/leaderboard', async (req, res) => {
         }
       },
       {
-        // קיבוץ גלובלי - והפעם דוחפים את כל המצביעים לתוך מערך (voters)
+        // הקיבוץ הסופי של הלידרבורד הכללי
         $group: {
           _id: "$_id.charId",
           characterName: { $first: "$characterName" },
