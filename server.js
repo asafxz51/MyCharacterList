@@ -144,22 +144,39 @@ app.get('/api/lists', verifyToken, async (req, res) => {
   res.json(lists);
 });
 
+// --- USER SAVES A LIST (With Auto-Custom Linker by NAME ONLY) ---
 app.post('/api/lists', verifyToken, async (req, res) => {
   try {
     const data = req.body;
     const user = await User.findById(req.user._id);
 
-    // חסימה: אף אחד לא מקבל מעל 10 או מתחת ל-0
+    const approvedCustoms = await LeaderboardOverride.find({ charId: { $regex: '^custom_' } });
+
     if (data.items && Array.isArray(data.items)) {
       data.items.forEach(item => {
+        // הגנת ציונים
         if (item.rating > 10) item.rating = 10;
         if (item.rating < 0) item.rating = 0;
+
+        const apiStr = item.apiId ? item.apiId.toString() : "";
+        if (!apiStr || apiStr === "null" || apiStr === "undefined" || apiStr === "") {
+
+          if (item.characterName) {
+            // החיפוש פה בודק עכשיו *רק* את השם של הדמות!
+            const matchedCustom = approvedCustoms.find(c =>
+              c.characterName.toLowerCase().trim() === item.characterName.toLowerCase().trim()
+            );
+
+            if (matchedCustom) {
+              item.apiId = matchedCustom.charId;
+              item.entityType = 'character';
+            }
+          }
+        }
       });
     }
 
     await saveLog(user, data.logAction || (data._id ? "Update" : "Create"), data.logDetails || data.name);
-
-    // מסמנים את הרשימה כ"מעודכנת לסולם החדש"
     data.scaleUpdated = true;
 
     if (data._id) {
@@ -167,7 +184,6 @@ app.post('/api/lists', verifyToken, async (req, res) => {
       return res.json(updated);
     }
 
-    // יצירת רשימה חדשה
     data.userId = req.user._id;
     data.allowComments = data.allowComments !== false;
     const newList = new List(data);
@@ -1427,53 +1443,85 @@ app.get('/api/admin/auto-match-ids', verifyToken, verifyAdmin, async (req, res) 
   }
 });
 
-// --- ADMIN: SAFE MIGRATE RATINGS ---
-app.get('/api/admin/fix-ratings', verifyToken, verifyAdmin, async (req, res) => {
+app.get('/api/admin/promote-custom-page', verifyToken, verifyAdmin, (req, res) => {
+  res.send(`
+    <html>
+    <head>
+      <title>Approve Custom Character</title>
+      <style>
+        body { background: #121212; color: white; font-family: Arial; padding: 40px; display: flex; flex-direction: column; align-items: center; }
+        .card { background: #252525; padding: 30px; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid #333; }
+        input { padding: 12px; margin: 10px 0 20px 0; width: 100%; box-sizing: border-box; background: #121212; border: 1px solid #444; color: white; border-radius: 6px; }
+        button { padding: 12px; width: 100%; background: #bb86fc; border: none; font-weight: bold; cursor: pointer; border-radius: 6px; font-size: 1.1rem; }
+        h2 { color: #bb86fc; margin-top: 0; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <h2><i class="fas fa-star"></i> Approve Custom Character</h2>
+        <p style="color: #888; font-size: 0.9rem; margin-bottom: 20px;">The system will auto-link characters based <b>ONLY</b> on their Name.</p>
+        <form action="/api/admin/promote-custom" method="POST">
+          <label>Character Name (Used for matching users):</label>
+          <input type="text" name="characterName" required placeholder="e.g. Mikasa Ackerman">
+          
+          <label>Source Title (Just for Leaderboard display):</label>
+          <input type="text" name="sourceTitle" required placeholder="e.g. Attack on Titan">
+          
+          <button type="submit">Promote to Leaderboard</button>
+        </form>
+        <button onclick="window.location.href='/'" style="background: #444; color: white; margin-top: 15px;">Back to Home</button>
+      </div>
+    </body>
+    </html>
+  `);
+});
+
+app.post('/api/admin/promote-custom', verifyToken, verifyAdmin, async (req, res) => {
   try {
-    // מביא *רק* רשימות שעוד לא עודכנו לסולם החדש!
-    const lists = await List.find({ scaleUpdated: { $ne: true } });
-    let listsFixed = 0;
+    const { characterName, sourceTitle } = req.body;
+
+    // יצירת ID מבוסס *רק* על שם הדמות (הורדתי את הלוכסנים השגויים)
+    const cleanName = characterName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const generatedId = `custom_${cleanName}`;
+
+    await LeaderboardOverride.findOneAndUpdate(
+      { charId: generatedId },
+      { characterName: characterName.trim(), sourceTitle: sourceTitle.trim(), isHidden: false },
+      { upsert: true, new: true }
+    );
+
+    const lists = await List.find();
+    let updatedCount = 0;
 
     for (let list of lists) {
       let modified = false;
+      list.items.forEach(item => {
+        // חיפוש חופף שמבוסס נטו על שם הדמות!
+        if (item.characterName &&
+          item.characterName.toLowerCase().trim() === characterName.toLowerCase().trim()) {
 
-      if (list.rankingType === 'letters') {
-        // תרגום חכם מהסולם הישן לחדש
-        list.items.forEach(item => {
-          if (item.rating === 13) { item.rating = 10; modified = true; }
-          else if (item.rating === 12) { item.rating = 9; modified = true; }
-          else if (item.rating === 11) { item.rating = 8; modified = true; }
-          else if (item.rating === 10) { item.rating = 7; modified = true; }
-          else if (item.rating === 9) { item.rating = 6; modified = true; }
-          else if (item.rating === 8) { item.rating = 5; modified = true; }
-          else if (item.rating === 7) { item.rating = 4; modified = true; }
-          else if (item.rating === 6) { item.rating = 3; modified = true; }
-          else if (item.rating === 5) { item.rating = 2; modified = true; }
-          else if (item.rating > 10) { item.rating = 10; modified = true; }
-        });
-      } else {
-        // רשימות מספרים - מוריד טרולים
-        list.items.forEach(item => {
-          if (item.rating > 10) {
-            item.rating = 10;
-            modified = true;
-          }
-        });
+          item.apiId = generatedId;
+          item.entityType = 'character';
+          modified = true;
+        }
+      });
+
+      if (modified) {
+        list.markModified('items');
+        await list.save();
+        updatedCount++;
       }
-
-      // נועל את הרשימה כדי שהיא לא תעודכן שוב בטעות בעתיד!
-      list.scaleUpdated = true;
-      list.markModified('items');
-      await list.save();
-      listsFixed++;
     }
 
     res.send(`
-      <div style="font-family: Arial; padding: 40px; text-align: center; background: #121212; color: white;">
-        <h1 style="color: #bb86fc;"><i class="fas fa-shield-alt"></i> Safe Migration Complete!</h1>
-        <p style="font-size: 1.2rem;">Fixed and protected <b>${listsFixed}</b> legacy lists.</p>
-        <button onclick="window.location.href='/'" style="margin-top: 30px; padding: 10px 20px; cursor: pointer;">Back to Home</button>
-      </div>
+      <body style="background:#121212; color:white; font-family:Arial; text-align:center; padding:50px;">
+        <h2 style="color:#4CAF50;">Success! Character Promoted!</h2>
+        <p><b>${characterName}</b> was assigned ID: <br><span style="color:#bb86fc">${generatedId}</span></p>
+        <p>Updated <b>${updatedCount}</b> past lists. All future users typing this name will get this ID regardless of the source they type.</p>
+        <br><br>
+        <a href="/api/admin/promote-custom-page" style="color:#bb86fc; font-size: 1.2rem; text-decoration: none; border: 1px solid #bb86fc; padding: 10px 20px; border-radius: 6px; margin-right: 10px;">Promote Another</a>
+        <a href="/" style="color:#888; font-size: 1.2rem; text-decoration: none; border: 1px solid #888; padding: 10px 20px; border-radius: 6px;">Back Home</a>
+      </body>
     `);
   } catch (e) {
     res.status(500).send("Error: " + e.message);
