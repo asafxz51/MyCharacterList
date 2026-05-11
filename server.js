@@ -223,23 +223,11 @@ app.post('/api/lists/:id/duplicate', verifyToken, async (req, res) => {
 });
 
 // --- GLOBAL LEADERBOARD (OPTIMIZED) ---
+// --- GLOBAL LEADERBOARD (ULTRA FAST - NO LOOKUP) ---
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const pipeline = [
       { $match: { isPrivate: { $ne: true } } },
-
-      // התיקון הקריטי: שולפים את המשתמש *לפני* שמפרקים את הרשימה לדמויות! (חוסך 90% מזמן העיבוד)
-      {
-        $lookup: {
-          from: "users",
-          localField: "userId",
-          foreignField: "_id",
-          as: "userInfo"
-        }
-      },
-      { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
-
-      // רק אחרי שיש לנו את פרטי המשתמש, אנחנו מפרקים את הרשימה
       { $unwind: "$items" },
       {
         $match: {
@@ -254,20 +242,18 @@ app.get('/api/leaderboard', async (req, res) => {
         }
       },
       {
-        // קיבוץ לפי משתמש ודמות - גורר איתו את פרטי המשתמש
+        // קיבוץ ראשוני לפי משתמש
         $group: {
           _id: { userId: "$userId", charId: "$charId" },
           maxRating: { $max: "$items.rating" },
           characterName: { $first: "$items.characterName" },
           sourceTitle: { $first: "$items.sourceTitle" },
           sourceType: { $first: "$items.sourceType" },
-          image: { $max: "$items.image" },
-          username: { $first: "$userInfo.username" },
-          avatar: { $first: "$userInfo.avatar" }
+          image: { $max: "$items.image" }
         }
       },
       {
-        // הקיבוץ הסופי של הלידרבורד הכללי
+        // קיבוץ סופי ללידרבורד (שומרים רק את ה-userId של המצביע)
         $group: {
           _id: "$_id.charId",
           characterName: { $first: "$characterName" },
@@ -278,8 +264,7 @@ app.get('/api/leaderboard', async (req, res) => {
           rankedByCount: { $sum: 1 },
           voters: {
             $push: {
-              username: "$username",
-              avatar: "$avatar",
+              userId: "$_id.userId",
               rating: "$maxRating"
             }
           }
@@ -290,12 +275,30 @@ app.get('/api/leaderboard', async (req, res) => {
       { $limit: 100 }
     ];
 
+    // 1. הרצת חישוב הלידרבורד (בלי להעמיס על המסד עם פקודות פיצול מתקדמות)
     const leaderboardRaw = await List.aggregate(pipeline);
 
+    // 2. שליפת השכתובים של האדמין
     const overrides = await LeaderboardOverride.find({});
     const overrideMap = {};
     overrides.forEach(o => { overrideMap[o.charId] = o; });
 
+    // 3. איסוף כל ה-IDs של המשתמשים שהצביעו לעשירייה הפותחת
+    const userIdsToFetch = new Set();
+    leaderboardRaw.forEach(item => {
+      item.voters.forEach(v => {
+        if (v.userId) userIdsToFetch.add(v.userId.toString());
+      });
+    });
+
+    // 4. שליפת כל השמות והתמונות בשאילתה אחת בודדת ומהירה!
+    const users = await User.find({ _id: { $in: Array.from(userIdsToFetch) } }, 'username avatar');
+    const userMap = {};
+    users.forEach(u => {
+      userMap[u._id.toString()] = { username: u.username, avatar: u.avatar };
+    });
+
+    // 5. חיבור הכל ביחד לפני השליחה ללקוח
     const finalLeaderboard = leaderboardRaw.map(item => {
       const override = overrideMap[item._id];
       if (override) {
@@ -305,6 +308,17 @@ app.get('/api/leaderboard', async (req, res) => {
         item.sourceType = override.sourceType || item.sourceType;
         item.image = override.image || item.image;
       }
+
+      // הזרקת שם ותמונה לכל מצביע מתוך הזיכרון (מהיר פי 1000 מלעשות את זה במסד)
+      item.voters = item.voters.map(v => {
+        const uInfo = userMap[v.userId ? v.userId.toString() : ''] || {};
+        return {
+          username: uInfo.username || 'Unknown',
+          avatar: uInfo.avatar || '',
+          rating: v.rating
+        };
+      });
+
       return item;
     }).filter(item => item !== null);
 
