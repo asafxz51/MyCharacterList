@@ -443,6 +443,14 @@
                 <input type="text" id="userSearchInput" placeholder="Search for users..."
                     style="width:100%; margin-bottom:15px; padding:10px; border-radius:6px; background:var(--bg-color); border:1px solid var(--border); color:var(--text-main);">
             </div>
+
+        <div id="leaderboardSortControls" style="display: none; justify-content: flex-end; margin-bottom: 15px;">
+            <select id="leaderboardSortSelect" onchange="loadLeaderboard()"
+                style="padding: 8px 12px; background: var(--bg-color); border: 1px solid var(--border); border-radius: 6px; font-weight: bold; cursor: pointer; outline: none;">
+                <option value="rating">Highest Rating</option>
+                <option value="popularity">Most Popular</option>
+            </select>
+        </div>
     
             <!-- הגריד שבו ירונדרו המשתמשים או הלידרבורד -->
             <div id="communityGrid" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
@@ -1106,15 +1114,16 @@
                 const btnUsers = document.getElementById('tabUsers');
                 const btnLeaderboard = document.getElementById('tabLeaderboard');
                 const commControls = document.getElementById('commControls');
+                const sortControls = document.getElementById('leaderboardSortControls'); // תפסנו את הפילטר
                 const grid = document.getElementById('communityGrid');
                 const title = document.getElementById('communityTitle');
 
                 if (tab === 'users') {
                     btnUsers.className = 'btn-primary active-tab';
                     btnLeaderboard.className = 'btn-primary inactive-tab';
-                    if (commControls) commControls.style.display = 'block'; // מציגים חיפוש
+                    if (commControls) commControls.style.display = 'block';
+                    if (sortControls) sortControls.style.display = 'none'; // מסתירים את המיון בטאב משתמשים
 
-                    // מחזירים את התצוגה לגריד של משתמשים
                     grid.style.display = 'grid';
                     grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
                     title.textContent = "Community";
@@ -1122,9 +1131,9 @@
                 } else {
                     btnUsers.className = 'btn-primary inactive-tab';
                     btnLeaderboard.className = 'btn-primary active-tab';
-                    if (commControls) commControls.style.display = 'none'; // מסתירים חיפוש בלידרבורד
+                    if (commControls) commControls.style.display = 'none';
+                    if (sortControls) sortControls.style.display = 'flex'; // מציגים את המיון בטאב לידרבורד!
 
-                    // משנים את התצוגה לבלוק (שורות אנכיות) במקום גריד!
                     grid.style.display = 'block';
                     title.innerHTML = '<i class="fas fa-trophy" style="color:gold;"></i> Global Leaderboard';
                     loadLeaderboard();
@@ -1187,7 +1196,8 @@
         grid.innerHTML = '<p style="text-align: center; padding: 40px; font-size: 1.1rem; color: var(--text-muted);">Calculating global rankings...</p>';
 
         try {
-            const res = await fetch('/api/leaderboard');
+            const sortMethod = document.getElementById('leaderboardSortSelect') ? document.getElementById('leaderboardSortSelect').value : 'rating';
+            const res = await fetch(`/api/leaderboard?sort=${sortMethod}`);
             const data = await res.json();
 
             // הגנה קריטית! מוודא שקיבלנו רשימה ולא הודעת שגיאה מהשרת

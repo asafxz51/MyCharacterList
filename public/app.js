@@ -1324,15 +1324,16 @@ function switchCommTab(tab) {
     const btnUsers = document.getElementById('tabUsers');
     const btnLeaderboard = document.getElementById('tabLeaderboard');
     const commControls = document.getElementById('commControls');
+    const sortControls = document.getElementById('leaderboardSortControls'); // תפסנו את הפילטר
     const grid = document.getElementById('communityGrid');
     const title = document.getElementById('communityTitle');
 
     if (tab === 'users') {
         btnUsers.className = 'btn-primary active-tab';
         btnLeaderboard.className = 'btn-primary inactive-tab';
-        if (commControls) commControls.style.display = 'block'; // מציגים את החיפוש
+        if (commControls) commControls.style.display = 'block';
+        if (sortControls) sortControls.style.display = 'none'; // מסתירים את המיון בטאב משתמשים
 
-        // מחזירים את התצוגה לגריד של משתמשים
         grid.style.display = 'grid';
         grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
         title.textContent = "Community";
@@ -1340,9 +1341,9 @@ function switchCommTab(tab) {
     } else {
         btnUsers.className = 'btn-primary inactive-tab';
         btnLeaderboard.className = 'btn-primary active-tab';
-        if (commControls) commControls.style.display = 'none'; // מחביאים את החיפוש
+        if (commControls) commControls.style.display = 'none';
+        if (sortControls) sortControls.style.display = 'flex'; // מציגים את המיון בטאב לידרבורד!
 
-        // משנים את התצוגה לבלוק (שורות אנכיות)
         grid.style.display = 'block';
         title.innerHTML = '<i class="fas fa-trophy" style="color:gold;"></i> Global Leaderboard';
         loadLeaderboard();
@@ -1404,7 +1405,8 @@ async function loadLeaderboard() {
     grid.innerHTML = '<p style="text-align: center; padding: 40px; font-size: 1.1rem; color: var(--text-muted);">Calculating global rankings...</p>';
 
     try {
-        const res = await fetch('/api/leaderboard');
+        const sortMethod = document.getElementById('leaderboardSortSelect') ? document.getElementById('leaderboardSortSelect').value : 'rating';
+        const res = await fetch(`/api/leaderboard?sort=${sortMethod}`);
         const data = await res.json();
 
         // הגנה קריטית! מוודא שקיבלנו רשימה ולא הודעת שגיאה מהשרת
@@ -2171,7 +2173,8 @@ if (leaderboardBtn) {
         grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px; font-size: 1.2rem;">Calculating global rankings...</p>';
 
         try {
-            const res = await fetch('/api/leaderboard');
+            const sortMethod = document.getElementById('leaderboardSortSelect') ? document.getElementById('leaderboardSortSelect').value : 'rating';
+            const res = await fetch(`/api/leaderboard?sort=${sortMethod}`);
             const data = await res.json();
 
             grid.innerHTML = '';

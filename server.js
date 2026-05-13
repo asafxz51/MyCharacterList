@@ -222,12 +222,18 @@ app.post('/api/lists/:id/duplicate', verifyToken, async (req, res) => {
   res.json(newList);
 });
 
-// --- GLOBAL LEADERBOARD (OPTIMIZED & LIGHTWEIGHT) ---
+// --- GLOBAL LEADERBOARD (OPTIMIZED & LIGHTWEIGHT WITH SORTING) ---
 app.get('/api/leaderboard', async (req, res) => {
   try {
+    // 1. בודק איך ביקשנו למיין
+    const sortParam = req.query.sort;
+    const sortStage = sortParam === 'popularity'
+      ? { rankedByCount: -1, avgRating: -1 } // קודם כמות מדרגים, אח"כ ציון
+      : { avgRating: -1, rankedByCount: -1 }; // קודם ציון, אח"כ כמות מדרגים
+
     const pipeline = [
       { $match: { isPrivate: { $ne: true } } },
-      { $project: { userId: 1, items: 1 } }, // אופטימיזציה קריטית: חוסך 90% מהזיכרון של מונגו
+      { $project: { userId: 1, items: 1 } },
       { $unwind: "$items" },
       {
         $match: {
@@ -263,7 +269,7 @@ app.get('/api/leaderboard', async (req, res) => {
         }
       },
       { $match: { rankedByCount: { $gte: 2 } } },
-      { $sort: { avgRating: -1, rankedByCount: -1 } },
+      { $sort: sortStage }, // <--- הזרקת המיון שבחרנו כאן!
       { $limit: 100 }
     ];
 
@@ -287,6 +293,7 @@ app.get('/api/leaderboard', async (req, res) => {
 
     res.json(finalLeaderboard);
   } catch (e) {
+    console.error("Leaderboard Error:", e);
     res.status(500).json({ error: e.message });
   }
 });

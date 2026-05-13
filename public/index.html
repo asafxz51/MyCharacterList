@@ -341,6 +341,15 @@
         <input type="text" id="userSearchInput" placeholder="Search for users..."
           style="width:100%; margin-bottom:15px; padding:10px; border-radius:6px; background:var(--bg-color); border:1px solid var(--border); color:var(--text-main);">
       </div>
+
+      <!-- תפריט מיון ללידרבורד (מוסתר כברירת מחדל) -->
+      <div id="leaderboardSortControls" style="display: none; justify-content: flex-end; margin-bottom: 15px;">
+        <select id="leaderboardSortSelect" onchange="loadLeaderboard()"
+          style="padding: 8px 12px; background: var(--bg-color); border: 1px solid var(--border); border-radius: 6px; font-weight: bold; cursor: pointer; outline: none;">
+          <option value="rating">Highest Rating</option>
+          <option value="popularity">Most Popular</option>
+        </select>
+      </div>
   
       <!-- הגריד שבו ירונדרו המשתמשים או הלידרבורד -->
       <div id="communityGrid" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
