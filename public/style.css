@@ -1565,3 +1565,97 @@ select {
   scrollbar-color: #b3b3b3 #1a1a1a !important;
 }
 
+/* =====================================
+   NOTES TOOLTIP (חלון הערות קופץ)
+   ===================================== */
+.card-bottom-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  min-height: 32px;
+}
+
+.card-bottom-bar .card-actions {
+  margin-top: 0;
+  /* מבטל מרווח ישן כדי שיישבו באותה שורה */
+}
+
+.note-tooltip-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+}
+
+.note-icon {
+  color: var(--text-muted);
+  font-size: 1.3rem;
+  transition: color 0.2s;
+}
+
+.note-tooltip-container:hover .note-icon {
+  color: var(--accent);
+  /* מאיר בסגול שעוברים עליו */
+}
+
+.note-tooltip {
+  visibility: hidden;
+  width: max-content;
+  /* מתאים את עצמו לאורך הטקסט */
+  max-width: 220px;
+  /* חוסם אותו מלהיות רחב מדי בדסקטופ */
+  background-color: #1a1a1a;
+  color: #fff;
+  text-align: left;
+  border-radius: 8px;
+  padding: 10px;
+  position: absolute;
+  z-index: 9999;
+  /* מונע הסתרה מאחורי דמויות אחרות */
+  bottom: 140%;
+  left: -10px;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  transform: translateY(5px);
+  border: 1px solid var(--accent);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  /* מוודא שרצף תווים ארוך יישבר בתוך הקופסה */
+}
+
+.note-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 15px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: var(--accent) transparent transparent transparent;
+}
+
+.note-tooltip-container:hover .note-tooltip {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 600px) {
+  .note-tooltip {
+    max-width: 140px;
+    /* תואם לרוחב הכרטיסייה במובייל כדי שלא יגלוש מהמסך! */
+    left: -5px;
+    /* מזיז אותו טיפה ימינה ליישור מושלם */
+    font-size: 0.8rem;
+  }
+
+  .note-tooltip::after {
+    left: 10px;
+    /* יישור החץ בהתאמה */
+  }
+}
+

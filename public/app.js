@@ -272,20 +272,23 @@ async function createList(name) {
     const rType = document.getElementById('rankingTypeSelect').value;
     const isPrivate = document.getElementById('isPrivateInput').checked;
     const isFreeOrder = document.getElementById('isFreeOrderInput').checked;
-
     const allowComments = document.getElementById('allowCommentsInput').checked;
+    const listDesc = document.getElementById('listDescriptionInput').value;
+
+    const payload = {
+        name: name,
+        listDescription: listDesc,
+        rankingType: rType,
+        isPrivate: isPrivate,
+        isFreeOrder: isFreeOrder,
+        allowComments: allowComments,
+        items: new Array() // הנה הטריק שעוקף את הבאג
+    };
 
     const res = await fetch('/api/lists', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            name: name,
-            rankingType: rType,
-            isPrivate,
-            isFreeOrder: isFreeOrder,
-            allowComments: allowComments, 
-            items: []
-        })
+        body: JSON.stringify(payload)
     });
 
     const newList = await res.json();
@@ -508,6 +511,15 @@ function renderCurrentList() {
     // הצגת הפקדים
     if (header) header.style.display = 'flex';
     document.getElementById('currentListTitle').textContent = list.name;
+    const descEl = document.getElementById('currentListDescription');
+    if (descEl) {
+        if (list.listDescription && list.listDescription.trim() !== '') {
+            descEl.textContent = list.listDescription;
+            descEl.style.display = 'block';
+        } else {
+            descEl.style.display = 'none';
+        }
+    }
     const editTitleBtn = document.getElementById('editListTitleBtn');
     if (editTitleBtn) editTitleBtn.classList.remove('hidden');
 
@@ -569,6 +581,14 @@ function renderCurrentList() {
             ? item.image
             : 'https://placehold.co/200x300/252525/bb86fc?text=No+Image';
 
+        // אם יש הערה, נציג את האייקון עם הטולטיפ, אם אין נשים בלוק ריק לשמור על היישור
+        const notesIconHtml = (item.notes && item.notes.trim() !== '') ? `
+            <div class="note-tooltip-container">
+                <i class="fas fa-sticky-note note-icon"></i>
+                <div class="note-tooltip">${item.notes}</div>
+            </div>
+        ` : '<div></div>';
+
         div.innerHTML = `
             <div class="rank-badge ${rankClass}">#${index + 1}</div>
             ${ratingHtml}
@@ -579,9 +599,14 @@ function renderCurrentList() {
                     <span class="source-title" title="${item.sourceTitle}">${item.sourceTitle}</span>
                     <span class="red-type">${item.sourceType === 'TV Show' ? 'TV' : item.sourceType}</span>
                 </div>
-                <div class="card-actions">
-                    <button class="icon-btn edit-btn" onclick="editItem(${item.originalIndex})"><i class="fas fa-edit"></i></button>
-                    <button class="icon-btn delete-btn" onclick="removeItem(${item.originalIndex})"><i class="fas fa-trash"></i></button>
+                
+                <!-- השורה התחתונה המעודכנת -->
+                <div class="card-bottom-bar">
+                    ${notesIconHtml}
+                    <div class="card-actions">
+                        <button class="icon-btn edit-btn" onclick="editItem(${item.originalIndex})"><i class="fas fa-edit"></i></button>
+                        <button class="icon-btn delete-btn" onclick="removeItem(${item.originalIndex})"><i class="fas fa-trash"></i></button>
+                    </div>
                 </div>
             </div>
         `;
@@ -610,6 +635,7 @@ window.editItem = function (index) {
     state.editingIndex = index;
 
     document.getElementById('modalImg').src = item.image;
+    document.getElementById('modalImg').classList.remove('hidden');
     document.getElementById('charNameInput').value = item.characterName;
     document.getElementById('customImgInput').value = item.image;
     document.getElementById('ratingInput').value = item.rating;
@@ -621,6 +647,7 @@ window.editItem = function (index) {
     document.getElementById('castSelector').innerHTML = '';
     document.getElementById('saveCharBtn').textContent = "Update Character";
     document.getElementById('charModal').classList.remove('hidden');
+    document.getElementById('charNotesInput').value = item.notes || '';
 
     if (isLetters) {
         document.getElementById('ratingLetterInput').value = item.rating;
@@ -760,9 +787,11 @@ async function openCharModal(item) {
     document.getElementById('searchInput').value = '';
 
     document.getElementById('modalImg').src = item.image || 'https://via.placeholder.com/200';
+    document.getElementById('modalImg').classList.remove('hidden');
     document.getElementById('customImgInput').value = '';
     document.getElementById('ratingInput').value = 5;
     document.getElementById('saveCharBtn').textContent = "Add to List";
+    document.getElementById('charNotesInput').value = '';
 
     if (item.type === 'character' || item.type === 'game_character') {
         document.getElementById('charNameInput').value = item.title;
@@ -876,6 +905,7 @@ function openCustomCharModal() {
 
     document.getElementById('sourceTypeInput').value = 'Other';
     document.getElementById('saveCharBtn').textContent = "Add Custom Character";
+    document.getElementById('charNotesInput').value = '';
 
     const list = state.lists.find(l => l._id === state.activeListId);
     const isLetters = list && list.rankingType === 'letters';
@@ -936,6 +966,7 @@ document.getElementById('saveCharBtn').addEventListener('click', () => {
 
     const actionType = state.editingIndex > -1 ? "Edit Character" : "Add Character";
     const charDetails = `${name} (Source: ${sourceTitle})`;
+    const notesVal = document.getElementById('charNotesInput').value;
 
     // יצירת האובייקט שיישמר ב-Database
     const itemData = {
@@ -944,6 +975,7 @@ document.getElementById('saveCharBtn').addEventListener('click', () => {
         sourceType: sourceType,
         rating: ratingVal,
         image: finalImage,
+        notes: notesVal,
         apiId: finalApiId,
         entityType: detectedEntity
     };
@@ -1053,6 +1085,9 @@ document.getElementById('createListBtn').addEventListener('click', () => {
     document.getElementById('duplicateListBtn').classList.add('hidden');
     document.getElementById('saveListBtn').textContent = "Create";
     document.getElementById('listModal').classList.remove('hidden');
+
+    document.getElementById('newListName').value = '';
+    document.getElementById('listDescriptionInput').value = '';
 });
 
 document.getElementById('editListTitleBtn').addEventListener('click', () => {
@@ -1074,6 +1109,9 @@ document.getElementById('editListTitleBtn').addEventListener('click', () => {
     document.getElementById('duplicateListBtn').classList.remove('hidden');
     document.getElementById('saveListBtn').textContent = "Save Changes";
     document.getElementById('listModal').classList.remove('hidden');
+
+    document.getElementById('newListName').value = list.name;
+    document.getElementById('listDescriptionInput').value = list.listDescription || ''; 
 });
 
 document.getElementById('saveListBtn').addEventListener('click', async () => {
@@ -1082,8 +1120,6 @@ document.getElementById('saveListBtn').addEventListener('click', async () => {
         const rType = document.getElementById('rankingTypeSelect').value;
         const isPrivate = document.getElementById('isPrivateInput').checked;
         const isFreeOrder = document.getElementById('isFreeOrderInput').checked;
-
-        // תיקון: קבלת הערך מהאינפוט של התגובות בהגדרות
         const allowComments = document.getElementById('allowCommentsInput').checked;
 
         if (!name) {
@@ -1099,9 +1135,8 @@ document.getElementById('saveListBtn').addEventListener('click', async () => {
             list.rankingType = rType;
             list.isPrivate = isPrivate;
             list.isFreeOrder = isFreeOrder;
-
-            // תיקון: עדכון הזיכרון הלוקאלי לפני השליחה לשרת
             list.allowComments = allowComments;
+            list.listDescription = document.getElementById('listDescriptionInput').value;
 
             await updateCurrentList(true, "Update List Settings", `Changed settings for: ${name}`);
 

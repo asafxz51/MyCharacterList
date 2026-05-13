@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const ListSchema = new mongoose.Schema({
  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
  name: { type: String, required: true },
+ listDescription: { type: String, maxlength: 300 },
  order: { type: Number, default: 0 },
  rankingType: { type: String, default: 'numbers' },
  isPrivate: { type: Boolean, default: false },
@@ -37,6 +38,7 @@ const ListSchema = new mongoose.Schema({
   image: String,
   rating: Number,
   description: String,
+  notes: String,
   apiId: String,
   entityType: { type: String, default: 'character' }
  }]

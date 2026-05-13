@@ -126,6 +126,7 @@
 }
 
 
+
 .mobile-only-btn {
     display: none; /* כבוי בדסקטופ */
 }
@@ -347,6 +348,12 @@
         <div class="share-header">
             <h1 id="listTitle" style="font-size: 2.5rem; margin-bottom: 10px;">Loading...</h1>
             <p id="listAuthor" style="color:var(--text-muted); font-size: 1.1rem; margin-bottom: 15px;"></p>
+        
+            <!-- הבלוק החדש של התיאור (מעוצב יפה עם רקע עדין) -->
+        <p id="listDescriptionDisplay"
+            style="color: var(--text-main); font-size: 1.05rem; margin-bottom: 20px; line-height: 1.6; display: none; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid var(--border); text-align: center; max-width: 600px; margin-left: auto; margin-right: auto; word-break: break-word; overflow-wrap: break-word;">
+        </p>
+        
             <div id="otherListsContainer"
                 style="display: none; justify-content: center; align-items: center; gap: 10px; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
                 <label style="color: var(--text-muted); font-size: 0.9rem;">More from this user:</label>
@@ -725,6 +732,12 @@
                     document.getElementById('listTitle').textContent = data.name;
                     document.getElementById('listAuthor').textContent = `Created by: ${data.author}`;
 
+                     const descEl = document.getElementById('listDescriptionDisplay');
+                    if (data.listDescription && data.listDescription.trim() !== '') {
+                        descEl.textContent = data.listDescription;
+                        descEl.style.display = 'block';
+                    }
+
                     listRankingType = data.rankingType || 'numbers';
                     isFreeOrder = data.isFreeOrder || false;
                     allItems = data.items || [];
@@ -790,14 +803,31 @@
                     ? item.image
                     : 'https://placehold.co/200x300/252525/bb86fc?text=No+Image';
 
-                div.innerHTML = `
+              // אם יש הערה, נצייר את כל השורה התחתונה. אם אין - לא נצייר כלום!
+                    const notesIconHtml = (item.notes && item.notes.trim() !== '') ? `
+                    <div class="note-tooltip-container">
+                        <i class="fas fa-sticky-note note-icon"></i>
+                        <div class="note-tooltip">${item.notes}</div>
+                    </div>
+                ` : `<div></div>`;
+
+                    div.innerHTML = `
             <div class="rank-badge ${index < 3 ? 'rank-' + (index + 1) : 'rank-other'}">#${index + 1}</div>
             ${ratingHtml}
             <img src="${validImg}" class="char-img" onerror="this.src='https://placehold.co/200x300/252525/bb86fc?text=No+Image'">
-            <div class="char-info">
+            
+            <!-- הוספנו פלקס לעטיפה כדי שנוכל לדחוף דברים למטה -->
+            <div class="char-info" style="display: flex; flex-direction: column; flex: 1;">
                 <div class="char-name">${item.characterName}</div>
-                <div class="source-row">
-                    <span class="source-title" title="${item.sourceTitle}">${item.sourceTitle}</span>
+                
+                <!-- המקור: מקבל שורה שלמה משלו, נחתך עם 3 נקודות -->
+                <div style="width: 100%; margin-top: 2px;">
+                    <div class="source-title" title="${item.sourceTitle}" style="display: block; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0;">${item.sourceTitle}</div>
+                </div>
+                
+                <!-- שורה תחתונה: נדחפת למטה תמיד. נוט משמאל, טייפ מימין -->
+                <div class="card-bottom-bar" style="margin-top: auto; padding-top: 10px;">
+                    ${notesIconHtml}
                     <span class="red-type">${displayType}</span>
                 </div>
             </div>`;

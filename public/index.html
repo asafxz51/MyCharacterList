@@ -77,12 +77,17 @@
       <header class="list-header">
         <!-- שורה 1: כותרת בלבד -->
         <div class="title-row">
-          <div style="display: flex; align-items: center; gap: 15px;">
-            <h2 id="currentListTitle">Select a List</h2>
-            <button id="editListTitleBtn" class="icon-btn hidden"><i class="fas fa-pen"></i></button>
-            <div id="indexLikesCount" class="likes-chip hidden">
-              <i class="fas fa-heart"></i> <span id="indexLikesNumber">0</span>
+          <div style="display: flex; flex-direction: column;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+              <h2 id="currentListTitle" style="margin-bottom: 0;">Select a List</h2>
+              <button id="editListTitleBtn" class="icon-btn hidden"><i class="fas fa-pen"></i></button>
+              <div id="indexLikesCount" class="likes-chip hidden">
+                <i class="fas fa-heart"></i> <span id="indexLikesNumber">0</span>
+              </div>
             </div>
+          <p id="currentListDescription"
+            style="color: var(--text-muted); font-size: 0.95rem; margin-top: 8px; max-width: 1000px; display: none; line-height: 1.5; word-break: break-word; overflow-wrap: break-word;">
+          </p>
           </div>
         </div>
       
@@ -167,15 +172,15 @@
       <span class="close-modal">&times;</span>
       <div class="modal-body">
         <img id="modalImg" src="" alt="Source">
+  
         <div class="modal-info">
-
           <div id="castSelector"></div>
-
+  
           <div class="form-group">
             <label>Character Name:</label>
-            <input type="text" id="charNameInput" placeholder="e.g., Walter White">
+            <input type="text" id="charNameInput" placeholder="e.g., Walter White" maxlength="36">
           </div>
-
+  
           <div class="row-group">
             <div class="form-group" style="flex: 2;">
               <label>Source Title:</label>
@@ -196,34 +201,40 @@
               </select>
             </div>
           </div>
-
+  
           <div class="form-group">
             <label>Custom Image URL (Optional):</label>
             <input type="text" id="customImgInput" placeholder="Paste image link...">
           </div>
+  
+          <div class="form-group">
+            <label>Personal Notes (Optional):</label>
+            <textarea id="charNotesInput" placeholder="Why did you rank them here? (Max 700 chars)" maxlength="700" rows="3"
+              style="width: 100%; padding: 8px; background: var(--bg-color); border: 1px solid var(--border); color: var(--text-main); border-radius: 4px; resize: vertical;"></textarea>
+          </div>
+  
           <div class="form-group">
             <label>Rating:</label>
-
             <input type="number" id="ratingInput" min="0" max="10" step="0.5" value="5">
-
-            <select id="ratingLetterInput" class="hidden" style="width: 100%; padding: 8px; background: var(--bg-color); color: var
-    (--text-main); border: 1px solid var(--border); border-radius: 4px;">
+            <select id="ratingLetterInput" class="hidden"
+              style="width: 100%; padding: 8px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border); border-radius: 4px;">
               <option value="10">SSS</option>
-              <option value="9">SS</option>
-              <option value="8">S</option>
-              <option value="7">A</option>
-              <option value="6">B</option>
-              <option value="5">C</option>
-              <option value="4">D</option>
-              <option value="3">E</option>
-              <option value="2">F</option>
+              <option value="9.5">SS</option>
+              <option value="9">S</option>
+              <option value="8">A</option>
+              <option value="7">B</option>
+              <option value="6">C</option>
+              <option value="5">D</option>
+              <option value="4">E</option>
+              <option value="3">F</option>
               <option value="0">No Grade</option>
             </select>
           </div>
-
-
+  
+          <!-- הכפתור חזר פנימה לתוך ה-modal-info -->
           <button id="saveCharBtn" class="btn-primary">Add to List</button>
         </div>
+  
       </div>
     </div>
   </div>
@@ -233,7 +244,11 @@
       <span class="close-modal">&times;</span>
       <h3 id="listModalTitle">Create New List</h3>
 
-      <input type="text" id="newListName" placeholder="List Name">
+      <input type="text" id="newListName" placeholder="List Name" maxlength="40">
+
+      <textarea id="listDescriptionInput" placeholder="List Description (Optional, up to 1000 characters)" maxlength="1000"
+        rows="3"
+        style="width: 100%; margin-top: 10px; padding: 10px; background: var(--bg-color); border: 1px solid var(--border); color: var(--text-main); border-radius: 4px; resize: vertical;"></textarea>
 
       <div style="margin-top: 10px; text-align: left;">
         <label style="font-size: 0.9rem; color: var(--text-muted);">Ranking Style:</label>
