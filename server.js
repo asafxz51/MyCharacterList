@@ -154,7 +154,8 @@ app.post('/api/lists', verifyToken, async (req, res) => {
 
     if (data.items && Array.isArray(data.items)) {
       data.items.forEach(item => {
-        // הגנת ציונים
+        item.rating = Math.round((Number(item.rating) || 0) * 100) / 100;
+
         if (item.rating > 10) item.rating = 10;
         if (item.rating < 0) item.rating = 0;
 
@@ -319,7 +320,7 @@ app.get('/api/leaderboard/voters/:charId', async (req, res) => {
             userBestRating[user._id] = {
               // הוספנו את ה-userId! (אם הרשימה פרטית, נחזיר null כדי שלא ילחצו עליו)
               userId: list.isPrivate ? null : user._id,
-              username: list.isPrivate ? "Anonymous (Private)" : user.username,
+              username: list.isPrivate ? "Anonymous" : user.username,
               avatar: list.isPrivate ? "" : user.avatar,
               rating: item.rating
             };

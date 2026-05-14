@@ -981,6 +981,7 @@ document.getElementById('saveCharBtn').addEventListener('click', () => {
         ratingVal = parseInt(document.getElementById('ratingLetterInput').value);
     } else {
         ratingVal = parseFloat(document.getElementById('ratingInput').value);
+        ratingVal = Math.round(ratingVal * 100) / 100;
     }
 
     if (ratingVal > 10) ratingVal = 10;
@@ -1486,7 +1487,7 @@ async function loadLeaderboard() {
             else if (index === 1) { rankClass = 'lb-rank-2'; }
             else if (index === 2) { rankClass = 'lb-rank-3'; }
 
-            const formattedScore = item.avgRating.toFixed(1);
+            const formattedScore = parseFloat(item.avgRating.toFixed(2));
             const displayType = item.sourceType === 'TV Show' ? 'TV' : (item.sourceType || 'Other');
 
             let validImg = item.image && !item.image.includes('via.placeholder.com')
@@ -1727,47 +1728,21 @@ function handleSidebarDragEnd(e) {
 // --- ADMIN LOGIC ---
 const adminBtn = document.getElementById('adminBtn');
 if (adminBtn) {
-    adminBtn.addEventListener('click', async () => {
+    adminBtn.addEventListener('click', () => {
         document.getElementById('adminModal').classList.remove('hidden');
-        switchAdminTab('settings');
-
-        // טעינת טקסט נוכחי
-        const res = await fetch('/api/settings/welcome');
-        const data = await res.json();
-        document.getElementById('adminWelcomeTitle').value = data.welcomeTitle || '';
-        document.getElementById('adminWelcomeText').value = data.welcomeText || '';
+        switchAdminTab('users');
     });
 }
 
-document.getElementById('adminSaveSettingsBtn').addEventListener('click', async () => {
-    const title = document.getElementById('adminWelcomeTitle').value;
-    const text = document.getElementById('adminWelcomeText').value;
-    await fetch('/api/admin/settings/welcome', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, text })
-    });
-    alert("Welcome screen updated!");
-});
-
-// --- ADMIN LOGIC ---
-
-// (הקוד של כפתור השמירה של ה-Settings נשאר אותו דבר, מתחילים לעדכן מהטאבים:)
-
-document.getElementById('adminTabSettings').onclick = () => switchAdminTab('settings');
 document.getElementById('adminTabUsers').onclick = () => switchAdminTab('users');
-// הוספת חזרה לרשימת המשתמשים
 document.getElementById('adminBackToUsersBtn').onclick = () => switchAdminTab('users');
 document.getElementById('adminTabLogs').onclick = () => switchAdminTab('logs');
 
-
 function switchAdminTab(tab) {
-    document.getElementById('adminSettingsSection').classList.add('hidden');
     document.getElementById('adminUsersSection').classList.add('hidden');
     document.getElementById('adminListsSection').classList.add('hidden');
     document.getElementById('adminLogsSection').classList.add('hidden');
 
-    document.getElementById('adminTabSettings').className = 'btn-primary inactive-tab';
     document.getElementById('adminTabUsers').className = 'btn-primary inactive-tab';
     document.getElementById('adminTabLogs').className = 'btn-primary inactive-tab';
 
@@ -1776,17 +1751,13 @@ function switchAdminTab(tab) {
         logsAutoRefreshInterval = null;
     }
 
-    if (tab === 'settings') {
-        document.getElementById('adminSettingsSection').classList.remove('hidden');
-        document.getElementById('adminTabSettings').className = 'btn-primary active-tab';
-    } else if (tab === 'users') {
+    if (tab === 'users') {
         document.getElementById('adminUsersSection').classList.remove('hidden');
         document.getElementById('adminTabUsers').className = 'btn-primary active-tab';
         loadAdminUsers();
     } else if (tab === 'logs') {
         document.getElementById('adminLogsSection').classList.remove('hidden');
         document.getElementById('adminTabLogs').className = 'btn-primary active-tab';
-
         loadAdminLogs();
 
         logsAutoRefreshInterval = setInterval(() => {
@@ -1797,17 +1768,11 @@ function switchAdminTab(tab) {
 
 async function loadAdminLogs(silent = false) {
     const list = document.getElementById('adminLogsList');
-
-    // מציגים Loading רק אם זה לא רענון שקט
-    if (!silent) {
-        list.innerHTML = '<div style="text-align:center; padding:20px;">Updating...</div>';
-    }
+    if (!silent) list.innerHTML = '<div style="text-align:center; padding:20px;">Updating...</div>';
 
     try {
         const res = await fetch('/api/admin/logs');
         const logs = await res.json();
-
-        // יצירת ה-HTML של כל הלוגים
         const html = logs.map(log => {
             const date = new Date(log.timestamp).toLocaleString('he-IL');
             let actionColor = "var(--accent)";
@@ -1824,12 +1789,12 @@ async function loadAdminLogs(silent = false) {
                 </div>
             `;
         }).join('');
-
         list.innerHTML = html;
     } catch (e) {
         if (!silent) list.innerHTML = 'Error loading logs.';
     }
 }
+
 async function loadAdminUsers() {
     const grid = document.getElementById('adminUsersGrid');
     grid.innerHTML = 'Loading users...';
@@ -1853,7 +1818,6 @@ async function loadAdminUsers() {
 }
 
 window.adminManageLists = async function (userId, username) {
-    // 1. מעבר תצוגה בסשן האדמין
     const adminUsersSection = document.getElementById('adminUsersSection');
     const adminListsSection = document.getElementById('adminListsSection');
     const adminUserListsTitle = document.getElementById('adminUserListsTitle');
@@ -1863,28 +1827,21 @@ window.adminManageLists = async function (userId, username) {
     if (adminListsSection) adminListsSection.classList.remove('hidden');
     if (adminUserListsTitle) adminUserListsTitle.textContent = `Lists owned by: ${username}`;
 
-    // 2. ניקוי הגריד והצגת Loading
     grid.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted);">Fetching lists...</div>';
 
     try {
         const res = await fetch(`/api/admin/users/${userId}/lists`);
-
         if (!res.ok) throw new Error("Failed to fetch lists");
-
         const lists = await res.json();
 
-        // 3. ניקוי ה-Loading
         grid.innerHTML = '';
-
         if (!lists || lists.length === 0) {
             grid.innerHTML = '<p style="padding:20px; color:#888;">This user has no lists yet.</p>';
             return;
         }
 
-        // 4. רינדור הליסטים
         lists.forEach(l => {
             const div = document.createElement('div');
-            // עיצוב שורה לכל ליסט באדמין
             div.style = "display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--card-bg); border:1px solid var(--border); border-radius:8px; margin-bottom:8px;";
 
             const privacyIcon = l.isPrivate ? '<i class="fas fa-lock" style="margin-right:8px; font-size:0.8rem; color:#888;"></i>' : '';
@@ -1902,7 +1859,6 @@ window.adminManageLists = async function (userId, username) {
             `;
             grid.appendChild(div);
         });
-
     } catch (e) {
         console.error("Admin Manage Lists Error:", e);
         grid.innerHTML = '<p style="color:red; padding:20px;">Error loading user lists.</p>';
@@ -1910,9 +1866,8 @@ window.adminManageLists = async function (userId, username) {
 }
 
 window.adminResetPass = async function (id) {
-    // שואל את האדמין לסיסמה החדשה
     const newPass = prompt("Enter new password for this user (Min 3 characters):");
-    if (!newPass) return; // אם לחץ ביטול או השאיר ריק
+    if (!newPass) return;
 
     const res = await fetch(`/api/admin/users/${id}/reset`, {
         method: 'POST',
