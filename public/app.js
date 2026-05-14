@@ -1487,7 +1487,7 @@ async function loadLeaderboard() {
             else if (index === 1) { rankClass = 'lb-rank-2'; }
             else if (index === 2) { rankClass = 'lb-rank-3'; }
 
-            const formattedScore = parseFloat(item.avgRating.toFixed(2));
+            const formattedScore = parseFloat(item.avgRating.toFixed(1));
             const displayType = item.sourceType === 'TV Show' ? 'TV' : (item.sourceType || 'Other');
 
             let validImg = item.image && !item.image.includes('via.placeholder.com')
