@@ -1366,6 +1366,8 @@ async function loadCommunityUsers() {
         const query = document.getElementById('userSearchInput')?.value || '';
         const res = await fetch(`/api/users?search=${query}&t=${Date.now()}`);
         const users = await res.json();
+        if (currentCommTab !== 'users') return;
+
 
         grid.innerHTML = users.length ? '' : '<p style="grid-column: 1/-1; text-align:center;">No users found.</p>';
 
@@ -1408,6 +1410,7 @@ async function loadLeaderboard() {
         const sortMethod = document.getElementById('leaderboardSortSelect') ? document.getElementById('leaderboardSortSelect').value : 'rating';
         const res = await fetch(`/api/leaderboard?sort=${sortMethod}`);
         const data = await res.json();
+        if (currentCommTab !== 'leaderboard') return;
 
         // הגנה קריטית! מוודא שקיבלנו רשימה ולא הודעת שגיאה מהשרת
         if (!Array.isArray(data)) {
