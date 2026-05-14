@@ -666,6 +666,24 @@ app.delete('/api/admin/users/:id', verifyToken, verifyAdmin, async (req, res) =>
   res.json({ success: true });
 });
 
+app.delete('/api/admin/lists/:id', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const list = await List.findById(req.params.id);
+    if (!list) return res.status(404).json({ error: "List not found" });
+
+    const adminUser = await User.findById(req.user._id);
+    await saveLog(adminUser, "Admin Deleted List", `Deleted list "${list.name}" (Owner ID: ${list.userId})`);
+
+    await List.findByIdAndDelete(req.params.id);
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error("Admin Delete List Error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
 app.post('/api/admin/users/:id/reset', verifyToken, verifyAdmin, async (req, res) => {
   const hashedPassword = await bcrypt.hash(req.body.newPassword, 10);
   await User.findByIdAndUpdate(req.params.id, { password: hashedPassword });
