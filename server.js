@@ -232,7 +232,7 @@ app.get('/api/leaderboard', async (req, res) => {
       : { avgRating: -1, rankedByCount: -1 }; // קודם ציון, אח"כ כמות מדרגים
 
     const pipeline = [
-      { $match: { isPrivate: { $ne: true } } },
+      // { $match: { isPrivate: { $ne: true } } },
       { $project: { userId: 1, items: 1 } },
       { $unwind: "$items" },
       {
