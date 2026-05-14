@@ -298,13 +298,12 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
-// --- NEW: GET SPECIFIC CHARACTER VOTERS ---
+// --- GET SPECIFIC CHARACTER VOTERS (WITH ANONYMOUS PRIVATE VOTES) ---
 app.get('/api/leaderboard/voters/:charId', async (req, res) => {
   try {
     const charId = req.params.charId;
 
-    // משיכת הרשימות שבהן הדמות מופיעה
-    const lists = await List.find({ isPrivate: { $ne: true }, "items.apiId": charId })
+    const lists = await List.find({ "items.apiId": charId })
       .populate('userId', 'username avatar');
 
     const userBestRating = {};
@@ -318,8 +317,10 @@ app.get('/api/leaderboard/voters/:charId', async (req, res) => {
           const currentMax = userBestRating[user._id] ? userBestRating[user._id].rating : 0;
           if (item.rating > currentMax) {
             userBestRating[user._id] = {
-              username: user.username,
-              avatar: user.avatar,
+              // הוספנו את ה-userId! (אם הרשימה פרטית, נחזיר null כדי שלא ילחצו עליו)
+              userId: list.isPrivate ? null : user._id,
+              username: list.isPrivate ? "Anonymous (Private)" : user.username,
+              avatar: list.isPrivate ? "" : user.avatar,
               rating: item.rating
             };
           }
@@ -327,11 +328,45 @@ app.get('/api/leaderboard/voters/:charId', async (req, res) => {
       });
     });
 
-    // מיון המצביעים מהציון הגבוה לנמוך
     const voters = Object.values(userBestRating).sort((a, b) => b.rating - a.rating);
     res.json(voters);
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// --- PUBLIC: RANDOM LISTS FOR LANDING PAGE ---
+app.get('/api/public/random-lists', async (req, res) => {
+  try {
+    const randomLists = await List.aggregate([
+      {
+        $match: {
+          isPrivate: { $ne: true }, // רק רשימות ציבוריות
+          "items.9": { $exists: true } // טריק מונגו מהיר: מוודא שיש לפחות 10 איברים במערך הדמויות
+        }
+      },
+      { $sample: { size: 6 } }, // שולף 5 באקראי
+      { $project: { name: 1, items: 1 } }
+    ]);
+
+    const formattedLists = randomLists.map(list => {
+      // לוקח את התמונה של הדמות הראשונה בתור כריכה (Cover) לרשימה
+      const coverImage = list.items.length > 0 && list.items[0].image && !list.items[0].image.includes('via.placeholder')
+        ? list.items[0].image
+        : 'https://placehold.co/200x300/252525/bb86fc?text=No+Cover';
+
+      return {
+        _id: list._id,
+        name: list.name,
+        thumbnail: coverImage,
+        itemCount: list.items.length
+      };
+    });
+
+    res.json(formattedLists);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to fetch random lists" });
   }
 });
 

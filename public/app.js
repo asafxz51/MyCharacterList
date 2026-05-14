@@ -102,42 +102,81 @@ async function showLoggedOutState() {
     const mobProfileBtn = document.getElementById('mobileProfileBtn');
     if (mobProfileBtn) mobProfileBtn.classList.add('hidden');
 
-    // --- מצב מנותק ---
-    document.getElementById('userDisplay').style.display = 'none'; // מעלים את ה-"Hi"
-    authBtn.textContent = "Login"; // מוודא שכתוב לוגין
-    authBtn.style.display = 'inline-block'; // משאיר את הכפתור גלוי וזמין ללחיצה!
+    document.getElementById('userDisplay').style.display = 'none';
+    authBtn.textContent = "Login";
+    authBtn.style.display = 'inline-block';
 
-    // מסתיר את שאר האתר
     document.querySelector('.sidebar').style.display = 'none';
     document.querySelector('.list-header').style.display = 'none';
     document.getElementById('listNav').innerHTML = '';
-
-    // מסך הפתיחה
-    let title = "Welcome";
-    let text = "Please log in.";
-    try {
-        const res = await fetch('/api/settings/welcome');
-        const data = await res.json();
-        title = data.welcomeTitle;
-        text = data.welcomeText.replace(/\n/g, '<br>');
-    } catch (e) { }
 
     if (document.getElementById('notifArea')) {
         document.getElementById('notifArea').classList.add('hidden');
     }
 
-    document.getElementById('characterGrid').innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; max-width: 600px; margin: 40px auto; background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid var(--border);">
-            <i class="fas fa-star" style="font-size: 4rem; color: var(--accent); margin-bottom: 20px;"></i>
-            <h2 style="margin-bottom: 15px; font-size: 2.2rem; color: var(--text-main);">${title}</h2>
-            <p style="color: var(--text-muted); margin-bottom: 30px; font-size: 1.1rem; line-height: 1.6;">${text}</p>
-            <button onclick="document.getElementById('authModal').classList.remove('hidden')" class="btn-primary" style="width: auto; padding: 12px 30px; font-size: 1.1rem; border-radius: 30px;">
-                <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i> Login or Register to Start
-            </button>
+    const grid = document.getElementById('characterGrid');
+
+    grid.innerHTML = `
+        <div style="grid-column: 1/-1; padding-bottom: 50px;">
+            
+            <!-- 1. Hero Section -->
+            <div style="text-align: center; padding: 40px 15px;">
+                <h1 class="hero-title">MyCharacterList</h1>
+                <p class="hero-subtitle">Your ultimate hub to rank, share, and discover characters!</p>
+                <p style="font-size: 1rem; color: var(--text-muted); margin-bottom: 30px;">Create a new account or log in to start</p>
+                <button onclick="document.getElementById('authModal').classList.remove('hidden')" class="btn-primary" style="padding: 12px 35px; font-size: 1.1rem; border-radius: 30px; width: auto; box-shadow: 0 4px 15px rgba(187, 134, 252, 0.3);">
+                    <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i> Login / Register
+                </button>
+            </div>
+
+            <!-- 2. Random Community Lists -->
+            <div style="text-align: center; margin-top: 10px;">
+                <h3 style="font-size: 1.6rem; margin-bottom: 20px; color: var(--text-main);"><i class="fas fa-compass" style="color: var(--accent);"></i> Explore Community Lists</h3>
+                <!-- כאן הכנסנו את הקלאס שמסדר אותם בזוגות במובייל -->
+                <div id="randomListsContainer" class="random-lists-grid">
+                    <p style="color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading community lists...</p>
+                </div>
+            </div>
+
+            <!-- 3. What is MyCharacterList? + Screenshot -->
+            <div style="margin-top: 60px; background: var(--card-bg); padding: 40px 20px; border-radius: 20px; border: 1px solid var(--border); text-align: center;">
+                <h2 style="font-size: 2rem; color: var(--accent); margin-bottom: 20px;">What is MyCharacterList?</h2>
+                <p style="font-size: 1.1rem; line-height: 1.6; color: var(--text-muted); max-width: 800px; margin: 0 auto 30px auto;">
+                    MyCharacterList is the ultimate platform to build your own tier lists and rankings for your favorite characters across Anime, Video Games, Movies, Visual Novels, and Books. Join our growing community, share your opinions, discover new media, and see who makes it to the top of the Global Leaderboard!
+                </p>
+                
+                <img src="Screenshot_42.jpg" alt="MyCharacterList Screenshot" style="width: 100%; max-width: 900px; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.6); border: 1px solid var(--border);">
+            </div>
+
         </div>
     `;
-    if (document.getElementById('mobileProfileBtn')) document.getElementById('mobileProfileBtn').classList.add('hidden');
-    if (document.getElementById('shareBtn')) document.getElementById('shareBtn').classList.add('hidden');
+
+    // בקשת הרשימות מהשרת והצגתן במסך
+    try {
+        const res = await fetch('/api/public/random-lists');
+        const container = document.getElementById('randomListsContainer');
+
+        if (res.ok) {
+            const lists = await res.json();
+            if (lists.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-muted);">No public lists available yet.</p>';
+            } else {
+                container.innerHTML = lists.map(l => `
+                    <div class="landing-list-card" onclick="window.location.href='/share.html?id=${l._id}'">
+                        <img src="${l.thumbnail}" onerror="this.src='https://placehold.co/200x300/252525/bb86fc?text=No+Image'">
+                        <div class="landing-list-info">
+                            <h4>${l.name}</h4>
+                            <span><i class="fas fa-layer-group"></i> ${l.itemCount} Characters</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        } else {
+            container.innerHTML = '<p style="color:#ff4444;">Failed to load lists.</p>';
+        }
+    } catch (e) {
+        document.getElementById('randomListsContainer').innerHTML = '<p style="color:#ff4444;">Server connection error.</p>';
+    }
 }
 
 // פונקציה לפתיחת/סגירת התפריט
@@ -1058,9 +1097,16 @@ document.getElementById('authSubmitBtn').onclick = (e) => {
 
 document.getElementById('authSwitch').addEventListener('click', () => { isRegisterMode = !isRegisterMode; updateAuthUI(); });
 function updateAuthUI() {
-    const t = document.getElementById('authTitle'), b = document.getElementById('authSubmitBtn'), s = document.getElementById('authSwitch');
-    t.textContent = isRegisterMode ? "Register" : "Login"; b.textContent = isRegisterMode ? "Register" : "Login";
-    s.textContent = isRegisterMode ? "Have an account? Login." : "Need an account? Register.";
+    const t = document.getElementById('authTitle'),
+        b = document.getElementById('authSubmitBtn'),
+        s = document.getElementById('authSwitch');
+
+    t.textContent = isRegisterMode ? "Register" : "Login";
+    b.textContent = isRegisterMode ? "Register" : "Login";
+
+    s.innerHTML = isRegisterMode
+        ? 'Have an account? <span style="color: var(--accent); font-weight: bold;">Login.</span>'
+        : 'New here? <span style="color: var(--accent); font-weight: bold;">Register.</span>';
 }
 
 document.getElementById('shareBtn').addEventListener('click', () => {
@@ -1197,10 +1243,7 @@ document.querySelectorAll('.close-modal').forEach(btn => {
 });
 
 function setupEvents() {
-    document.getElementById('themeToggle').onclick = () => {
-        document.body.classList.toggle('light-theme');
-    };
-
+   
     document.getElementById('reorderBtn').addEventListener('click', toggleReorderMode);
     document.getElementById('saveOrderBtn').addEventListener('click', saveOrder);
     document.getElementById('addCustomCharBtn').addEventListener('click', openCustomCharModal);
@@ -1312,6 +1355,7 @@ document.getElementById('closeCommModal').onclick = () => document.getElementByI
 // כפתור חזור (מתוך צפייה ברשימות של מישהו)
 document.getElementById('commBackBtn').onclick = () => {
     document.getElementById('commTabsContainer').classList.remove('hidden');
+    document.getElementById('commBackBtn').classList.add('hidden');
     switchCommTab(currentCommTab);
 };
 
@@ -1493,12 +1537,11 @@ async function loadLeaderboard() {
     }
 }
 
-// פונקציית טעינה עצלה למצביעים!
+// פונקציית טעינה עצלה למצביעים (כולל לחיצה על משתמשים)
 window.openVotersModal = async function (charId, charName) {
     document.getElementById('votersModalTitle').innerHTML = `<i class="fas fa-users"></i> Ranked By (${charName})`;
     const listDiv = document.getElementById('votersList');
 
-    // מראה אנימציית טעינה בזמן שהוא מביא את הנתונים
     listDiv.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading users...</div>';
     document.getElementById('votersModal').classList.remove('hidden');
 
@@ -1518,9 +1561,16 @@ window.openVotersModal = async function (charId, charName) {
                 `<img src="${v.avatar}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">` :
                 `<i class="fas fa-user-circle" style="font-size: 35px; color: var(--text-muted);"></i>`;
 
+            // לוגיקת לחיצה: רק אם יש userId (כלומר משתמש פומבי) נאפשר לחיצה
+            const isClickable = v.userId ? true : false;
+            const cursorStyle = isClickable ? 'cursor: pointer;' : '';
+            // סוגרים את חלון ההצבעות, פותחים את חלון הקהילה ומציגים את המשתמש
+            const clickAction = isClickable ? `onclick="document.getElementById('votersModal').classList.add('hidden'); document.getElementById('communityModal').classList.remove('hidden'); showUserLists('${v.userId}', '${v.username.replace(/'/g, "\\'")}', '${v.avatar || ''}');"` : '';
+            const hoverEffect = isClickable ? `onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'"` : '';
+
             listDiv.innerHTML += `
                 <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
-                    <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px; transition: 0.2s; ${cursorStyle}" ${clickAction} ${hoverEffect}>
                         ${avatarHtml}
                         <span style="font-weight: bold; color: var(--text-main);">${v.username || 'Unknown'}</span>
                     </div>
@@ -1539,14 +1589,21 @@ window.openVotersModal = async function (charId, charName) {
 async function showUserLists(userId, username, avatar) {
     const grid = document.getElementById('communityGrid');
     const commControls = document.getElementById('commControls');
+    const sortControls = document.getElementById('leaderboardSortControls');
     const tabsContainer = document.getElementById('commTabsContainer');
     const backBtn = document.getElementById('commBackBtn');
     const title = document.getElementById('communityTitle');
 
-    // מסתיר טאבים וחיפוש כשצופים במשתמש ספציפי
+    // מסתיר טאבים, חיפוש, ומיון כשצופים במשתמש ספציפי
     if (tabsContainer) tabsContainer.classList.add('hidden');
     if (commControls) commControls.style.display = 'none';
+    if (sortControls) sortControls.style.display = 'none';
     if (backBtn) backBtn.classList.remove('hidden');
+
+    // --- התיקון הקריטי: מכריחים את החלון לחזור למצב קוביות (Grid) ---
+    grid.style.display = 'grid';
+    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
+    grid.style.gap = '15px';
 
     // לוגיקת האווטאר המוגדל
     let displayAvatar = avatar;
@@ -1581,14 +1638,19 @@ async function showUserLists(userId, username, avatar) {
         lists.forEach(list => {
             const div = document.createElement('div');
             div.className = 'comm-list-card';
+
+            // עיצוב משופר: מונע שמות רשימות ארוכים מלשבור את הקובייה
             div.innerHTML = `
-                <h4 style="color:var(--accent); margin-bottom: 5px; font-size: 1.1rem;">${list.name}</h4>
+                <h4 style="color:var(--accent); margin-bottom: 5px; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${list.name}">${list.name}</h4>
                 <p style="color:var(--text-muted); font-size: 0.9rem;">${list.items ? list.items.length : 0} items</p>
             `;
+
             div.onclick = () => window.open(`/share.html?id=${list._id}`, '_blank');
             grid.appendChild(div);
         });
-    } catch (e) { grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Error loading lists.</p>'; }
+    } catch (e) {
+        grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Error loading lists.</p>';
+    }
 }
 
 window.toggleFollow = async function (e, userId) {

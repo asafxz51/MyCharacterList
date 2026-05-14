@@ -340,7 +340,6 @@
                     style="position: absolute; top: 40px; right: 0; width: 280px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; z-index: 3000; max-height: 400px; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.4);">
                 </div>
             </div>
-            <button id="themeToggle"><i class="fas fa-moon"></i></button>
         </div>
     </nav>
 
@@ -471,7 +470,8 @@
                     style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888; font-size: 0.9rem;"></i>
             </div>
             <button id="authSubmitBtn" class="btn-primary">Login</button>
-            <p id="authSwitch" style="margin-top:15px; cursor:pointer; color:#888;">Need an account? Register.</p>
+            <p id="authSwitch" style="margin-top:10px; cursor:pointer; color:#888;">New here? <span
+                    style="color: var(--accent); font-weight: bold;">Register.</span></p>
         </div>
     </div>
 
@@ -570,7 +570,7 @@
         let visibleNotifsLimit = 5, currentNotifsData = [], visibleCommentsLimit = 10;
         let isReg = false; // הגדרת משתנה ההרשמה
 
-        document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light-theme');
+      
 
         function getRatingDisplay(rating, type) {
             if (rating === 0) return 'No Grade';
@@ -1057,10 +1057,14 @@
             else { document.getElementById('authModal').classList.remove('hidden'); }
         };
         document.getElementById('authSwitch').onclick = () => {
-            isReg = !isReg;
-            document.getElementById('authTitle').innerText = isReg ? "Register" : "Login";
-            document.getElementById('authSubmitBtn').innerText = isReg ? "Register" : "Login";
-        };
+                isReg = !isReg;
+                document.getElementById('authTitle').innerText = isReg ? "Register" : "Login";
+                document.getElementById('authSubmitBtn').innerText = isReg ? "Register" : "Login";
+                document.getElementById('authSwitch').innerHTML = isReg
+                    ? 'Have an account? <span style="color: var(--accent); font-weight: bold;">Login.</span>'
+                    : 'New here? <span style="color: var(--accent); font-weight: bold;">Register.</span>';
+            };
+
         document.getElementById('authSubmitBtn').onclick = (e) => { e.preventDefault(); handleAuthAction(); };
         document.getElementById('closeAuth').onclick = () => document.getElementById('authModal').classList.add('hidden');
 
@@ -1099,9 +1103,10 @@
 
         document.getElementById('closeCommModal').onclick = () => document.getElementById('communityModal').classList.add('hidden');
 
-        // כפתור חזור (מתוך צפייה ברשימות של מישהו)
+     // כפתור חזור (מתוך צפייה ברשימות של מישהו)
         document.getElementById('commBackBtn').onclick = () => {
             document.getElementById('commTabsContainer').classList.remove('hidden');
+            document.getElementById('commBackBtn').classList.add('hidden'); // מוודא שכפתור חזור נעלם
             switchCommTab(currentCommTab);
         };
 
@@ -1285,34 +1290,40 @@
         }
     }
 
-    // פונקציית טעינה עצלה למצביעים!
-    window.openVotersModal = async function (charId, charName) {
-        document.getElementById('votersModalTitle').innerHTML = `<i class="fas fa-users"></i> Ranked By (${charName})`;
-        const listDiv = document.getElementById('votersList');
+    // פונקציית טעינה עצלה למצביעים (כולל לחיצה על משתמשים)
+        window.openVotersModal = async function (charId, charName) {
+            document.getElementById('votersModalTitle').innerHTML = `<i class="fas fa-users"></i> Ranked By (${charName})`;
+            const listDiv = document.getElementById('votersList');
 
-        // מראה אנימציית טעינה בזמן שהוא מביא את הנתונים
-        listDiv.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading users...</div>';
-        document.getElementById('votersModal').classList.remove('hidden');
+            listDiv.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading users...</div>';
+            document.getElementById('votersModal').classList.remove('hidden');
 
-        try {
-            const res = await fetch(`/api/leaderboard/voters/${charId}`);
-            const voters = await res.json();
+            try {
+                const res = await fetch(`/api/leaderboard/voters/${charId}`);
+                const voters = await res.json();
 
-            listDiv.innerHTML = '';
+                listDiv.innerHTML = '';
 
-            if (!voters || voters.length === 0) {
-                listDiv.innerHTML = '<div style="text-align:center; color:#888;">No users found.</div>';
-                return;
-            }
+                if (!voters || voters.length === 0) {
+                    listDiv.innerHTML = '<div style="text-align:center; color:#888;">No users found.</div>';
+                    return;
+                }
 
-            voters.forEach(v => {
-                const avatarHtml = (v.avatar && v.avatar.trim() !== "") ?
-                    `<img src="${v.avatar}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">` :
-                    `<i class="fas fa-user-circle" style="font-size: 35px; color: var(--text-muted);"></i>`;
+                voters.forEach(v => {
+                    const avatarHtml = (v.avatar && v.avatar.trim() !== "") ?
+                        `<img src="${v.avatar}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">` :
+                        `<i class="fas fa-user-circle" style="font-size: 35px; color: var(--text-muted);"></i>`;
 
-                listDiv.innerHTML += `
+                    // לוגיקת לחיצה: רק אם יש userId (כלומר משתמש פומבי) נאפשר לחיצה
+                    const isClickable = v.userId ? true : false;
+                    const cursorStyle = isClickable ? 'cursor: pointer;' : '';
+                    // סוגרים את חלון ההצבעות, פותחים את חלון הקהילה ומציגים את המשתמש
+                    const clickAction = isClickable ? `onclick="document.getElementById('votersModal').classList.add('hidden'); document.getElementById('communityModal').classList.remove('hidden'); showUserLists('${v.userId}', '${v.username.replace(/'/g, "\\'")}', '${v.avatar || ''}');"` : '';
+                    const hoverEffect = isClickable ? `onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'"` : '';
+
+                    listDiv.innerHTML += `
                 <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
-                    <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px; transition: 0.2s; ${cursorStyle}" ${clickAction} ${hoverEffect}>
                         ${avatarHtml}
                         <span style="font-weight: bold; color: var(--text-main);">${v.username || 'Unknown'}</span>
                     </div>
@@ -1321,67 +1332,79 @@
                     </div>
                 </div>
             `;
-            });
-        } catch (e) {
-            listDiv.innerHTML = '<div style="color:#ff4444; text-align:center;">Error loading voters.</div>';
+                });
+            } catch (e) {
+                listDiv.innerHTML = '<div style="color:#ff4444; text-align:center;">Error loading voters.</div>';
+            }
         }
-    }
 
         // פתיחת הפרופיל של מישהו
-        async function showUserLists(userId, username, avatar) {
-            const grid = document.getElementById('communityGrid');
-            const commControls = document.getElementById('commControls');
-            const tabsContainer = document.getElementById('commTabsContainer');
-            const backBtn = document.getElementById('commBackBtn');
-            const title = document.getElementById('communityTitle');
+            async function showUserLists(userId, username, avatar) {
+                const grid = document.getElementById('communityGrid');
+                const commControls = document.getElementById('commControls');
+                const sortControls = document.getElementById('leaderboardSortControls');
+                const tabsContainer = document.getElementById('commTabsContainer');
+                const backBtn = document.getElementById('commBackBtn');
+                const title = document.getElementById('communityTitle');
 
-            // מסתיר טאבים וחיפוש כשצופים במשתמש ספציפי
-            if (tabsContainer) tabsContainer.classList.add('hidden');
-            if (commControls) commControls.style.display = 'none';
-            if (backBtn) backBtn.classList.remove('hidden');
+                // מסתיר טאבים, חיפוש, ומיון כשצופים במשתמש ספציפי
+                if (tabsContainer) tabsContainer.classList.add('hidden');
+                if (commControls) commControls.style.display = 'none';
+                if (sortControls) sortControls.style.display = 'none';
+                if (backBtn) backBtn.classList.remove('hidden');
 
-            // לוגיקת האווטאר המוגדל
-            let displayAvatar = avatar;
-            if ((!displayAvatar || displayAvatar === "") && typeof state !== 'undefined' && state.userId === userId) {
-                displayAvatar = document.getElementById('navAvatar')?.src;
-            }
+                // --- התיקון הקריטי: מכריחים את החלון לחזור למצב קוביות (Grid) ---
+                grid.style.display = 'grid';
+                grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
+                grid.style.gap = '15px';
 
-            const isImage = displayAvatar && (displayAvatar.startsWith('http') || displayAvatar.startsWith('data:image'));
-            const headerAvatarHtml = isImage ?
-                `<img src="${displayAvatar}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--accent); margin-bottom: 15px; display: block; background: var(--bg-color); padding: 2px;">` :
-                `<i class="fas fa-user-circle" style="font-size: 100px; margin-bottom: 15px; color: var(--text-muted); display: block;"></i>`;
+                // לוגיקת האווטאר המוגדל
+                let displayAvatar = avatar;
+                if ((!displayAvatar || displayAvatar === "") && typeof state !== 'undefined' && state.userId === userId) {
+                    displayAvatar = document.getElementById('navAvatar')?.src;
+                }
 
-            title.innerHTML = `
+                const isImage = displayAvatar && (displayAvatar.startsWith('http') || displayAvatar.startsWith('data:image'));
+                const headerAvatarHtml = isImage ?
+                    `<img src="${displayAvatar}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--accent); margin-bottom: 15px; display: block; background: var(--bg-color); padding: 2px;">` :
+                    `<i class="fas fa-user-circle" style="font-size: 100px; margin-bottom: 15px; color: var(--text-muted); display: block;"></i>`;
+
+                title.innerHTML = `
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin-bottom: 10px;">
             ${headerAvatarHtml}
             <div style="font-size: 1.5rem; font-weight: bold; color: var(--text-main);">${username}'s Lists</div>
         </div>
     `;
 
-            grid.innerHTML = '<p style="text-align:center; padding: 20px; grid-column: 1/-1;">Loading lists...</p>';
+                grid.innerHTML = '<p style="text-align:center; padding: 20px; grid-column: 1/-1;">Loading lists...</p>';
 
-            try {
-                const res = await fetch(`/api/users/${userId}/lists`);
-                const lists = await res.json();
-                grid.innerHTML = '';
+                try {
+                    const res = await fetch(`/api/users/${userId}/lists`);
+                    const lists = await res.json();
+                    grid.innerHTML = '';
 
-                if (!lists || lists.length === 0) {
-                    grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding: 20px; color: var(--text-muted);">This user has no public lists.</p>';
-                    return;
-                }
+                    if (!lists || lists.length === 0) {
+                        grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding: 20px; color: var(--text-muted);">This user has no public lists.</p>';
+                        return;
+                    }
 
-                lists.forEach(list => {
-                    const div = document.createElement('div');
-                    div.className = 'comm-list-card';
-                    div.innerHTML = `
-                <h4 style="color:var(--accent); margin-bottom: 5px; font-size: 1.1rem;">${list.name}</h4>
+                    lists.forEach(list => {
+                        const div = document.createElement('div');
+                        div.className = 'comm-list-card';
+
+                        // עיצוב משופר: מונע שמות רשימות ארוכים מלשבור את הקובייה
+                        div.innerHTML = `
+                <h4 style="color:var(--accent); margin-bottom: 5px; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${list.name}">${list.name}</h4>
                 <p style="color:var(--text-muted); font-size: 0.9rem;">${list.items ? list.items.length : 0} items</p>
             `;
-                    div.onclick = () => window.open(`/share.html?id=${list._id}`, '_blank');
-                    grid.appendChild(div);
-                });
-            } catch (e) { grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Error loading lists.</p>'; }
-        }
+
+                        div.onclick = () => window.open(`/share.html?id=${list._id}`, '_blank');
+                        grid.appendChild(div);
+                    });
+                } catch (e) {
+                    grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Error loading lists.</p>';
+                }
+            }
 
         window.toggleFollow = async function (e, userId) {
             e.stopPropagation();

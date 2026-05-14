@@ -1659,3 +1659,100 @@ select {
   }
 }
 
+/* =====================================
+   LANDING PAGE (LOGGED OUT)
+   ===================================== */
+
+.hero-title {
+  font-size: 4rem;
+  color: var(--accent);
+  margin-bottom: 10px;
+  font-weight: 900;
+}
+
+.hero-subtitle {
+  font-size: 1.4rem;
+  color: var(--text-main);
+  margin-bottom: 15px;
+}
+
+.random-lists-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+  padding: 0 20px;
+}
+
+.landing-list-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 160px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+
+.landing-list-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(187, 134, 252, 0.3);
+  border-color: var(--accent);
+}
+
+.landing-list-card img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+}
+
+.landing-list-info {
+  padding: 12px;
+  text-align: center;
+}
+
+.landing-list-info h4 {
+  font-size: 1.05rem;
+  margin-bottom: 5px;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.landing-list-info span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 600px) {
+  .hero-title {
+    font-size: 2.3rem;
+    /* כותרת קומפקטית יותר */
+  }
+
+  .hero-subtitle {
+    font-size: 1.1rem;
+  }
+
+  .random-lists-grid {
+    display: grid;
+    /* עוברים ממצב שורה למצב רשת (גריד) */
+    grid-template-columns: repeat(2, 1fr);
+    /* בדיוק 2 עמודות שוות */
+    gap: 12px;
+    /* רווח קטן יותר בין הכרטיסיות */
+    padding: 0 10px;
+  }
+
+  .landing-list-card {
+    width: 100%;
+    /* ממלא את העמודה במלואה */
+  }
+
+  .landing-list-card img {
+    height: 160px;
+    /* מקצר קצת את גובה התמונה כדי שלא תתפוס חצי מסך */
+  }
+}
+
