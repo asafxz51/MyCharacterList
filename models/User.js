@@ -6,6 +6,9 @@ const UserSchema = new mongoose.Schema({
  following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
  role: { type: String, default: 'user' },
  avatar: { type: String, default: '' },
+ banner: { type: String, default: '' }, 
+ bio: { type: String, default: 'No bio written yet.' }, 
+ featuredListId: { type: String, default: null }, 
  notifications: [{
   type: { type: String },
   fromUser: String,

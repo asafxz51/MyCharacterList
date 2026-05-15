@@ -11,6 +11,25 @@ let visibleIndexCommentsLimit = 10;
 async function init() {
     await checkLoginStatus();
     setupEvents();
+
+    // קריאת הכתובת כדי לדעת אם הגענו מהפרופיל ואיזה חלון לפתוח
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+
+    if (tab === 'community') {
+        document.getElementById('communityModal').classList.remove('hidden');
+        document.getElementById('commTabsContainer').classList.remove('hidden');
+        document.getElementById('commBackBtn').classList.add('hidden');
+        switchCommTab('users');
+    } else if (tab === 'leaderboard') {
+        document.getElementById('communityModal').classList.remove('hidden');
+        document.getElementById('commTabsContainer').classList.remove('hidden');
+        document.getElementById('commBackBtn').classList.add('hidden');
+        switchCommTab('leaderboard');
+    } else if (tab === 'admin') {
+        document.getElementById('adminModal').classList.remove('hidden');
+        switchAdminTab('users');
+    }
 }
 
 async function checkLoginStatus() {
@@ -32,21 +51,18 @@ async function checkLoginStatus() {
 
 
             // --- טיפול באווטאר בנאב-בר ---
-            const navAvatar = document.getElementById('navAvatar');
-            const defaultIcon = document.getElementById('navDefaultIcon');
-            const mobProfileBtn = document.getElementById('mobileProfileBtn');
-            if (document.getElementById('mobileProfileBtn')) {
-                document.getElementById('mobileProfileBtn').classList.remove('hidden');
-            }
-            // אם יש לינק תקין (לא ריק ולא שבור)
-            if (data.avatar && data.avatar.trim() !== "") {
-                navAvatar.src = data.avatar;
-                navAvatar.classList.remove('hidden');
-                if (defaultIcon) defaultIcon.classList.add('hidden');
-            } else {
-                navAvatar.classList.add('hidden');
-                if (defaultIcon) defaultIcon.classList.remove('hidden');
-            }
+            // const navAvatar = document.getElementById('navAvatar');
+            // const defaultIcon = document.getElementById('navDefaultIcon');
+           
+            // // אם יש לינק תקין (לא ריק ולא שבור)
+            // if (data.avatar && data.avatar.trim() !== "") {
+            //     navAvatar.src = data.avatar;
+            //     navAvatar.classList.remove('hidden');
+            //     if (defaultIcon) defaultIcon.classList.add('hidden');
+            // } else {
+            //     navAvatar.classList.add('hidden');
+            //     if (defaultIcon) defaultIcon.classList.remove('hidden');
+            // }
 
             if (menuBtn) menuBtn.classList.remove('hidden');
 
@@ -55,8 +71,12 @@ async function checkLoginStatus() {
                 sessionStorage.setItem('entryLogged', 'true');
             }
 
-            if (nameLabel) nameLabel.textContent = data.username;
-            if (userChip) userChip.classList.remove('hidden');
+            // if (nameLabel) nameLabel.textContent = data.username;
+            // if (userChip) userChip.classList.remove('hidden');
+            // document.getElementById('myProfileLink').onclick = () => {
+            //     window.location.href = `/profile.html?user=${data.username}`;
+            // };
+        
 
             if (authBtn) {
                 authBtn.textContent = "Logout";
@@ -64,6 +84,11 @@ async function checkLoginStatus() {
             }
 
             if (data.role === 'admin' && adminBtn) adminBtn.classList.remove('hidden');
+            const sidebarProfileBtn = document.getElementById('sidebarProfileBtn');
+            if (sidebarProfileBtn) {
+                sidebarProfileBtn.classList.remove('hidden');
+                sidebarProfileBtn.onclick = () => window.location.href = `/profile.html?user=${data.username}`;
+            }
 
             if (document.querySelector('.sidebar')) document.querySelector('.sidebar').style.display = 'flex';
             if (createBtn) createBtn.style.display = 'block';
@@ -72,7 +97,7 @@ async function checkLoginStatus() {
             if (document.getElementById('notifArea')) {
                 document.getElementById('notifArea').classList.remove('hidden');
             }
-            if (document.getElementById('mobileProfileBtn')) document.getElementById('mobileProfileBtn').classList.remove('hidden');
+          
             if (document.getElementById('shareBtn')) document.getElementById('shareBtn').classList.remove('hidden');
 
             fetchNotifications();
@@ -92,15 +117,13 @@ async function checkLoginStatus() {
 
 async function showLoggedOutState() {
     const authBtn = document.getElementById('authBtnNav');
-    const elementsToHide = ['mobileProfileBtn', 'notifArea', 'adminBtn', 'shareBtn', 'userDisplay'];
+    const elementsToHide = ['mobileProfileBtn', 'notifArea', 'adminBtn', 'shareBtn', 'userDisplay', 'sidebarProfileBtn'];
     elementsToHide.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
     });
     const menuBtn = document.getElementById('mobileMenuBtn');
     if (menuBtn) menuBtn.classList.add('hidden');
-    const mobProfileBtn = document.getElementById('mobileProfileBtn');
-    if (mobProfileBtn) mobProfileBtn.classList.add('hidden');
 
     document.getElementById('userDisplay').style.display = 'none';
     authBtn.textContent = "Login";
@@ -302,7 +325,17 @@ function renderNotifDropdownUI() {
 async function fetchLists() {
     const res = await fetch('/api/lists');
     state.lists = await res.json();
-    if (state.lists.length > 0 && !state.activeListId) state.activeListId = state.lists[0]._id;
+
+    const params = new URLSearchParams(window.location.search);
+    const requestedId = params.get('id');
+
+    if (requestedId && state.lists.some(l => l._id === requestedId)) {
+        state.activeListId = requestedId;
+    }
+    else if (state.lists.length > 0 && !state.activeListId) {
+        state.activeListId = state.lists[0]._id;
+    }
+
     renderSidebar();
     renderCurrentList();
 }
@@ -1346,9 +1379,16 @@ let currentCommTab = 'users';
 // פתיחת מודאל הקהילה
 document.getElementById('communityBtn').onclick = () => {
     document.getElementById('communityModal').classList.remove('hidden');
-    document.getElementById('commTabsContainer').classList.remove('hidden'); // מוודאים שהטאבים גלויים
+    document.getElementById('commTabsContainer').classList.remove('hidden'); 
     document.getElementById('commBackBtn').classList.add('hidden');
-    switchCommTab(currentCommTab); // טוען את הטאב האחרון שהיינו בו
+    switchCommTab(currentCommTab); 
+};
+
+document.getElementById('openLeaderboardBtn').onclick = () => {
+    document.getElementById('communityModal').classList.remove('hidden');
+    document.getElementById('commTabsContainer').classList.remove('hidden');
+    document.getElementById('commBackBtn').classList.add('hidden');
+    switchCommTab('leaderboard'); 
 };
 
 document.getElementById('closeCommModal').onclick = () => document.getElementById('communityModal').classList.add('hidden');
@@ -1438,7 +1478,7 @@ async function loadCommunityUsers() {
             `;
 
             div.onclick = (e) => {
-                if (!e.target.closest('.follow-btn')) showUserLists(u._id, u.username, u.avatar);
+                if (!e.target.closest('.follow-btn')) window.location.href = `/profile.html?user=${u.username}`;
             };
             grid.appendChild(div);
         });
@@ -1921,7 +1961,7 @@ function renderIndexComments(comments, ownerId) {
 
         div.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-                <div style="display:flex; align-items:center; cursor:pointer;" onclick="showUserLists('${c.userId}', '${c.username}', '${c.avatar || ''}'); document.getElementById('communityModal').classList.remove('hidden');">
+                <div style="display:flex; align-items:center; cursor:pointer;" onclick="window.location.href='/profile.html?user=${c.username}'">
                     ${avatarHtml}
                     <b style="color:var(--accent); font-weight:bold; font-size: 1rem;">${c.username}${adminTag}</b>
                 </div>
@@ -1950,7 +1990,7 @@ function renderIndexComments(comments, ownerId) {
     <div style="margin-bottom:10px; font-size:0.85rem; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; position:relative;">
         <div style="display:flex; align-items:center; margin-bottom:8px;">
             ${rAvatar}
-            <b style="color:var(--accent); cursor:pointer;" onclick="showUserLists('${r.userId}', '${r.username}'); document.getElementById('communityModal').classList.remove('hidden');">${r.username}${rAdminTag}</b> 
+            <b style="color:var(--accent); cursor:pointer;" onclick="window.location.href='/profile.html?user=${r.username}'"">${r.username}${rAdminTag}</b> 
             ${r.replyingTo ? `<span style="color:var(--text-muted); font-size:0.7rem; margin-left:5px;">replied to @${r.replyingTo}</span>` : ''}
         </div>
         <p style="margin:5px 0; color:var(--text-main); padding-left: 42px;">${r.text}</p>

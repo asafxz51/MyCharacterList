@@ -14,37 +14,26 @@
 <body class="dark-theme">
 
   <nav class="navbar">
-    <!-- <div style="display: flex; align-items: center; gap: 10px;"> -->
-
     <button id="mobileMenuBtn" class="mobile-only hidden"
       style="background: none; border: none; color: var(--text-main); font-size: 1.5rem; cursor: pointer;">
       <i class="fas fa-bars"></i>
     </button>
-
     <a href="/" style="text-decoration: none;">
       <div class="logo">MyCharacterList</div>
     </a>
   
-    <div class="nav-identity" onclick="openProfileModal()" style="cursor: pointer;" title="Edit Avatar">
-      <span id="userDisplay" class="user-chip hidden">
-        <img id="navAvatar" src="" class="hidden"
-          style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; margin-right: 5px; border: 1px solid var(--accent);">
-        <i id="navDefaultIcon" class="fas fa-user-circle"></i>
-        <span id="usernameLabel"></span>
-      </span>
-    </div>
+    <!-- לחיצה על השם לוקחת אותך לעמוד הפרופיל שלך -->
+
   
     <div class="nav-controls">
       <button id="authBtnNav">Login</button>
-  
-      <button id="adminBtn" class="icon-btn hidden" title="Admin Panel"><i class="fas fa-crown"
-          style="color: gold;"></i></button>
-  
-    <button id="mobileProfileBtn" class="mobile-only-btn hidden" onclick="openProfileModal()">
-      <i class="fas fa-user"></i>
-    </button>
-  
-      <button id="communityBtn" title="View Users"><i class="fas fa-users"></i></button>
+    
+      <!-- הנה כפתור השיתוף שחזר למקומו! -->
+      <button id="shareBtn" class="hidden" title="Share List"
+        style="background: none; border: 1px solid var(--border); color: var(--text-main); height: 38px; padding: 0 12px; border-radius: 6px; cursor: pointer;">
+        <i class="fas fa-share-alt"></i>
+      </button>
+    
       <div id="notifArea" class="hidden" style="position: relative; display: inline-block;">
         <button id="notifBtn" title="Notifications"><i class="fas fa-bell"></i></button>
         <span id="notifBadge" class="hidden"
@@ -53,10 +42,6 @@
           style="position: absolute; top: 40px; right: 0; width: 280px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; z-index: 3000; max-height: 400px; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.4);">
         </div>
       </div>
-      <button id="shareBtn" class="hidden" title="Share List">
-    <i class="fas fa-share-alt"></i>
-</button>
-      
     </div>
   </nav>
 
@@ -66,6 +51,28 @@
 
   <div class="container" id="appContainer">
     <aside class="sidebar">
+      <div
+        style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid var(--border);">
+      <button id="sidebarProfileBtn" class="btn-primary hidden"
+        style="background: #333 !important; color: var(--text-main) !important; border: 1px solid var(--border) !important; display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px; box-shadow: none !important;">
+        <i class="fas fa-user" style="color: var(--accent);"></i> My Profile
+      </button>
+        
+          <button id="communityBtn" class="btn-primary"
+            style="background: #333; color: white; border: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px;">
+            <i class="fas fa-users" style="color: var(--accent);"></i> Community
+          </button>
+          <!-- כפתור חדש שיפתח את הלידרבורד ישירות -->
+          <button id="openLeaderboardBtn" class="btn-primary"
+            style="background: #333; color: white; border: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px;">
+            <i class="fas fa-trophy" style="color: gold;"></i> Leaderboard
+          </button>
+          <!-- כפתור אדמין -->
+          <button id="adminBtn" class="btn-primary hidden"
+            style="background: rgba(255, 215, 0, 0.1); color: gold; border: 1px solid gold; display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px;">
+            <i class="fas fa-crown"></i> Admin Panel
+          </button>
+        </div>
       <div class="sidebar-header">
         <h3>My Lists</h3>
         <button id="createListBtn"><i class="fas fa-plus"></i></button>

@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Profile - MyCharacterList</title>
+ <link rel="stylesheet" href="style.css">
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+   <link rel="icon" type="image/png" href="/icon.png">
+
+ <style>
+  .main-content {
+   padding: 0 !important;
+  }
+
+  .profile-banner {
+            width: 100%;
+            height: 280px;
+            min-height: 280px; 
+            flex-shrink: 0;    
+            background-color: #2a2a2a;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            border-bottom: 1px solid var(--border);
+        }
+
+  /* 1. הרחבת הפרופיל ל-1600px! */
+  .profile-container {
+   max-width: 1600px;
+   margin: 0 auto;
+   padding: 0 40px;
+  }
+
+  .profile-header-layout {
+   display: flex;
+   justify-content: space-between;
+   align-items: flex-start;
+   margin-top: -75px;
+   gap: 30px;
+   margin-bottom: 40px;
+  }
+
+  .profile-user-info {
+   display: flex;
+   gap: 25px;
+   flex: 1;
+   align-items: flex-start;
+  }
+
+  .profile-avatar-wrapper {
+   position: relative;
+   width: 150px;
+   height: 150px;
+   border-radius: 50%;
+   border: 6px solid var(--bg-color);
+   background: var(--card-bg);
+   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+   flex-shrink: 0;
+   z-index: 10;
+  }
+
+  .profile-avatar {
+   width: 100%;
+   height: 100%;
+   border-radius: 50%;
+   object-fit: cover;
+  }
+
+  .profile-text-content {
+   padding-top: 85px;
+   flex: 1;
+   min-width: 0;
+   position: relative;
+   /* חובה כדי שהעריכה תצוף מעל זה! */
+  }
+
+  .profile-name {
+   font-size: 2.2rem;
+   margin: 0 0 10px 0;
+   color: var(--text-main);
+   font-weight: 900;
+  }
+
+  .profile-bio {
+   color: var(--text-muted);
+   line-height: 1.6;
+   white-space: pre-wrap;
+   word-break: break-word;
+   margin: 0;
+  }
+
+  .profile-stats {
+   padding-top: 85px;
+   display: flex;
+   gap: 25px;
+  }
+
+ /* ימין: סטטיסטיקות מעודכנות (אופקיות) */
+        .stats-col {
+            margin-top: 85px; /* יישור עם הביו והתמונה */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: flex-end; /* מיישר את הכל לימין */
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 25px; /* רווח בין כל נתון (Followers / Likes / Ranked) */
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column; /* מספר למעלה, תווית למטה */
+            align-items: center;
+            text-align: center;
+        }
+        
+        .stat-num { font-size: 1.6rem; font-weight: bold; color: var(--accent); }
+        .stat-label { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; margin-top: 5px; }
+
+  .profile-body-layout {
+   display: flex;
+   gap: 40px;
+   align-items: flex-start;
+   padding-bottom: 60px;
+  }
+
+  /* עמודת ה-Featured (מורחבת קצת כדי שיכנסו דמויות) */
+  .featured-col {
+   width: 320px;
+   flex-shrink: 0;
+   background: var(--card-bg);
+   border: 1px solid var(--border);
+   border-radius: 12px;
+   padding: 20px;
+   position: relative;
+  }
+
+  /* 3. עיצוב מיני-דמויות ל-Featured */
+  .featured-char-row {
+   display: flex;
+   align-items: center;
+   gap: 12px;
+   padding: 8px 0;
+   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .featured-char-row:last-child {
+   border-bottom: none;
+  }
+
+  .featured-char-img {
+   width: 45px;
+   height: 45px;
+   border-radius: 8px;
+   object-fit: cover;
+   border: 1px solid var(--border);
+  }
+
+  .featured-char-name {
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+            min-width: 0; /* התיקון הקריטי: מכריח את הטקסט להיחתך */
+            margin-right: 10px; /* נותן מרווח נשימה קטן בין השם לציון */
+        }
+        
+        .featured-char-rating {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #FFD700;
+            background: rgba(255,215,0,0.1);
+            padding: 3px 8px;
+            border-radius: 6px;
+            flex-shrink: 0; /* התיקון הקריטי: מונע מהציון להימעך או להידחף החוצה */
+        }
+
+  .lists-col {
+   flex: 1;
+   min-width: 0;
+  }
+
+ .lists-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+            gap: 15px;
+            padding-bottom: 50px;
+        }
+
+  .edit-pen {
+   position: absolute;
+   background: var(--accent);
+   color: white;
+   border: none;
+   width: 32px;
+   height: 32px;
+   border-radius: 50%;
+   cursor: pointer;
+   display: none;
+   justify-content: center;
+   align-items: center;
+   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+   transition: 0.2s;
+   z-index: 20;
+   font-size: 0.9rem;
+  }
+
+  .edit-pen:hover {
+   transform: scale(1.1);
+   background: #9959e0;
+  }
+
+  .comm-list-card {
+  background: var(--card-bg);
+  padding: 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  text-align: center;
+  transition: all 0.2s ease; /* מוודא שהאנימציה תהיה חלקה וזורמת */
+}
+
+.comm-list-card:hover {
+  border-color: var(--accent);
+  transform: scale(1.03) translateY(-3px); /* מגדיל ב-3% ומרים קצת למעלה */
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(187, 134, 252, 0.15); /* צל עמוק עם נגיעה סגולה */
+  z-index: 2; /* מוודא שהכרטיסייה קופצת "מעל" שאר הכרטיסיות */
+}
+
+ /* =====================================
+           התאמה קומפקטית ומושלמת למסכי מובייל
+           ===================================== */
+        @media (max-width: 900px) {
+            /* 1. הקטנה משמעותית של הבאנר */
+            .profile-banner {
+                height: 120px !important;
+                min-height: 120px !important;
+            }
+            .profile-container {
+                padding: 0 15px;
+            }
+
+            /* 2. סידור קומפקטי של כל החלק העליון */
+            .profile-header-layout { 
+                flex-direction: column; 
+                align-items: center; 
+                margin-top: 10px; 
+                margin-bottom: 20px;
+                gap: 10px;
+            }
+            
+            .profile-user-info { 
+                flex-direction: column; 
+                align-items: center; 
+                text-align: center; 
+                gap: 5px;
+                width: 100%;
+            }
+            
+            /* 3. הקטנת האווטאר והעטים */
+            .profile-avatar-wrapper { 
+                width: 90px;
+                height: 90px;
+                margin-top: -45px; 
+                border-width: 3px;
+            }
+            
+            .edit-pen {
+                width: 24px;
+                height: 24px;
+                font-size: 0.75rem;
+            }
+            
+            /* 4. הקטנת הפונטים (שם המשתמש והביו) */
+            .profile-text-content { 
+                padding-top: 0; 
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .profile-name {
+                font-size: 1.6rem;
+                margin-bottom: 5px;
+            }
+            
+            #profileBio { 
+                text-align: center; 
+                font-size: 0.9rem;
+                line-height: 1.4;
+            }
+
+            #bioDisplayWrapper, #bioEditMode {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+
+            /* 5. קיווץ הסטטיסטיקות לשורה אחת מסודרת */
+            .stats-col {
+                width: 100%;
+                margin-top: 5px;
+                align-items: center;
+            }
+            
+            .stats-row {
+                width: 100%;
+                justify-content: space-evenly;
+                gap: 10px;
+            }
+
+            .stat-num {
+                font-size: 1.2rem; /* מספרים עדינים יותר */
+            }
+
+            .stat-label {
+                font-size: 0.7rem; /* טקסט תווית קטן יותר */
+                margin-top: 2px;
+            }
+            
+            #actionButtons {
+                justify-content: center !important; 
+                margin-top: 15px !important;
+            }
+
+            /* 6. סידור החלק התחתון (רשימות) */
+            .profile-body-layout { 
+                flex-direction: column; 
+                gap: 20px;
+            }
+            
+            .featured-col { 
+                width: 100%; 
+                padding: 15px;
+            }
+            
+            /* מכריח בדיוק 2 רשימות בכל שורה במובייל */
+            .lists-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 10px;
+            }
+
+            /* מקטין טיפה את גובה תמונת הכריכה שיתאים לרוחב החדש במובייל */
+            .comm-list-card img {
+                height: 140px !important; 
+            }
+            
+            /* מקטין מעט את הטקסט בתוך הכרטיסיות במובייל כדי שלא יימעך */
+            .comm-list-card h4 {
+                font-size: 0.9rem !important;
+            }
+        }
+ </style>
+</head>
+
+<body class="dark-theme">
+
+ <nav class="navbar">
+  <button id="mobileMenuBtn" class="mobile-only hidden"
+   style="background: none; border: none; color: var(--text-main); font-size: 1.5rem; cursor: pointer; margin-right: 15px;">
+   <i class="fas fa-bars"></i>
+  </button>
+  <a href="/" style="text-decoration: none;">
+   <div class="logo">MyCharacterList</div>
+  </a>
+
+
+
+  <div class="nav-controls">
+   <button id="authBtnNav" onclick="window.location.href='/'">Login</button>
+   <div id="notifArea" class="hidden" style="position: relative; display: inline-block;">
+    <button id="notifBtn" title="Notifications"><i class="fas fa-bell"></i></button>
+    <span id="notifBadge" class="hidden"
+     style="position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; font-weight: bold;">0</span>
+    <div id="notifDropdown" class="hidden"
+     style="position: absolute; top: 40px; right: 0; width: 280px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; z-index: 3000; max-height: 400px; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.4);">
+    </div>
+   </div>
+  </div>
+ </nav>
+
+ <div id="mobileOverlay" class="mobile-overlay hidden"></div>
+
+ <div class="container" id="appContainer">
+
+  <aside class="sidebar">
+  <div
+   style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid var(--border);">
+  
+   <button id="sidebarProfileBtn" class="btn-primary hidden"
+    style="background: #333 !important; color: var(--text-main) !important; border: 1px solid var(--border) !important; display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px; box-shadow: none !important;">
+    <i class="fas fa-user" style="color: var(--accent);"></i> My Profile
+   </button>
+  
+   <button onclick="openCommModal('users')" class="btn-primary"
+    style="background: #333 !important; color: var(--text-main) !important; border: 1px solid var(--border) !important; display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px; box-shadow: none !important;">
+    <i class="fas fa-users" style="color: var(--accent);"></i> Community
+   </button>
+  
+   <button onclick="openCommModal('leaderboard')" class="btn-primary"
+    style="background: #333 !important; color: var(--text-main) !important; border: 1px solid var(--border) !important; display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px; box-shadow: none !important;">
+    <i class="fas fa-trophy" style="color: gold;"></i> Leaderboard
+   </button>
+  
+   <button id="adminBtn" class="btn-primary hidden" onclick="openAdminPanel()"
+    style="background: rgba(255, 215, 0, 0.1) !important; color: gold !important; border: 1px solid gold !important; display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px; box-shadow: none !important;">
+    <i class="fas fa-crown"></i> Admin Panel
+   </button>
+  
+  </div>
+
+  <div class="sidebar-header" style="display: flex; justify-content: space-between; align-items: center;">
+   <h3>My Lists</h3>
+   <!-- כפתור הוספת רשימה חדשה -->
+   <button id="createListBtn" onclick="document.getElementById('listModal').classList.remove('hidden')"
+    style="background: var(--accent); color: white; border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: 0.2s;"><i
+     class="fas fa-plus"></i></button>
+  </div>
+   <ul id="listNav">
+    <li style="color: var(--text-muted); text-align: center; padding: 20px;">Loading...</li>
+   </ul>
+  </aside>
+
+  <main class="main-content">
+
+   <div id="bannerImg" class="profile-banner">
+    <button id="penBanner" class="edit-pen" style="top: 15px; right: 15px;" title="Edit Banner"><i
+      class="fas fa-pen"></i></button>
+   </div>
+
+   <div class="profile-container">
+
+    <div class="profile-header-layout">
+     <div class="profile-user-info">
+      <div class="profile-avatar-wrapper">
+       <img id="avatarImg" class="profile-avatar" src="https://via.placeholder.com/150"
+        onerror="this.src='https://via.placeholder.com/150'">
+       <button id="penAvatar" class="edit-pen" style="bottom: 5px; right: 5px;" title="Edit Avatar"><i
+         class="fas fa-pen"></i></button>
+      </div>
+
+      <div class="profile-text-content">
+       <h1 id="profileUsername" class="profile-name">Loading...</h1>
+
+       <div id="bioDisplayWrapper"
+        style="position: relative; display: block; width: 700px; max-width: 100%; min-height: 50px;">
+        <button id="penBio" class="edit-pen" style="top: -10px; right: 10px;" title="Edit Bio"><i
+          class="fas fa-pen"></i></button>
+        <p id="profileBio" class="profile-bio"></p>
+       </div>
+
+       <!-- 2. תיקון הביו: הפכנו אותו ל-absolute כדי שיצוף ולא ידחוף כלום! -->
+       <div id="bioEditMode"
+        style="display: none; position: absolute; top: 0; left: 0; width: 100%; max-width: 500px; background: var(--bg-color); z-index: 100; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); padding: 15px; border: 1px solid var(--border);">
+        <textarea id="bioInput" rows="4"
+         style="width: 100%; padding: 10px; background: var(--card-bg); color: white; border: 1px solid var(--accent); border-radius: 8px; resize: vertical; margin-bottom: 10px;"></textarea>
+        <div style="display: flex; gap: 10px;">
+         <button onclick="saveBio()" class="btn-primary" style="flex: 1; padding: 8px;">Save</button>
+         <button onclick="cancelBioEdit()" class="btn-primary"
+          style="flex: 1; padding: 8px; background: #555;">Cancel</button>
+        </div>
+       </div>
+
+     
+
+      </div>
+     </div>
+
+     <!-- ימין: סטטיסטיקות -->
+     <!-- ימין: סטטיסטיקות וכפתור מעקב -->
+     <div class="stats-col">
+      <div class="stats-row">
+       <div class="stat-item">
+        <span id="statFollowers" class="stat-num">0</span>
+        <span class="stat-label">Followers</span>
+       </div>
+       <div class="stat-item">
+        <span id="statLikes" class="stat-num">0</span>
+        <span class="stat-label">Total Likes</span>
+       </div>
+       <div class="stat-item">
+        <span id="statRanked" class="stat-num">0</span>
+        <span class="stat-label">Ranked</span>
+       </div>
+      </div>
+     
+      <!-- מיקום כפתור הפולו מתחת לסטטיסטיקות, מיושר לימין -->
+      <div id="actionButtons" style="width: 100%; display: flex; justify-content: flex-end;"></div>
+     </div>
+
+    </div>
+
+    <div class="profile-body-layout">
+
+     <div class="featured-col">
+      <button id="penFeatured" class="edit-pen" style="top: -10px; right: -10px;" title="Change Featured List"><i
+        class="fas fa-pen"></i></button>
+
+      <h3
+       style="color: var(--accent); margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; font-size: 1.1rem;">
+       <i class="fas fa-star"></i> Featured List
+      </h3>
+
+      <div id="featuredDisplay">
+       <p style="color: var(--text-muted); font-size: 0.9rem; text-align: center;">No featured list selected.</p>
+      </div>
+
+      <div id="featuredEditMode" style="display: none;">
+       <select id="featuredSelect"
+        style="width: 100%; padding: 8px; background: var(--bg-color); color: white; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px;"></select>
+       <div style="display: flex; gap: 5px;">
+        <button onclick="saveFeatured()" class="btn-primary"
+         style="flex: 1; padding: 5px; font-size: 0.8rem;">Save</button>
+        <button onclick="cancelFeaturedEdit()" class="btn-primary"
+         style="flex: 1; padding: 5px; font-size: 0.8rem; background: #555;">Cancel</button>
+       </div>
+      </div>
+     </div>
+
+     <div class="lists-col">
+      <h2
+       style="color: var(--accent); margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border);">
+       <i class="fas fa-layer-group"></i> Public Lists</h2>
+      <div id="allListsGrid" class="lists-grid"></div>
+     </div>
+
+    </div>
+   </div>
+  </main>
+ </div>
+
+ <!-- COMMUNITY MODAL -->
+ <div id="communityModal" class="modal hidden">
+  <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
+   <span class="close-modal" onclick="document.getElementById('communityModal').classList.add('hidden')">&times;</span>
+   <h3 id="communityTitle" style="text-align: center; margin-bottom: 15px;">Community</h3>
+ 
+   <div id="commTabsContainer" style="display: flex; gap: 10px; margin-bottom: 15px;">
+    <button id="tabUsers" class="btn-primary active-tab" style="flex:1;">Users</button>
+    <button id="tabLeaderboard" class="btn-primary inactive-tab" style="flex:1;">
+     <i class="fas fa-trophy" style="color:gold;"></i> Leaderboard
+    </button>
+   </div>
+ 
+   <div id="leaderboardSortControls" style="display: none; justify-content: flex-end; margin-bottom: 15px;">
+    <select id="leaderboardSortSelect" onchange="loadLeaderboard()"
+     style="padding: 8px 12px; background: var(--bg-color); border: 1px solid var(--border); border-radius: 6px; font-weight: bold; cursor: pointer; outline: none;">
+     <option value="rating">Highest Rating</option>
+     <option value="popularity">Most Popular</option>
+    </select>
+   </div>
+ 
+   <div id="commControls">
+    <input type="text" id="userSearchInput" placeholder="Search for users..."
+     style="width:100%; margin-bottom:15px; padding:10px; border-radius:6px; background:var(--bg-color); border:1px solid var(--border); color:var(--text-main);">
+   </div>
+ 
+   <div id="communityGrid" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));"></div>
+  </div>
+ </div>
+ 
+ <!-- VOTERS MODAL -->
+ <div id="votersModal" class="modal hidden">
+  <div class="modal-content small-modal">
+   <span class="close-modal" onclick="document.getElementById('votersModal').classList.add('hidden')">&times;</span>
+   <h3 id="votersModalTitle" style="margin-bottom: 15px; color: var(--accent);"><i class="fas fa-users"></i> Ranked By
+   </h3>
+   <div id="votersList"
+    style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
+   </div>
+  </div>
+ </div>
+
+  <div id="deleteListModal" class="modal hidden">
+   <div class="modal-content small-modal" style="text-align: center;">
+    <span class="close-modal" onclick="document.getElementById('deleteListModal').classList.add('hidden')">&times;</span>
+    <h3 style="margin-bottom: 10px;">Delete List?</h3>
+    <p style="color: var(--text-muted); margin-bottom: 20px;">This will permanently delete this list and all characters
+     inside it.</p>
+    <div style="display: flex; gap: 10px; justify-content: center;">
+     <button class="btn-primary" onclick="document.getElementById('deleteListModal').classList.add('hidden')"
+      style="background: #555;">Cancel</button>
+     <button class="btn-primary" onclick="executeDeleteList()" style="background: #ff4444;">Yes, Delete</button>
+    </div>
+   </div>
+  </div>
+
+  <!-- מודאל יצירת רשימה חדשה -->
+  <div id="listModal" class="modal hidden">
+   <div class="modal-content small-modal">
+    <span class="close-modal" onclick="document.getElementById('listModal').classList.add('hidden')">&times;</span>
+    <h3 style="margin-bottom: 15px;">Create New List</h3>
+  
+    <input type="text" id="newListName" placeholder="List Name"
+     style="width: 100%; padding: 8px; background: var(--bg-color); color: white; border: 1px solid var(--border); border-radius: 4px;">
+    <textarea id="listDescriptionInput" placeholder="List Description (Optional, up to 300 characters)" maxlength="300"
+     rows="3"
+     style="width: 100%; margin-top: 10px; padding: 10px; background: var(--bg-color); border: 1px solid var(--border); color: white; border-radius: 4px; resize: vertical;"></textarea>
+  
+    <div style="margin-top: 15px; text-align: left;">
+     <label style="font-size: 0.9rem; color: var(--text-muted);">Ranking Style:</label>
+     <select id="rankingTypeSelect"
+      style="width: 100%; margin-top: 5px; padding: 8px; background: var(--bg-color); color: white; border: 1px solid var(--border); border-radius: 4px;">
+      <option value="numbers">Numbers (0-10)</option>
+      <option value="letters">Letters (SSS - F)</option>
+     </select>
+    </div>
+  
+    <div style="margin-top: 10px; text-align: left; display:flex; align-items:center; gap:10px;">
+     <input type="checkbox" id="isFreeOrderInput" style="width:auto; cursor: pointer;">
+     <label for="isFreeOrderInput" style="cursor:pointer; font-size: 0.9rem;">Free Order <small
+       style="color:var(--text-muted)">(Ignore Sorting)</small></label>
+    </div>
+  
+    <div style="margin-top: 10px; text-align: left; display:flex; align-items:center; gap:10px;">
+     <input type="checkbox" id="allowCommentsInput" checked style="width:auto; cursor: pointer;">
+     <label for="allowCommentsInput" style="cursor:pointer; font-size: 0.9rem;">Allow Comments</label>
+    </div>
+  
+    <div style="margin-top: 10px; text-align: left; display:flex; align-items:center; gap:10px;">
+     <input type="checkbox" id="isPrivateInput" style="width:auto; cursor: pointer;">
+     <label for="isPrivateInput" style="cursor:pointer; font-size: 0.9rem;">Private List <small
+       style="color:var(--text-muted)">(Hidden)</small></label>
+    </div>
+  
+    <button onclick="createNewListFromProfile()" class="btn-primary" style="margin-top: 20px; width: 100%;">Create
+     List</button>
+   </div>
+  </div>
+
+  <!-- IMAGE UPLOAD MODAL (For Avatar & Banner) -->
+  <div id="imageUploadModal" class="modal hidden">
+   <div class="modal-content small-modal">
+    <span class="close-modal" onclick="document.getElementById('imageUploadModal').classList.add('hidden')">&times;</span>
+    <h3 id="imageModalTitle" style="margin-bottom: 20px; color: var(--accent);">Change Image</h3>
+  
+    <!-- תצוגה מקדימה של התמונה -->
+    <div
+     style="text-align: center; margin-bottom: 20px; position: relative; display: flex; justify-content: center; width: 100%;">
+     <img id="imageModalPreview" src=""
+      style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 4px solid var(--accent); background: var(--bg-color); transition: 0.3s;">
+    </div>
+  
+    <!-- הזנת קישור -->
+    <div class="form-group" style="text-align: left;">
+     <label style="font-size: 0.85rem; color: var(--text-muted);">Paste Image URL:</label>
+     <input type="text" id="imageUrlInput" placeholder="https://..."
+      style="margin-top: 5px; width: 100%; padding: 10px; background: var(--bg-color); border: 1px solid var(--border); color: white; border-radius: 6px;">
+    </div>
+  
+    <div style="margin: 15px 0; display: flex; align-items: center; gap: 10px;">
+     <hr style="flex: 1; border: 0; border-top: 1px solid var(--border);">
+     <span style="font-size: 0.8rem; color: #888;">OR</span>
+     <hr style="flex: 1; border: 0; border-top: 1px solid var(--border);">
+    </div>
+  
+    <!-- העלאה מהמכשיר -->
+    <div class="form-group">
+     <label for="imageFileInput" class="btn-primary"
+      style="background: transparent; border: 1px dashed var(--accent); color: var(--accent); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; height: 45px; width: 100%; border-radius: 6px;">
+      <i class="fas fa-upload"></i> Upload from Device
+     </label>
+     <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
+    </div>
+  
+    <button id="saveImageBtn" onclick="saveUploadedImage()" class="btn-primary"
+     style="margin-top: 20px; width: 100%; padding: 12px; border-radius: 6px;">Save Image</button>
+   </div>
+  </div>
+
+ <script>
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetUsername = urlParams.get('user');
+  let profileData = null;
+  let loggedInUser = null;
+  let currentNotifsData = [];
+
+  const menuBtn = document.getElementById('mobileMenuBtn');
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('mobileOverlay');
+
+  if (menuBtn) {
+   menuBtn.onclick = (e) => {
+    e.stopPropagation();
+    sidebar.classList.add('open');
+    overlay.classList.remove('hidden');
+   };
+  }
+  if (overlay) {
+   overlay.onclick = () => {
+    sidebar.classList.remove('open');
+    overlay.classList.add('hidden');
+   };
+  }
+
+  function goToMyProfile() {
+   if (loggedInUser) window.location.href = '/profile.html?user=' + loggedInUser.username;
+  }
+
+  // פונקציית עזר להמרת ציונים לאותיות
+  function getLetterRating(rating) {
+   if (rating >= 10) return 'SSS';
+   if (rating >= 9) return 'SS';
+   if (rating >= 8) return 'S';
+   if (rating >= 7) return 'A';
+   if (rating >= 6) return 'B';
+   if (rating >= 5) return 'C';
+   if (rating >= 4) return 'D';
+   if (rating >= 3) return 'E';
+   return 'F';
+  }
+
+  async function initProfile() {
+   if (!targetUsername) {
+    document.getElementById('profileUsername').textContent = "User not found.";
+    return;
+   }
+
+   try {
+    const authRes = await fetch('/api/auth/check');
+    if (authRes.ok) {
+     const authData = await authRes.json();
+     loggedInUser = authData;
+
+     document.getElementById('authBtnNav').textContent = "Logout";
+     document.getElementById('authBtnNav').onclick = async () => {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/';
+     };
+
+     if (document.getElementById('mobileMenuBtn')) document.getElementById('mobileMenuBtn').classList.remove('hidden');
+     if (authData.role === 'admin') document.getElementById('adminBtn').classList.remove('hidden');
+
+     const sidebarProfileBtn = document.getElementById('sidebarProfileBtn');
+     if (sidebarProfileBtn) {
+      sidebarProfileBtn.classList.remove('hidden');
+      sidebarProfileBtn.onclick = () => window.location.href = `/profile.html?user=${authData.username}`;
+     }
+
+     document.getElementById('notifArea').classList.remove('hidden');
+     document.querySelector('.sidebar').style.display = 'flex';
+     loadSidebar();
+     fetchNotifications();
+    } else {
+     document.querySelector('.sidebar').style.display = 'none';
+    }
+   } catch (e) { document.querySelector('.sidebar').style.display = 'none'; }
+
+   try {
+    const res = await fetch(`/api/profile/${targetUsername}`);
+    if (!res.ok) throw new Error();
+    profileData = await res.json();
+    renderProfile();
+    setupEditPens();
+   } catch (e) {
+    document.getElementById('profileUsername').textContent = "User not found or private.";
+   }
+  }
+
+ let pendingDeleteListId = null; // שומר את ה-ID של הרשימה שאנחנו עומדים למחוק
+
+  async function loadSidebar() {
+   try {
+    const res = await fetch('/api/lists');
+    const lists = await res.json();
+    const nav = document.getElementById('listNav');
+    nav.innerHTML = '';
+
+    lists.forEach(l => {
+     const li = document.createElement('li');
+     li.style.cssText = "padding: 10px; cursor: pointer; border-radius: 5px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;";
+     li.onmouseover = () => { li.style.background = 'var(--accent)'; li.style.color = 'white'; };
+     li.onmouseout = () => { li.style.background = 'transparent'; li.style.color = 'inherit'; };
+
+     const lockIcon = l.isPrivate ? '<i class="fas fa-lock" style="font-size:0.8rem; margin-right:8px; color:#aaa;"></i>' : '';
+
+     // החלק של הטקסט הלחיץ (שמעביר לאינדקס)
+     const textSpan = document.createElement('span');
+     textSpan.style.flex = "1";
+     textSpan.innerHTML = `${lockIcon}${l.name}`;
+     textSpan.onclick = () => window.location.href = `/?id=${l._id}`;
+     li.appendChild(textSpan);
+
+     // החלק של פח האשפה
+     const delBtn = document.createElement('button');
+     delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+     delBtn.style.cssText = "background: none; border: none; color: inherit; cursor: pointer; font-size: 0.9rem; padding: 0 5px;";
+     delBtn.onclick = (e) => {
+      e.stopPropagation(); // עוצר את הלחיצה מלעבור גם לשורה עצמה
+      pendingDeleteListId = l._id;
+      document.getElementById('deleteListModal').classList.remove('hidden');
+     };
+
+     li.appendChild(delBtn);
+     nav.appendChild(li);
+    });
+   } catch (e) { }
+  }
+
+  // פונקציית המחיקה שתופעל כשמאשרים בחלון הקופץ
+  async function executeDeleteList() {
+   if (!pendingDeleteListId) return;
+   try {
+    await fetch(`/api/lists/${pendingDeleteListId}`, { method: 'DELETE' });
+    document.getElementById('deleteListModal').classList.add('hidden');
+    pendingDeleteListId = null;
+    // מרענן את העמוד כדי שהרשימה תימחק גם מהסיידבאר וגם מאזור "כל הרשימות" בפרופיל
+    window.location.reload();
+   } catch (e) {
+    console.error("Failed to delete list", e);
+   }
+  }
+
+  function renderProfile() {
+   document.title = `${profileData.username}'s Profile`;
+   document.getElementById('profileUsername').textContent = profileData.username;
+   document.getElementById('profileBio').textContent = profileData.bio || "No bio written yet.";
+   document.getElementById('statFollowers').textContent = profileData.followersCount;
+   document.getElementById('statLikes').textContent = profileData.totalLikes;
+   document.getElementById('statRanked').textContent = profileData.totalRanked;
+
+   if (profileData.avatar) document.getElementById('avatarImg').src = profileData.avatar;
+   if (profileData.banner) document.getElementById('bannerImg').style.backgroundImage = `url('${profileData.banner}')`;
+
+   const actionBtns = document.getElementById('actionButtons');
+   if (loggedInUser && loggedInUser.username !== profileData.username) {
+    const followClass = profileData.isFollowing ? 'fas fa-star' : 'far fa-star';
+    const followText = profileData.isFollowing ? ' Unfollow' : ' Follow';
+    const followColor = profileData.isFollowing ? '#555' : 'var(--accent)';
+    actionBtns.innerHTML = `<button onclick="toggleFollow('${profileData._id}')" class="btn-primary" style="width: auto !important; padding: 8px 25px; border-radius: 20px; font-size: 0.95rem; background: ${followColor};"><i class="${followClass}"></i> ${followText}</button>`;
+   }
+
+   const listsGrid = document.getElementById('allListsGrid');
+   listsGrid.innerHTML = '';
+   let featuredList = null;
+
+   profileData.lists.forEach(list => {
+    if (list._id === profileData.featuredListId) featuredList = list;
+
+    let sortedItems = [...list.items];
+    if (!list.isFreeOrder) {
+     sortedItems.sort((a, b) => b.rating - a.rating);
+    }
+
+    const topCharacter = sortedItems.length > 0 ? sortedItems[0] : null;
+    let coverImg = topCharacter && topCharacter.image && !topCharacter.image.includes('placeholder')
+     ? topCharacter.image
+     : 'https://placehold.co/400x200/1a1a1a/bb86fc?text=No+Characters';
+
+    // ביטלנו את ה-Flex בטקסט עצמו והשתמשנו ב-overflow נקי
+    listsGrid.innerHTML += `
+                    <div class="comm-list-card" onclick="window.location.href='/share.html?id=${list._id}'" style="background: var(--card-bg); border-radius: 12px; cursor: pointer; border: 1px solid var(--border); transition: 0.2s; overflow: hidden; display: flex; flex-direction: column; padding: 0;">
+                        <img src="${coverImg}" style="width: 100%; height: 180px; object-fit: cover; border-bottom: 1px solid var(--border); display: block;">
+                        
+                        <div style="padding: 15px; text-align: center; width: 100%; box-sizing: border-box; overflow: hidden;">
+                            <div style="color:var(--accent); margin-bottom: 5px; font-size: 1.05rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${list.name}">${list.name}</div>
+                            <div style="color:var(--text-muted); font-size: 0.85rem; margin: 0;"><i class="fas fa-layer-group"></i> ${list.items.length} items</div>
+                        </div>
+                    </div>
+                `;
+   });
+
+   const featuredDisplay = document.getElementById('featuredDisplay');
+   if (featuredList) {
+    let sortedItems = [...featuredList.items];
+    if (!featuredList.isFreeOrder) {
+     sortedItems.sort((a, b) => b.rating - a.rating);
+    }
+
+    const top5 = sortedItems.slice(0, 5);
+    let charsHtml = '';
+
+    top5.forEach(item => {
+     let imgUrl = item.image && !item.image.includes('placeholder') ? item.image : 'https://placehold.co/50x50/252525/bb86fc?text=?';
+     let displayRating = featuredList.rankingType === 'letters' ? getLetterRating(item.rating) : item.rating;
+
+     // הוספנו פה display: block ו-min-width 0 לשם הדמות
+     charsHtml += `
+                        <div class="featured-char-row" style="display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); min-width: 0; width: 100%;">
+                            <img src="${imgUrl}" class="featured-char-img" style="width: 45px; height: 45px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0;">
+                            <span class="featured-char-name" title="${item.characterName}" style="font-size: 0.95rem; font-weight: bold; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; display: block;">${item.characterName}</span>
+                            <span class="featured-char-rating" style="font-size: 0.85rem; font-weight: bold; color: #FFD700; background: rgba(255,215,0,0.1); padding: 3px 8px; border-radius: 6px; flex-shrink: 0;"><i class="fas fa-star" style="font-size: 0.7rem; margin-right: 3px;"></i>${displayRating}</span>
+                        </div>
+                    `;
+    });
+
+    // גם פה הבטחנו ששם הרשימה עצמה ייחתך במידת הצורך
+    featuredDisplay.innerHTML = `
+                    <div style="font-weight: bold; font-size: 1.15rem; margin-bottom: 15px; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; display: block;" title="${featuredList.name}">${featuredList.name}</div>
+                    
+                    <div style="display: flex; flex-direction: column; margin-bottom: 20px; width: 100%; min-width: 0;">
+                        ${charsHtml}
+                    </div>
+                    
+                    <button class="btn-primary" onclick="window.location.href='/share.html?id=${featuredList._id}'" style="width: 100%; padding: 10px; font-size: 0.95rem; border-radius: 8px; box-sizing: border-box;">View Full List</button>
+                `;
+   }
+  }
+
+  function setupEditPens() {
+   if (!loggedInUser || loggedInUser.username !== profileData.username) return;
+
+   document.getElementById('penBanner').style.display = 'flex';
+   document.getElementById('penAvatar').style.display = 'flex';
+   document.getElementById('penBio').style.display = 'flex';
+   document.getElementById('penFeatured').style.display = 'flex';
+
+   document.getElementById('penBanner').onclick = () => openImageModal('banner');
+   document.getElementById('penAvatar').onclick = () => openImageModal('avatar');
+
+   document.getElementById('penBio').onclick = () => {
+    document.getElementById('bioDisplayWrapper').style.visibility = 'hidden'; // מסתיר רק חזותית!
+    document.getElementById('bioEditMode').style.display = 'block';
+    document.getElementById('bioInput').value = profileData.bio || "";
+   };
+
+   document.getElementById('penFeatured').onclick = () => {
+    document.getElementById('featuredDisplay').style.display = 'none';
+    document.getElementById('featuredEditMode').style.display = 'block';
+
+    const select = document.getElementById('featuredSelect');
+    select.innerHTML = '<option value="">-- Remove Featured --</option>';
+    profileData.lists.forEach(l => {
+     select.innerHTML += `<option value="${l._id}" ${l._id === profileData.featuredListId ? 'selected' : ''}>${l.name}</option>`;
+    });
+   };
+  }
+
+  window.cancelBioEdit = () => {
+   document.getElementById('bioEditMode').style.display = 'none';
+   document.getElementById('bioDisplayWrapper').style.visibility = 'visible';
+  };
+
+  window.saveBio = () => {
+   const newBio = document.getElementById('bioInput').value;
+   updateProfileField('bio', newBio);
+  };
+
+  window.cancelFeaturedEdit = () => {
+   document.getElementById('featuredEditMode').style.display = 'none';
+   document.getElementById('featuredDisplay').style.display = 'block';
+  };
+
+  window.saveFeatured = () => {
+   const listId = document.getElementById('featuredSelect').value;
+   updateProfileField('featuredListId', listId);
+  };
+
+  async function updateProfileField(field, value) {
+   const payload = {
+    avatar: profileData.avatar,
+    banner: profileData.banner,
+    bio: profileData.bio,
+    featuredListId: profileData.featuredListId
+   };
+   payload[field] = value;
+
+   const res = await fetch('/api/profile/update', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+   });
+
+   if (res.ok) window.location.reload();
+   else alert("Error updating profile.");
+  }
+
+  async function toggleFollow(id) {
+   await fetch(`/api/users/follow/${id}`, { method: 'POST' });
+   window.location.reload();
+  }
+
+  let visibleNotifsLimit = 5;
+  async function fetchNotifications() {
+   if (!loggedInUser) return;
+   try {
+    const res = await fetch('/api/notifications');
+    if (res.ok) {
+     currentNotifsData = await res.json();
+     renderNotifDropdownUI();
+    }
+   } catch (e) { }
+  }
+
+  function renderNotifDropdownUI() {
+   const dropdown = document.getElementById('notifDropdown');
+   const badge = document.getElementById('notifBadge');
+   if (!dropdown) return;
+
+   const unreadCount = currentNotifsData.filter(n => !n.read).length;
+   if (badge) {
+    badge.textContent = unreadCount;
+    unreadCount > 0 ? badge.classList.remove('hidden') : badge.classList.add('hidden');
+   }
+
+   dropdown.innerHTML = '';
+   if (currentNotifsData.length === 0) {
+    dropdown.innerHTML = '<div style="padding:15px; text-align:center; color:#888;">No notifications</div>';
+    return;
+   }
+
+   const msgMap = {
+    'like': `liked your list`,
+    'comment': `commented on your list`,
+    'follow': `started following you`,
+    'reply': `replied to your comment`,
+    'comment_like': `liked your comment`
+   };
+
+   const notifsToShow = currentNotifsData.slice(0, visibleNotifsLimit);
+
+   notifsToShow.forEach(n => {
+    const div = document.createElement('div');
+    div.style = `padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.85rem; cursor: pointer; background: ${n.read ? 'transparent' : 'rgba(187, 134, 252, 0.08)'}`;
+    const actionText = msgMap[n.type] || 'interacted with you';
+    const listNameText = n.listName ? `: <b>${n.listName}</b>` : '';
+    div.innerHTML = `<div><b>${n.fromUser}</b> ${actionText}${listNameText}</div><div style="font-size:0.7rem; color:#666; margin-top:4px;">${new Date(n.timestamp).toLocaleString('he-IL')}</div>`;
+    div.onclick = () => { if (n.listId) window.location.href = `/?id=${n.listId}`; };
+    dropdown.appendChild(div);
+   });
+
+   if (currentNotifsData.length > visibleNotifsLimit) {
+    const loadMoreDiv = document.createElement('div');
+    loadMoreDiv.style = "padding: 10px; text-align: center; color: var(--accent); cursor: pointer; font-size: 0.85rem; font-weight: bold; border-top: 1px solid var(--border);";
+    loadMoreDiv.innerHTML = 'Show more...';
+    loadMoreDiv.onclick = (e) => {
+     e.stopPropagation();
+     visibleNotifsLimit += 5;
+     renderNotifDropdownUI();
+    };
+    dropdown.appendChild(loadMoreDiv);
+   }
+  }
+
+  document.getElementById('notifBtn').onclick = (e) => {
+   e.stopPropagation();
+   const drop = document.getElementById('notifDropdown');
+   if (drop.classList.contains('hidden')) {
+    visibleNotifsLimit = 5;
+    renderNotifDropdownUI();
+    drop.classList.remove('hidden');
+    fetch('/api/notifications/read', { method: 'POST' });
+    document.getElementById('notifBadge').classList.add('hidden');
+   } else {
+    drop.classList.add('hidden');
+   }
+  };
+
+  window.addEventListener('click', (e) => {
+   const drop = document.getElementById('notifDropdown');
+   if (drop && !drop.contains(e.target) && !e.target.closest('#notifBtn')) {
+    drop.classList.add('hidden');
+   }
+   if (e.target.classList.contains('modal')) {
+    e.target.classList.add('hidden');
+   }
+  });
+
+  // ==========================================
+   // מערכת הקהילה והלידרבורד המוטמעת בפרופיל
+   // ==========================================
+   let currentCommTab = 'users';
+   let userSearchDebounce;
+
+   function openCommModal(tab) {
+    document.getElementById('communityModal').classList.remove('hidden');
+    switchCommTab(tab);
+   }
+
+   document.getElementById('tabUsers').onclick = () => switchCommTab('users');
+   document.getElementById('tabLeaderboard').onclick = () => switchCommTab('leaderboard');
+
+   document.getElementById('userSearchInput').addEventListener('input', (e) => {
+    clearTimeout(userSearchDebounce);
+    userSearchDebounce = setTimeout(() => { loadCommunityUsers(); }, 500);
+   });
+
+   function switchCommTab(tab) {
+    currentCommTab = tab;
+    const btnUsers = document.getElementById('tabUsers');
+    const btnLeaderboard = document.getElementById('tabLeaderboard');
+    const commControls = document.getElementById('commControls');
+    const sortControls = document.getElementById('leaderboardSortControls');
+    const grid = document.getElementById('communityGrid');
+    const title = document.getElementById('communityTitle');
+
+    if (tab === 'users') {
+     btnUsers.className = 'btn-primary active-tab';
+     btnLeaderboard.className = 'btn-primary inactive-tab';
+     commControls.style.display = 'block';
+     sortControls.style.display = 'none';
+
+     grid.style.display = 'grid';
+     grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
+     title.textContent = "Community";
+     loadCommunityUsers();
+    } else {
+     btnUsers.className = 'btn-primary inactive-tab';
+     btnLeaderboard.className = 'btn-primary active-tab';
+     commControls.style.display = 'none';
+     sortControls.style.display = 'flex';
+
+     grid.style.display = 'block';
+     title.innerHTML = '<i class="fas fa-trophy" style="color:gold;"></i> Global Leaderboard';
+     loadLeaderboard();
+    }
+   }
+
+   async function loadCommunityUsers() {
+     const grid = document.getElementById('communityGrid');
+     grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Loading users...</p>';
+     try {
+      const query = document.getElementById('userSearchInput')?.value || '';
+      const res = await fetch(`/api/users?search=${query}&t=${Date.now()}`);
+      const users = await res.json();
+
+      grid.innerHTML = users.length ? '' : '<p style="grid-column: 1/-1; text-align:center;">No users found.</p>';
+
+      users.forEach(u => {
+       const div = document.createElement('div');
+       div.className = 'user-card';
+
+       const userImg = (u.avatar && u.avatar.trim() !== "") ?
+        `<img src="${u.avatar}" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); margin-bottom: 10px;">` :
+        `<i class="fas fa-user-circle user-icon" style="font-size: 55px; margin-bottom: 10px;"></i>`;
+
+       const isUserLoggedIn = loggedInUser !== null;
+       let starHtml = isUserLoggedIn ? `
+                        <button class="follow-btn" onclick="toggleCommunityFollow(event, '${u._id}')">
+                            <i class="${u.isFollowing ? 'fas fa-star active' : 'far fa-star'}"></i>
+                        </button>` : '';
+
+       div.innerHTML = `
+                        ${starHtml}
+                        ${userImg}
+                        <div style="font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 5px;">${u.username}</div>
+                    `;
+
+       div.onclick = (e) => {
+        if (!e.target.closest('.follow-btn')) {
+         window.location.href = `/profile.html?user=${u.username}`;
+        }
+       };
+       grid.appendChild(div);
+      });
+     } catch (e) { grid.innerHTML = '<p style="grid-column: 1/-1;">Error loading.</p>'; }
+    }
+
+    window.toggleCommunityFollow = async function (e, userId) {
+     e.stopPropagation(); 
+
+     const icon = e.currentTarget.querySelector('i');
+     const wasFollowing = icon.classList.contains('fas');
+
+     icon.className = wasFollowing ? 'far fa-star' : 'fas fa-star active';
+
+     try {
+      await fetch(`/api/users/follow/${userId}`, { method: 'POST' });
+     } catch (err) {
+      console.error("Follow error", err);
+     }
+    };
+
+   async function loadLeaderboard() {
+    const grid = document.getElementById('communityGrid');
+    grid.innerHTML = '<p style="text-align: center; padding: 40px; font-size: 1.1rem; color: var(--text-muted);">Calculating global rankings...</p>';
+    try {
+     const sortMethod = document.getElementById('leaderboardSortSelect') ? document.getElementById('leaderboardSortSelect').value : 'rating';
+     const res = await fetch(`/api/leaderboard?sort=${sortMethod}`);
+     const data = await res.json();
+
+     if (currentCommTab !== 'leaderboard') return;
+     grid.innerHTML = '';
+
+     if (data.length === 0) {
+      grid.innerHTML = '<p style="text-align: center; padding: 40px; color: #888;">No characters ranked yet.</p>';
+      return;
+     }
+
+     data.forEach((item, index) => {
+      const div = document.createElement('div');
+      div.className = 'leaderboard-row';
+      let rankClass = 'lb-rank-other';
+      let rankText = `#${index + 1}`;
+      if (index === 0) { rankClass = 'lb-rank-1'; rankText = '<i class="fas fa-crown" style="margin-right: 4px;"></i>1'; }
+      else if (index === 1) { rankClass = 'lb-rank-2'; }
+      else if (index === 2) { rankClass = 'lb-rank-3'; }
+
+      const formattedScore = parseFloat(item.avgRating.toFixed(1));
+      const displayType = item.sourceType === 'TV Show' ? 'TV' : (item.sourceType || 'Other');
+      let validImg = item.image && !item.image.includes('via.placeholder.com') ? item.image : 'https://placehold.co/60x60/252525/bb86fc?text=?';
+
+      div.innerHTML = `
+                        <div class="leaderboard-rank ${rankClass}">${rankText}</div>
+                        <img src="${validImg}" class="leaderboard-img" onerror="this.src='https://placehold.co/60x60/252525/bb86fc?text=?'">
+                        <div class="leaderboard-content-wrapper">
+                            <div class="leaderboard-info">
+                                <div class="leaderboard-name">${item.characterName}</div>
+                                <div class="leaderboard-source">
+                                    <span class="leaderboard-source-text" title="${item.sourceTitle}">${item.sourceTitle}</span>
+                                    <span style="color:var(--accent); font-size:0.75rem; margin-left:5px; font-weight:bold; flex-shrink: 0;">• ${displayType}</span>
+                                </div>
+                            </div>
+                            <div class="leaderboard-stats">
+                                <div class="leaderboard-score">
+                                    <span style="color: #FFD700; font-weight: 900; font-size: 1.1rem; display: flex; align-items: center;">
+                                        <i class="fas fa-star" style="font-size:0.8rem; margin-right:5px;"></i> ${formattedScore}
+                                    </span>
+                                    <span onclick="openVotersModal('${item._id}', '${item.characterName.replace(/'/g, "\\'")}')" style="cursor: pointer; color: var(--text-muted); font-size: 0.8rem; border-left: 1px solid rgba(255,255,255,0.15); margin-left: 10px; padding-left: 10px; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" title="View who ranked this">
+                                        <i class="fas fa-users" style="margin-right:4px;"></i> ${item.rankedByCount}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+      grid.appendChild(div);
+     });
+    } catch (e) {
+     grid.innerHTML = '<p style="text-align: center; color: #ff4444; padding: 20px;">Failed to load leaderboard.</p>';
+    }
+   }
+
+   window.openVotersModal = async function (charId, charName) {
+    document.getElementById('votersModalTitle').innerHTML = `<i class="fas fa-users"></i> Ranked By (${charName})`;
+    const listDiv = document.getElementById('votersList');
+    listDiv.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading users...</div>';
+    document.getElementById('votersModal').classList.remove('hidden');
+
+    try {
+     const res = await fetch(`/api/leaderboard/voters/${charId}`);
+     const voters = await res.json();
+     listDiv.innerHTML = '';
+
+     if (!voters || voters.length === 0) {
+      listDiv.innerHTML = '<div style="text-align:center; color:#888;">No users found.</div>';
+      return;
+     }
+
+     voters.forEach(v => {
+      const avatarHtml = (v.avatar && v.avatar.trim() !== "") ?
+       `<img src="${v.avatar}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">` :
+       `<i class="fas fa-user-circle" style="font-size: 35px; color: var(--text-muted);"></i>`;
+
+      const isClickable = v.userId ? true : false;
+      const cursorStyle = isClickable ? 'cursor: pointer;' : '';
+      // לחיצה על שם ברשימת מצביעים זורקת גם היא ישר לעמוד הפרופיל שלו!
+      const clickAction = isClickable ? `onclick="window.location.href='/profile.html?user=${v.username.replace(/'/g, "\\'")}'"` : '';
+
+      listDiv.innerHTML += `
+                        <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+                            <div style="display: flex; align-items: center; gap: 10px; ${cursorStyle}" ${clickAction} onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+                                ${avatarHtml}
+                                <span style="font-weight: bold; color: var(--text-main);">${v.username || 'Unknown'}</span>
+                            </div>
+                            <div style="color: #FFD700; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center;">
+                                ${v.rating} <i class="fas fa-star" style="font-size: 0.8rem; margin-left: 4px;"></i>
+                            </div>
+                        </div>
+                    `;
+     });
+    } catch (e) {
+     listDiv.innerHTML = '<div style="color:#ff4444; text-align:center;">Error loading voters.</div>';
+    }
+   }
+
+   // פונקציית יצירת רשימה מתוך פרופיל
+    async function createNewListFromProfile() {
+     const name = document.getElementById('newListName').value.trim();
+     if (!name) return alert("Please enter a list name.");
+
+     const rType = document.getElementById('rankingTypeSelect').value;
+     const isPrivate = document.getElementById('isPrivateInput').checked;
+     const isFreeOrder = document.getElementById('isFreeOrderInput').checked;
+     const allowComments = document.getElementById('allowCommentsInput').checked;
+     const listDesc = document.getElementById('listDescriptionInput').value;
+
+     const payload = {
+      name: name,
+      listDescription: listDesc,
+      rankingType: rType,
+      isPrivate: isPrivate,
+      isFreeOrder: isFreeOrder,
+      allowComments: allowComments,
+      items: new Array() // עוקף באג מונגו/טוקנים
+     };
+
+     try {
+      const res = await fetch('/api/lists', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+       const newList = await res.json();
+       document.getElementById('listModal').classList.add('hidden');
+       // אם יצרת את הרשימה, נעביר אותך לאינדקס כדי שתתחיל למלא אותה!
+       window.location.href = `/?id=${newList._id}`;
+      } else {
+       alert("Error creating list.");
+      }
+     } catch (e) {
+      console.error(e);
+      alert("Server error.");
+     }
+    }
+
+    // ==========================================
+     // IMAGE UPLOAD SYSTEM (AVATAR & BANNER)
+     // ==========================================
+     let currentImageType = 'avatar'; // זוכר אם אנחנו עורכים באנר או תמונת פרופיל
+
+     window.openImageModal = function (type) {
+      currentImageType = type;
+      const modal = document.getElementById('imageUploadModal');
+      const title = document.getElementById('imageModalTitle');
+      const preview = document.getElementById('imageModalPreview');
+      const urlInput = document.getElementById('imageUrlInput');
+
+      // איפוס שדות
+      document.getElementById('imageFileInput').value = '';
+
+      if (type === 'banner') {
+       title.innerHTML = '<i class="fas fa-image"></i> Change Banner';
+       preview.style.borderRadius = "8px"; // באנר מלבני
+       preview.style.width = "100%";
+       preview.style.height = "120px";
+       preview.src = profileData.banner || "https://placehold.co/800x300/252525/bb86fc?text=No+Banner";
+       urlInput.value = profileData.banner || "";
+      } else {
+       title.innerHTML = '<i class="fas fa-user-circle"></i> Change Avatar';
+       preview.style.borderRadius = "50%"; // אווטאר עגול
+       preview.style.width = "150px";
+       preview.style.height = "150px";
+       preview.src = profileData.avatar || "https://placehold.co/150x150/252525/bb86fc?text=Avatar";
+       urlInput.value = profileData.avatar || "";
+      }
+
+      modal.classList.remove('hidden');
+     };
+
+     // ברגע שמקלידים כתובת URL - התצוגה המקדימה מתעדכנת מייד!
+     document.getElementById('imageUrlInput').addEventListener('input', (e) => {
+      const url = e.target.value.trim();
+      const placeholder = currentImageType === 'banner' ? "https://placehold.co/800x300/252525/bb86fc?text=No+Banner" : "https://placehold.co/150x150/252525/bb86fc?text=Avatar";
+      document.getElementById('imageModalPreview').src = url || placeholder;
+     });
+
+     // בחירת קובץ מהמחשב/טלפון (ממיר לתמונה על המקום)
+     document.getElementById('imageFileInput').onchange = function (e) {
+      const file = e.target.files[0];
+      if (file) {
+       // מגבלת גודל של 2 מגה-בייט כדי לא לחנוק את המסד נתונים
+       if (file.size > 1024 * 1024 * 2) return alert("File too large! Max size is 2MB.");
+
+       const reader = new FileReader();
+       reader.onload = (ev) => {
+        document.getElementById('imageModalPreview').src = ev.target.result;
+        document.getElementById('imageUrlInput').value = ''; // מאפס את הקישור אם העלינו קובץ
+       };
+       reader.readAsDataURL(file);
+      }
+     };
+
+     // שמירה ושליחה לשרת
+     window.saveUploadedImage = async function () {
+      const btn = document.getElementById('saveImageBtn');
+      const previewSrc = document.getElementById('imageModalPreview').src;
+
+      if (!previewSrc || previewSrc.includes('placehold.co')) {
+       return alert("Please select or upload an image first.");
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+      try {
+       // קורא לפונקציה הראשית שמעדכנת מול השרת (ומרעננת את הדף אוטומטית כשהיא מסיימת)
+       await updateProfileField(currentImageType, previewSrc);
+      } catch (e) {
+       alert("Error saving image.");
+       btn.disabled = false;
+       btn.textContent = "Save Image";
+      }
+     };
+
+  initProfile();
+  
+ </script>
+</body>
+
+</html>

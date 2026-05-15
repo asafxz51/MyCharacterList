@@ -627,6 +627,71 @@ app.delete('/api/lists/:listId/comments/:commentId/replies/:replyId', verifyToke
   }
 });
 
+// קבלת נתונים מלאים לפרופיל
+app.get('/api/profile/:username', optionalToken, async (req, res) => {
+  try {
+    const targetUser = await User.findOne({ username: req.params.username }, '-password -notifications');
+    if (!targetUser) return res.status(404).json({ error: "User not found" });
+
+    // מביא את כל הרשימות הציבוריות של המשתמש
+    const userLists = await List.find({ userId: targetUser._id, isPrivate: { $ne: true } });
+
+    // חישוב סטטיסטיקות מגניבות לפרופיל!
+    let totalLikes = 0;
+    let totalRanked = 0;
+    userLists.forEach(list => {
+      totalLikes += (list.likes ? list.likes.length : 0);
+      totalRanked += (list.items ? list.items.length : 0);
+    });
+
+    let isFollowing = false;
+    if (req.user) {
+      const viewer = await User.findById(req.user._id);
+      if (viewer && viewer.following.includes(targetUser._id)) isFollowing = true;
+    }
+
+    res.json({
+      _id: targetUser._id,
+      username: targetUser.username,
+      avatar: targetUser.avatar,
+      banner: targetUser.banner,
+      bio: targetUser.bio,
+      featuredListId: targetUser.featuredListId,
+      followersCount: await User.countDocuments({ following: targetUser._id }),
+      totalLikes,
+      totalRanked,
+      isFollowing,
+      lists: userLists
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/profile/update', verifyToken, async (req, res) => {
+  try {
+    const { avatar, banner, bio, featuredListId } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { avatar, banner, bio, featuredListId },
+      { new: true }
+    );
+
+    if (avatar) {
+      List.updateMany(
+        { "comments.userId": user._id },
+        { $set: { "comments.$[elem].avatar": avatar } },
+        { arrayFilters: [{ "elem.userId": user._id }] }
+      ).exec();
+    }
+
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
 // --- NOTIFICATIONS ---
 
 app.get('/api/notifications', verifyToken, async (req, res) => {
@@ -758,12 +823,25 @@ app.get('/api/tmdb/credits', async (req, res) => {
 
 app.get('/api/search/jikan', async (req, res) => {
   try {
+    // הגדלנו את ההמתנה לשנייה שלמה - זה פותר המון חסימות של Jikan!
     await new Promise(r => setTimeout(r, 500));
-    const r = await axios.get(`https://api.jikan.moe/v4/characters`, { params: { q: req.query.query, limit: 15 } });
+
+    const r = await axios.get(`https://api.jikan.moe/v4/characters`, {
+      params: { q: req.query.query, limit: 15 }
+    });
+
     res.json(r.data.data.map(i => ({
-      id: i.mal_id, title: i.name, image: i.images?.jpg?.image_url, type: 'character', description: 'Anime Character'
+      id: i.mal_id,
+      title: i.name,
+      image: i.images?.jpg?.image_url,
+      type: 'character',
+      description: 'Anime Character'
     })));
-  } catch (e) { res.json([]); }
+  } catch (e) {
+    // עכשיו השרת ידפיס לך את השגיאה ללוגים כדי שתראה למה Jikan מסרב
+    console.error("Jikan API Error:", e.response ? e.response.status : e.message);
+    res.json([]);
+  }
 });
 
 app.get('/api/jikan/details/:id', async (req, res) => {
@@ -1005,11 +1083,11 @@ app.get('/api/share/:id', async (req, res) => {
     if (!list) return res.status(404).json({ error: 'Not found' });
     const user = await User.findById(list.userId);
 
-    // יצירת אובייקט עם הגנות על שדות של רשימות ישנות
     const listObj = list.toObject();
     const dataToSend = {
       ...listObj,
       author: user ? user.username : 'Unknown',
+      authorAvatar: user ? user.avatar : '', 
       likes: listObj.likes || [],
       comments: listObj.comments || [],
       allowComments: listObj.allowComments !== undefined ? listObj.allowComments : true

@@ -73,6 +73,8 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-left: auto;
+  /* התיקון שדוחף את כל הכפתורים חזרה לימין! */
 }
 
 /* עיצוב כפתורי הריבוע בנאב */
@@ -1326,11 +1328,16 @@ select {
       justify-content: center;
     }
 
-            .nav-controls {
-              width: 100%;
-              display: flex;
-              justify-content: space-between;
-            }
+                                                .nav-controls {
+                                                  order: 3;
+                                                  width: 100%;
+                                                  margin-top: 10px;
+                                                  padding-top: 10px;
+                                                  border-top: 1px solid var(--border);
+                                                  justify-content: space-around;
+                                                  margin-left: 0;
+                                                  /* מבטל את הדחיפה במובייל כדי שיישאר ממורכז */
+                                                }
 
       
 
