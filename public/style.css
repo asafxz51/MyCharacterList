@@ -1770,31 +1770,42 @@ select {
 /* הגדרה כללית לכפתורים בסיידבאר */
 .sidebar .btn-primary {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  position: relative;
-  overflow: hidden;
+  position: relative !important;
+  transform: translateX(0);
 }
 
 /* אפקט הריחוף לכפתורים הרגילים (פרופיל, קהילה, לידרבורד) */
 .sidebar .btn-primary:hover {
   background: rgba(187, 134, 252, 0.1) !important;
   /* הילה סגולה עדינה ברקע */
-  border-color: var(--accent) !important;
+  /* border-color: var(--accent) !important; */
   transform: translateX(3px);
   /* הכפתור "יוצא" טיפה ימינה */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 8px rgba(187, 134, 252, 0.2) !important;
 }
 
-/* אפקט מיוחד לכפתור האדמין (בצבע זהב) */
-#adminBtn:hover {
-  background: rgba(255, 215, 0, 0.15) !important;
-  /* הילה זהובה */
-  border-color: #ffd700 !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 10px rgba(255, 215, 0, 0.3) !important;
+#sidebarProfileBtn:hover,
+.sidebar button[onclick*="openCommModal"]:hover {
+  background: rgba(187, 134, 252, 0.2) !important;
+  /* הילה סגולה מודגשת יותר */
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+  transform: translateX(8px) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), 0 0 12px rgba(187, 134, 252, 0.4) !important;
 }
 
-/* אנימציה קטנה לאייקון בזמן הריחוף */
+/* אפקט ריחוף לכפתור האדמין (זהב) */
+#adminBtn:hover {
+  background: rgba(255, 215, 0, 0.15) !important;
+  border-color: #ffd700 !important;
+  color: #ffd700 !important;
+  transform: translateX(8px) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), 0 0 15px rgba(255, 215, 0, 0.3) !important;
+}
+
+/* אנימציה לאייקונים בתוך הכפתורים */
 .sidebar .btn-primary:hover i {
   transform: scale(1.2);
-  transition: transform 0.2s ease;
+  filter: drop-shadow(0 0 5px currentColor);
 }
 
