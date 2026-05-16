@@ -1277,28 +1277,30 @@
       return;
      }
 
-     voters.forEach(v => {
-      const avatarHtml = (v.avatar && v.avatar.trim() !== "") ?
-       `<img src="${v.avatar}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">` :
-       `<i class="fas fa-user-circle" style="font-size: 35px; color: var(--text-muted);"></i>`;
+    voters.forEach(v => {
+            const avatarHtml = (v.avatar && v.avatar.trim() !== "") ?
+                `<img src="${v.avatar}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">` :
+                `<i class="fas fa-user-circle" style="font-size: 35px; color: var(--text-muted);"></i>`;
 
-      const isClickable = v.userId ? true : false;
-      const cursorStyle = isClickable ? 'cursor: pointer;' : '';
-      // לחיצה על שם ברשימת מצביעים זורקת גם היא ישר לעמוד הפרופיל שלו!
-      const clickAction = isClickable ? `onclick="window.location.href='/profile.html?user=${v.username.replace(/'/g, "\\'")}'"` : '';
+            const isClickable = v.userId ? true : false;
+            const cursorStyle = isClickable ? 'cursor: pointer;' : '';
+            const clickAction = isClickable ? `onclick="window.location.href='/profile.html?user=${v.username.replace(/'/g, "\\'")}'"` : '';
 
-      listDiv.innerHTML += `
-                        <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
-                            <div style="display: flex; align-items: center; gap: 10px; ${cursorStyle}" ${clickAction} onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
-                                ${avatarHtml}
-                                <span style="font-weight: bold; color: var(--text-main);">${v.username || 'Unknown'}</span>
-                            </div>
-                            <div style="color: #FFD700; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center;">
-                                ${v.rating} <i class="fas fa-star" style="font-size: 0.8rem; margin-left: 4px;"></i>
-                            </div>
-                        </div>
-                    `;
-     });
+            // תוספת לאדמין: סימון מנעול אם ההצבעה היא מרשימה פרטית
+              const privateTag = v.isPrivateVote ? `<span style="color:#c3c3c3 font-size:0.7rem; margin-left:8px; padding:1px 4px; border-radius:4px;"><i class="fas fa-lock"></i></span>` : '';
+
+            listDiv.innerHTML += `
+                <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+                    <div style="display: flex; align-items: center; gap: 10px; ${cursorStyle}" ${clickAction}>
+                        ${avatarHtml}
+                        <span style="font-weight: bold; color: var(--text-main);">${v.username}${privateTag}</span>
+                    </div>
+                    <div style="color: #FFD700; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center;">
+                        ${v.rating} <i class="fas fa-star" style="font-size: 0.8rem; margin-left: 4px;"></i>
+                    </div>
+                </div>
+            `;
+        });
     } catch (e) {
      listDiv.innerHTML = '<div style="color:#ff4444; text-align:center;">Error loading voters.</div>';
     }

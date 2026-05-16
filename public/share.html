@@ -271,7 +271,6 @@
             border: none !important;
             border-left: 1px solid var(--border) !important;
             background-color: var(--card-bg) !important;
-            color: var(--accent) !important;
             font-weight: 800 !important;
             cursor: pointer;
             padding-left: 15px !important;
@@ -339,26 +338,78 @@
         /* נעילת הגריד - מונע מתוכן להרחיב את הטורים */
 #grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    /* הקטנו את המינימום מ-200 ל-180 כדי שיכנסו יותר בשורה והגובה יירד */
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
     gap: 20px;
     width: 100%;
-    grid-auto-flow: row;
 }
 
-/* אבטחת כרטיסייה */
 .char-card {
     width: 100% !important;
-    min-width: 0 !important; /* מאפשר לה להתכווץ */
-    overflow: hidden;
+    overflow: visible !important; 
     display: flex;
     flex-direction: column;
+    position: relative; 
+    margin-top: 10px; /* צמצמנו את המרווח העליון */
 }
 
-@media (max-width: 768px) {
+.char-card-img {
+    width: 100%;
+    object-fit: cover;
+    display: block;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    background: #111;
+    
+    /* ברירת מחדל למחשב: יותר נמוך */
+    aspect-ratio: 1 / 1.2 !important; 
+}
+
+    @media (max-width: 768px) {
+    /* נעילת הגריד ל-2 טורים שווים ב-100% */
     #grid {
-        grid-template-columns: repeat(2, 1fr) !important; /* 2 בדיוק במובייל */
-        gap: 10px;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important; /* הכרחי: מחלק את המסך בדיוק לחצי */
+        gap: 10px !important;
+        width: 100% !important;
+        padding: 0 !important;
     }
+
+    /* וידוא שהכרטיסייה לא גדולה יותר מהטור שלה */
+    .char-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important; /* מאפשר לטקסט בפנים להיחתך במקום להרחיב את הקארד */
+        margin: 0 !important;
+    }
+
+    .char-card-img {
+        aspect-ratio: 1 / 1.5 !important; /* גובה פוסטר במובייל */
+    }
+
+    /* הקטנה קלה של הטקסט במובייל כדי שיכנס יותר מידע */
+    .char-info {
+        padding: 8px !important;
+    }
+
+    .char-name {
+        font-size: 0.9rem !important;
+    }
+
+       #otherListsContainer {
+        flex-direction: column !important;
+        gap: 8px !important;
+        align-items: center !important;
+        text-align: center;
+    }
+
+    /* מגדיל את הדרופדאון שיהיה נוח ללחיצה בטלפון */
+    #userListsDropdown {
+        width: 100% !important;
+        max-width: 280px;
+        margin: 0 auto;
+    }
+
 }
 
         @media (max-width: 768px) {
@@ -962,47 +1013,52 @@
                 if (!isFreeOrder) filtered.sort((a, b) => b.rating - a.rating);
 
                 filtered.forEach((item, index) => {
-                    const div = document.createElement('div');
-                    div.className = 'char-card';
+                const div = document.createElement('div');
+                div.className = 'char-card';
 
-                    const ratingHtml = item.rating === 0 ? '' : `<div class="char-rating">${getRatingDisplay(item.rating, listRankingType)}</div>`;
-                    const displayType = item.sourceType === 'TV Show' ? 'TV' : item.sourceType;
+                const ratingHtml = item.rating === 0 ? '' : `<div class="char-rating">${getRatingDisplay(item.rating, listRankingType)}</div>`;
+                const displayType = item.sourceType === 'TV Show' ? 'TV' : item.sourceType;
 
-                    let validImg = item.image && !item.image.includes('via.placeholder.com')
-                        ? item.image
-                        : 'https://placehold.co/200x300/252525/bb86fc?text=No+Image';
+                let validImg = item.image && !item.image.includes('via.placeholder.com')
+                    ? item.image
+                    : 'https://placehold.co/200x300/252525/bb86fc?text=No+Image';
 
-                    // אם יש הערה, נצייר את האייקון. אם אין - נשים רווח כדי שהטייפ יישאר בימין
-                    const notesIconHtml = (item.notes && item.notes.trim() !== '') ? `
-                    <div class="note-tooltip-container">
-                        <i class="fas fa-sticky-note note-icon"></i>
-                        <div class="note-tooltip">${item.notes}</div>
-                    </div>
-                ` : `<span></span>`;
+                const notesIconHtml = (item.notes && item.notes.trim() !== '') ? `
+            <div class="note-tooltip-container">
+                <i class="fas fa-sticky-note note-icon"></i>
+                <div class="note-tooltip">${item.notes}</div>
+            </div>
+        ` : `<span></span>`;
 
-                    div.innerHTML = `
+                div.innerHTML = `
             <div class="rank-badge ${index < 3 ? 'rank-' + (index + 1) : 'rank-other'}">#${index + 1}</div>
             ${ratingHtml}
-            <img src="${validImg}" class="char-img" onerror="this.src='https://placehold.co/200x300/252525/bb86fc?text=No+Image'" style="width:100%; display:block;">
             
-            <!-- נעילה: הוספנו overflow: hidden ו-width: 100% כדי למנוע התרחבות -->
-            <div class="char-info" style="display: flex; flex-direction: column; flex: 1; min-width: 0; width: 100%; overflow: hidden; box-sizing: border-box;">
-                
-                <!-- שם הדמות - שורה אחת עם 3 נקודות -->
-                <div class="char-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; display: block;" title="${item.characterName}">${item.characterName}</div>
-                
-                <!-- המקור - שורה אחת מלאה משלו עם 3 נקודות -->
-                <div class="source-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; width: 100%; margin-top: 2px; font-size: 0.85rem; color: var(--text-muted);" title="${item.sourceTitle}">${item.sourceTitle}</div>
-                
-                <!-- שורה תחתונה: נדחפת תמיד לסוף הכרטיסייה -->
+            <!-- שימוש בקלאס החדש שמנהל את הגובה לפי מכשיר -->
+            <img src="${validImg}" class="char-card-img" onerror="this.src='https://placehold.co/200x300/252525/bb86fc?text=No+Image'">
+            
+            <div class="char-info" style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-width: 0;">
+                <div style="width: 100%; overflow: hidden;">
+                    <div style="font-weight: bold; font-size: 1rem; color: #fff; white-space: normal; word-break: break-word; line-height: 1.2; margin-bottom: 4px;">
+                        ${item.characterName}
+                    </div>
+                    
+                    <!-- הצגת המקור רק אם הוא קיים -->
+                    ${item.sourceTitle && item.sourceTitle.trim() !== "" ? `
+                        <div style="font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;" title="${item.sourceTitle}">
+                            ${item.sourceTitle}
+                        </div>
+                    ` : ''}
+                </div>
+
                 <div class="card-bottom-bar" style="margin-top: auto; padding-top: 10px; display: flex; justify-content: space-between; align-items: center; width: 100%;">
                     ${notesIconHtml}
-                    <span class="red-type" style="flex-shrink: 0; font-size: 0.85rem;">${displayType}</span>
+                    <span class="red-type" style="flex-shrink: 0; font-size: 0.7rem; font-weight: bold; background: rgba(187, 134, 252, 0.1); padding: 2px 6px; border-radius: 4px;">${displayType}</span>
                 </div>
             </div>`;
 
-                    grid.appendChild(div);
-                });
+                grid.appendChild(div);
+            });
             }
 
         function renderComments(comments, ownerId) {
@@ -1469,18 +1525,18 @@
                         `<img src="${v.avatar}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">` :
                         `<i class="fas fa-user-circle" style="font-size: 35px; color: var(--text-muted);"></i>`;
 
-                    // לוגיקת לחיצה: רק אם יש userId (כלומר משתמש פומבי) נאפשר לחיצה
                     const isClickable = v.userId ? true : false;
                     const cursorStyle = isClickable ? 'cursor: pointer;' : '';
-                    // סוגרים את חלון ההצבעות, פותחים את חלון הקהילה ומציגים את המשתמש
-                    const clickAction = isClickable ? `onclick="document.getElementById('votersModal').classList.add('hidden'); document.getElementById('communityModal').classList.remove('hidden'); showUserLists('${v.userId}', '${v.username.replace(/'/g, "\\'")}', '${v.avatar || ''}');"` : '';
-                    const hoverEffect = isClickable ? `onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'"` : '';
+                    const clickAction = isClickable ? `onclick="window.location.href='/profile.html?user=${v.username.replace(/'/g, "\\'")}'"` : '';
+
+                    // תוספת לאדמין: סימון מנעול אם ההצבעה היא מרשימה פרטית
+                      const privateTag = v.isPrivateVote ? `<span style="color:#c3c3c3 font-size:0.7rem; margin-left:8px; padding:1px 4px; border-radius:4px;"><i class="fas fa-lock"></i></span>` : '';
 
                     listDiv.innerHTML += `
                 <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
-                    <div style="display: flex; align-items: center; gap: 10px; transition: 0.2s; ${cursorStyle}" ${clickAction} ${hoverEffect}>
+                    <div style="display: flex; align-items: center; gap: 10px; ${cursorStyle}" ${clickAction}>
                         ${avatarHtml}
-                        <span style="font-weight: bold; color: var(--text-main);">${v.username || 'Unknown'}</span>
+                        <span style="font-weight: bold; color: var(--text-main);">${v.username}${privateTag}</span>
                     </div>
                     <div style="color: #FFD700; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center;">
                         ${v.rating} <i class="fas fa-star" style="font-size: 0.8rem; margin-left: 4px;"></i>

@@ -301,6 +301,22 @@ a .logo {
   min-width: 0;
 }
 
+.red-type {
+  font-size: 0.75rem !important;
+  font-weight: bold !important;
+  /* color: var(--accent) !important; */
+  /* צבע סגול מהנושא */
+  background: rgba(49, 47, 50, 0.1) !important;
+  /* רקע סגול שקוף */
+  padding: 3px 8px !important;
+  border-radius: 4px !important;
+  text-transform: uppercase;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(187, 134, 252, 0.2);
+}
+
 .unified-filter input {
   flex: 2;
   /* נותן לחיפוש יותר משקל */

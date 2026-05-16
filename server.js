@@ -299,14 +299,19 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
-// --- GET SPECIFIC CHARACTER VOTERS (WITH ANONYMOUS PRIVATE VOTES) ---
-app.get('/api/leaderboard/voters/:charId', async (req, res) => {
+// --- GET SPECIFIC CHARACTER VOTERS (ADMINS SEE PRIVATE DATA) ---
+app.get('/api/leaderboard/voters/:charId', optionalToken, async (req, res) => {
   try {
     const charId = req.params.charId;
 
-    const lists = await List.find({ "items.apiId": charId })
-      .populate('userId', 'username avatar');
+    // בדיקה האם המשתמש המבקש הוא אדמין
+    let isAdmin = false;
+    if (req.user) {
+      const requester = await User.findById(req.user._id);
+      if (requester && requester.role === 'admin') isAdmin = true;
+    }
 
+    const lists = await List.find({ "items.apiId": charId }).populate('userId', 'username avatar');
     const userBestRating = {};
 
     lists.forEach(list => {
@@ -317,12 +322,15 @@ app.get('/api/leaderboard/voters/:charId', async (req, res) => {
         if (item.apiId && item.apiId.toString() === charId && item.rating > 0) {
           const currentMax = userBestRating[user._id] ? userBestRating[user._id].rating : 0;
           if (item.rating > currentMax) {
+            // לוגיקת חשיפה: אם זה פרטי ומי שצופה הוא לא אדמין -> תסתיר. אחרת -> תחשוף.
+            const shouldMask = list.isPrivate && !isAdmin;
+
             userBestRating[user._id] = {
-              // הוספנו את ה-userId! (אם הרשימה פרטית, נחזיר null כדי שלא ילחצו עליו)
-              userId: list.isPrivate ? null : user._id,
-              username: list.isPrivate ? "Anonymous" : user.username,
-              avatar: list.isPrivate ? "" : user.avatar,
-              rating: item.rating
+              userId: shouldMask ? null : user._id,
+              username: shouldMask ? "Anonymous" : user.username,
+              avatar: shouldMask ? "" : user.avatar,
+              rating: item.rating,
+              isPrivateVote: list.isPrivate // שולח דגל כדי שהאדמין יראה סימון
             };
           }
         }
@@ -668,15 +676,31 @@ app.get('/api/profile/:username', optionalToken, async (req, res) => {
   }
 });
 
+// עדכון נתוני הפרופיל של המשתמש המחובר + רישום בלוגים
 app.put('/api/profile/update', verifyToken, async (req, res) => {
   try {
     const { avatar, banner, bio, featuredListId } = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { avatar, banner, bio, featuredListId },
-      { new: true }
-    );
 
+    // משיכת המשתמש לפני העדכון כדי לדעת מה השתנה (אופציונלי)
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // ביצוע העדכון
+    await User.findByIdAndUpdate(req.user._id, { avatar, banner, bio, featuredListId });
+
+    // --- יצירת פירוט ללוג ---
+    let details = [];
+    if (avatar && avatar !== user.avatar) details.push("Avatar");
+    if (banner && banner !== user.banner) details.push("Banner");
+    if (bio && bio !== user.bio) details.push("Bio");
+    if (featuredListId && featuredListId !== user.featuredListId) details.push("Featured List");
+
+    const logDetails = details.length > 0 ? `Updated: ${details.join(', ')}` : "Profile saved (no major changes)";
+
+    // שמירת הלוג עבור האדמין
+    await saveLog(user, "Profile Edit", logDetails);
+
+    // סנכרון התמונה בתגובות הישנות (רץ ברקע)
     if (avatar) {
       List.updateMany(
         { "comments.userId": user._id },
@@ -687,6 +711,7 @@ app.put('/api/profile/update', verifyToken, async (req, res) => {
 
     res.json({ success: true });
   } catch (e) {
+    console.error("Profile update error:", e);
     res.status(500).json({ error: e.message });
   }
 });

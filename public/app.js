@@ -171,7 +171,7 @@ async function showLoggedOutState() {
                     MyCharacterList is the ultimate platform to build your own tier lists and rankings for your favorite characters across Anime, Video Games, Movies, Visual Novels, and Books. Join our growing community, share your opinions, discover new media, and see who makes it to the top of the Global Leaderboard!
                 </p>
                 
-                <img src="Screenshot_42.jpg" alt="Screenshot" style="width: 100%; max-width: 900px; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.6); border: 1px solid var(--border);">
+                <img src="homepage_preview.png" alt="homepage_preview" style="width: 100%; max-width: 900px; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.6); border: 1px solid var(--border);">
             </div>
 
         </div>
@@ -653,7 +653,13 @@ function renderCurrentList() {
             ? item.image
             : 'https://placehold.co/200x300/252525/bb86fc?text=No+Image';
 
-        // אם יש הערה, נציג את האייקון עם הטולטיפ, אם אין נשים בלוק ריק לשמור על היישור
+        // --- הנה השינוי המרכזי: יוצרים את המקור רק אם הוא קיים ---
+        const sourceHtml = (item.sourceTitle && item.sourceTitle.trim() !== "")
+            ? `<div class="source-row" style="margin-bottom: 5px;">
+                 <span class="source-title" title="${item.sourceTitle}">${item.sourceTitle}</span>
+               </div>`
+            : "";
+
         const notesIconHtml = (item.notes && item.notes.trim() !== '') ? `
             <div class="note-tooltip-container">
                 <i class="fas fa-sticky-note note-icon"></i>
@@ -665,19 +671,25 @@ function renderCurrentList() {
             <div class="rank-badge ${rankClass}">#${index + 1}</div>
             ${ratingHtml}
             <img src="${validImg}" class="char-img" onerror="this.src='https://placehold.co/200x300/252525/bb86fc?text=No+Image'">
-            <div class="char-info">
-                <div class="char-name">${item.characterName}</div>
-                <div class="source-row">
-                    <span class="source-title" title="${item.sourceTitle}">${item.sourceTitle}</span>
-                    <span class="red-type">${item.sourceType === 'TV Show' ? 'TV' : item.sourceType}</span>
-                </div>
+            <div class="char-info" style="display: flex; flex-direction: column;">
+                <div class="char-name" style="margin-bottom: 5px;">${item.characterName}</div>
                 
-                <!-- השורה התחתונה המעודכנת -->
-                <div class="card-bottom-bar">
+                <!-- כאן נכנס המקור (אם קיים) -->
+                ${sourceHtml}
+
+                <div class="card-bottom-bar" style="margin-top: auto; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <!-- אייקון הערות נשאר הכי שמאלי -->
                     ${notesIconHtml}
-                    <div class="card-actions">
-                        <button class="icon-btn edit-btn" onclick="editItem(${item.originalIndex})"><i class="fas fa-edit"></i></button>
-                        <button class="icon-btn delete-btn" onclick="removeItem(${item.originalIndex})"><i class="fas fa-trash"></i></button>
+                    
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <!-- כפתורי עריכה/מחיקה עברו לאמצע -->
+                        <div class="card-actions" style="margin: 0; display: flex; gap: 4px;">
+                            <button class="icon-btn edit-btn" onclick="editItem(${item.originalIndex})"><i class="fas fa-edit"></i></button>
+                            <button class="icon-btn delete-btn" onclick="removeItem(${item.originalIndex})"><i class="fas fa-trash"></i></button>
+                        </div>
+
+                        <!-- ה-Type המעוצב הוא עכשיו הכי ימני -->
+                        <span class="red-type">${item.sourceType === 'TV Show' ? 'TV' : item.sourceType}</span>
                     </div>
                 </div>
             </div>
@@ -885,11 +897,11 @@ async function openCharModal(item) {
         numInput.classList.add('hidden');
         letInput.classList.remove('hidden');
         // If editing, set the value
-        letInput.value = (item && item.rating) ? item.rating : "10";
+        letInput.value = 0;
     } else {
         numInput.classList.remove('hidden');
         letInput.classList.add('hidden');
-        numInput.value = (item && item.rating) ? item.rating : 5;
+        numInput.value = 0;
     }
 
     if (item.type === 'character') {
@@ -985,11 +997,11 @@ function openCustomCharModal() {
     if (isLetters) {
         document.getElementById('ratingInput').classList.add('hidden');
         document.getElementById('ratingLetterInput').classList.remove('hidden');
-        document.getElementById('ratingLetterInput').value = "10";
+        document.getElementById('ratingLetterInput').value = "0";
     } else {
         document.getElementById('ratingInput').classList.remove('hidden');
         document.getElementById('ratingLetterInput').classList.add('hidden');
-        document.getElementById('ratingInput').value = 5;
+        document.getElementById('ratingInput').value = 0;
     }
 
     document.getElementById('charModal').classList.remove('hidden');
@@ -1004,7 +1016,6 @@ document.getElementById('saveCharBtn').addEventListener('click', () => {
     const sourceType = document.getElementById('sourceTypeInput').value;
 
     if (!name) return alert("Character Name required");
-    if (!sourceTitle) return alert("Source Title required");
 
     const list = state.lists.find(l => l._id === state.activeListId);
     const isLetters = list.rankingType === 'letters';
@@ -1602,18 +1613,18 @@ window.openVotersModal = async function (charId, charName) {
                 `<img src="${v.avatar}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">` :
                 `<i class="fas fa-user-circle" style="font-size: 35px; color: var(--text-muted);"></i>`;
 
-            // לוגיקת לחיצה: רק אם יש userId (כלומר משתמש פומבי) נאפשר לחיצה
             const isClickable = v.userId ? true : false;
             const cursorStyle = isClickable ? 'cursor: pointer;' : '';
-            // סוגרים את חלון ההצבעות, פותחים את חלון הקהילה ומציגים את המשתמש
-            const clickAction = isClickable ? `onclick="document.getElementById('votersModal').classList.add('hidden'); document.getElementById('communityModal').classList.remove('hidden'); showUserLists('${v.userId}', '${v.username.replace(/'/g, "\\'")}', '${v.avatar || ''}');"` : '';
-            const hoverEffect = isClickable ? `onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'"` : '';
+            const clickAction = isClickable ? `onclick="window.location.href='/profile.html?user=${v.username.replace(/'/g, "\\'")}'"` : '';
+
+            // תוספת לאדמין: סימון מנעול אם ההצבעה היא מרשימה פרטית
+            const privateTag = v.isPrivateVote ? `<span style="color:#c3c3c3 font-size:0.7rem; margin-left:8px; padding:1px 4px; border-radius:4px;"><i class="fas fa-lock"></i></span>` : '';
 
             listDiv.innerHTML += `
                 <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
-                    <div style="display: flex; align-items: center; gap: 10px; transition: 0.2s; ${cursorStyle}" ${clickAction} ${hoverEffect}>
+                    <div style="display: flex; align-items: center; gap: 10px; ${cursorStyle}" ${clickAction}>
                         ${avatarHtml}
-                        <span style="font-weight: bold; color: var(--text-main);">${v.username || 'Unknown'}</span>
+                        <span style="font-weight: bold; color: var(--text-main);">${v.username}${privateTag}</span>
                     </div>
                     <div style="color: #FFD700; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center;">
                         ${v.rating} <i class="fas fa-star" style="font-size: 0.8rem; margin-left: 4px;"></i>
