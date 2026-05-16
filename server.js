@@ -271,7 +271,7 @@ app.get('/api/leaderboard', async (req, res) => {
       },
       { $match: { rankedByCount: { $gte: 2 } } },
       { $sort: sortStage }, // <--- הזרקת המיון שבחרנו כאן!
-      { $limit: 100 }
+      { $limit: 200 }
     ];
 
     const leaderboardRaw = await List.aggregate(pipeline);
@@ -280,17 +280,21 @@ app.get('/api/leaderboard', async (req, res) => {
     const overrideMap = {};
     overrides.forEach(o => { overrideMap[o.charId] = o; });
 
+    // סינון והחלת שינויי אדמין
     const finalLeaderboard = leaderboardRaw.map(item => {
       const override = overrideMap[item._id];
       if (override) {
-        if (override.isHidden) return null;
+        if (override.isHidden) return null; // דמות בבאן
         item.characterName = override.characterName || item.characterName;
         item.sourceTitle = override.sourceTitle || item.sourceTitle;
         item.sourceType = override.sourceType || item.sourceType;
         item.image = override.image || item.image;
       }
+      item.avgRating = parseFloat(item.avgRating.toFixed(1));
       return item;
-    }).filter(item => item !== null);
+    })
+      .filter(item => item !== null) 
+      .slice(0, 100);
 
     res.json(finalLeaderboard);
   } catch (e) {
