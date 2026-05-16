@@ -409,11 +409,10 @@
     <i class="fas fa-trophy" style="color: gold;"></i> Leaderboard
    </button>
   
-   <button id="adminBtn" class="btn-primary hidden" onclick="openAdminPanel()"
+<button id="adminBtn" class="btn-primary hidden" onclick="openAdminPanel()"
     style="background: rgba(255, 215, 0, 0.1) !important; color: gold !important; border: 1px solid gold !important; display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px; box-shadow: none !important;">
     <i class="fas fa-crown"></i> Admin Panel
-   </button>
-  
+</button>
   </div>
 
   <div class="sidebar-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -675,11 +674,46 @@
    </div>
   </div>
 
+<!-- ADMIN MODAL -->
+<div id="adminModal" class="modal hidden">
+    <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+        <span class="close-modal" onclick="document.getElementById('adminModal').classList.add('hidden')">&times;</span>
+        <h3 style="text-align: center; margin-bottom: 20px; color: gold;"><i class="fas fa-crown"></i> Admin Panel</h3>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button id="adminTabUsers" onclick="switchAdminTab('users')" class="btn-primary active-tab"
+                style="flex:1;">Users & Lists</button>
+            <button id="adminTabLogs" onclick="switchAdminTab('logs')" class="btn-primary inactive-tab"
+                style="flex:1;">Activity Logs</button>
+        </div>
+
+        <div id="adminUsersSection">
+            <div id="adminUsersGrid" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+
+        <div id="adminListsSection" class="hidden">
+            <button onclick="switchAdminTab('users')" class="btn-primary"
+                style="margin-bottom:15px; width:auto; background:#555;">
+                <i class="fas fa-arrow-left"></i> Back to Users
+            </button>
+            <h4 id="adminUserListsTitle" style="margin-bottom:15px; color:var(--accent);"></h4>
+            <div id="adminListsGrid" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+
+        <div id="adminLogsSection" class="hidden">
+            <div id="adminLogsList"
+                style="display: flex; flex-direction: column; gap: 8px; max-height: 500px; overflow-y: auto; font-size: 0.85rem; border: 1px solid var(--border); padding: 5px; border-radius: 4px;">
+            </div>
+        </div>
+    </div>
+</div>
+
  <script>
   const urlParams = new URLSearchParams(window.location.search);
   const targetUsername = urlParams.get('user');
   let profileData = null;
   let loggedInUser = null;
+  let logsAutoRefreshInterval = null;
   let currentNotifsData = [];
 
   const menuBtn = document.getElementById('mobileMenuBtn');
@@ -1390,6 +1424,143 @@
        btn.textContent = "Save Image";
       }
      };
+
+     // פונקציה לפתיחת הפאנל
+   // ==========================================
+    // ADMIN PANEL LOGIC (FIXED)
+    // ==========================================
+    window.openAdminPanel = function () {
+        const modal = document.getElementById('adminModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            window.switchAdminTab('users');
+        }
+    };
+
+    window.switchAdminTab = function (tab) {
+        const usersSec = document.getElementById('adminUsersSection');
+        const listsSec = document.getElementById('adminListsSection');
+        const logsSec = document.getElementById('adminLogsSection');
+        const tabUsersBtn = document.getElementById('adminTabUsers');
+        const tabLogsBtn = document.getElementById('adminTabLogs');
+
+        // ניקוי מצב קודם
+        usersSec.classList.add('hidden');
+        listsSec.classList.add('hidden');
+        logsSec.classList.add('hidden');
+        tabUsersBtn.className = 'btn-primary inactive-tab';
+        tabLogsBtn.className = 'btn-primary inactive-tab';
+
+        // עצירת ריענון לוגים אם היה פעיל
+        if (logsAutoRefreshInterval) {
+            clearInterval(logsAutoRefreshInterval);
+            logsAutoRefreshInterval = null;
+        }
+
+        if (tab === 'users') {
+            usersSec.classList.remove('hidden');
+            tabUsersBtn.className = 'btn-primary active-tab';
+            loadAdminUsers();
+        } else if (tab === 'logs') {
+            logsSec.classList.remove('hidden');
+            tabLogsBtn.className = 'btn-primary active-tab';
+            loadAdminLogs();
+            // הפעלת ריענון אוטומטי כל 5 שניות
+            logsAutoRefreshInterval = setInterval(() => loadAdminLogs(true), 5000);
+        }
+    };
+
+    window.loadAdminUsers = async function () {
+        const grid = document.getElementById('adminUsersGrid');
+        grid.innerHTML = '<div style="padding:20px; text-align:center;">Loading users...</div>';
+        try {
+            const res = await fetch('/api/admin/users');
+            const users = await res.json();
+            grid.innerHTML = '';
+            users.forEach(u => {
+                const div = document.createElement('div');
+                div.style = "display:flex; justify-content:space-between; align-items:center; padding:10px; background:var(--bg-color); border:1px solid var(--border); border-radius:4px; margin-bottom:5px;";
+                div.innerHTML = `
+                        <span><strong>${u.username}</strong></span>
+                        <div style="display:flex; gap:5px;">
+                            <button onclick="adminManageLists('${u._id}', '${u.username}')" class="btn-primary" style="width:auto; padding:5px 10px; background:#2196F3; font-size:0.8rem;">Lists</button>
+                            <button onclick="adminResetPass('${u._id}')" class="btn-primary" style="width:auto; padding:5px 10px; background:orange; font-size:0.8rem;">New Pass</button>
+                            <button onclick="adminDeleteUser('${u._id}')" class="btn-primary" style="width:auto; padding:5px 10px; background:red; font-size:0.8rem;">Delete</button>
+                        </div>
+                    `;
+                grid.appendChild(div);
+            });
+        } catch (e) { grid.innerHTML = 'Error loading users.'; }
+    };
+
+    window.loadAdminLogs = async function (silent = false) {
+        const list = document.getElementById('adminLogsList');
+        if (!silent) list.innerHTML = '<div style="padding:20px; text-align:center;">Updating logs...</div>';
+        try {
+            const res = await fetch('/api/admin/logs');
+            const logs = await res.json();
+            list.innerHTML = logs.map(log => {
+                const date = new Date(log.timestamp).toLocaleString('he-IL');
+                let actionColor = log.action.includes("Delete") ? "#ff4444" : (log.action.includes("Create") ? "#4CAF50" : "#2196F3");
+                return `<div style="padding: 8px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 10px; background: var(--card-bg); font-size:0.8rem;">
+                        <span style="color: #888; min-width: 130px;">${date}</span>
+                        <span style="font-weight: bold; min-width: 80px;">${log.username}</span>
+                        <span style="color: ${actionColor}; font-weight: bold;">${log.action}</span>
+                        <span style="flex: 1; color: var(--text-muted); text-align:right;">${log.details}</span>
+                    </div>`;
+            }).join('');
+        } catch (e) { }
+    };
+
+        // ניהול רשימות של משתמש ספציפי דרך האדמין
+        window.adminManageLists = async function (userId, username) {
+            document.getElementById('adminUsersSection').classList.add('hidden');
+            document.getElementById('adminListsSection').classList.remove('hidden');
+            document.getElementById('adminUserListsTitle').textContent = `Lists owned by: ${username}`;
+            const grid = document.getElementById('adminListsGrid');
+            grid.innerHTML = 'Fetching...';
+            try {
+                const res = await fetch(`/api/admin/users/${userId}/lists`);
+                const lists = await res.json();
+                grid.innerHTML = lists.length ? '' : '<p>No lists yet.</p>';
+                lists.forEach(l => {
+                    const div = document.createElement('div');
+                    div.style = "display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #333;";
+                    div.innerHTML = `
+                <span>${l.name}</span>
+                <button onclick="adminDeleteList('${l._id}', '${userId}', '${username}')" style="background:red; color:white; border:none; padding:3px 8px; border-radius:4px; cursor:pointer;">Delete</button>
+            `;
+                    grid.appendChild(div);
+                });
+            } catch (e) { grid.innerHTML = 'Error.'; }
+        };
+
+        // מחיקת משתמש או רשימה
+        window.adminDeleteUser = async function (id) {
+            if (!confirm("DELETE USER?")) return;
+            await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+            loadAdminUsers();
+        };
+
+        window.adminDeleteList = async function (listId, userId, username) {
+            if (!confirm("Delete list?")) return;
+            await fetch(`/api/admin/lists/${listId}`, { method: 'DELETE' });
+            adminManageLists(userId, username);
+        };
+
+        window.adminResetPass = async function (id) {
+                const newPass = prompt("Enter new password for this user (Min 3 characters):");
+                if (!newPass) return;
+
+                const res = await fetch(`/api/admin/users/${id}/reset`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ newPassword: newPass })
+                });
+
+                if (res.ok) alert("Password changed successfully!");
+                else alert("Error changing password.");
+            };
 
   initProfile();
   

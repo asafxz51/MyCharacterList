@@ -627,7 +627,7 @@ a .logo {
 .char-card {
   background: var(--card-bg);
   border-radius: 8px;
-  overflow: visible;
+  overflow: visible !important;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   position: relative;
   transition: transform 0.2s;
@@ -1761,5 +1761,40 @@ select {
     height: 160px;
     /* מקצר קצת את גובה התמונה כדי שלא תתפוס חצי מסך */
   }
+}
+
+/* =====================================
+   SIDEBAR BUTTONS HOVER EFFECTS
+   ===================================== */
+
+/* הגדרה כללית לכפתורים בסיידבאר */
+.sidebar .btn-primary {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* אפקט הריחוף לכפתורים הרגילים (פרופיל, קהילה, לידרבורד) */
+.sidebar .btn-primary:hover {
+  background: rgba(187, 134, 252, 0.1) !important;
+  /* הילה סגולה עדינה ברקע */
+  border-color: var(--accent) !important;
+  transform: translateX(3px);
+  /* הכפתור "יוצא" טיפה ימינה */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 8px rgba(187, 134, 252, 0.2) !important;
+}
+
+/* אפקט מיוחד לכפתור האדמין (בצבע זהב) */
+#adminBtn:hover {
+  background: rgba(255, 215, 0, 0.15) !important;
+  /* הילה זהובה */
+  border-color: #ffd700 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 10px rgba(255, 215, 0, 0.3) !important;
+}
+
+/* אנימציה קטנה לאייקון בזמן הריחוף */
+.sidebar .btn-primary:hover i {
+  transform: scale(1.2);
+  transition: transform 0.2s ease;
 }
 

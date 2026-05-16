@@ -117,88 +117,88 @@ async function checkLoginStatus() {
 
 async function showLoggedOutState() {
     const authBtn = document.getElementById('authBtnNav');
-    const elementsToHide = ['mobileProfileBtn', 'notifArea', 'adminBtn', 'shareBtn', 'userDisplay', 'sidebarProfileBtn'];
-    elementsToHide.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
-    });
-    const menuBtn = document.getElementById('mobileMenuBtn');
-    if (menuBtn) menuBtn.classList.add('hidden');
 
-    document.getElementById('userDisplay').style.display = 'none';
-    authBtn.textContent = "Login";
-    authBtn.style.display = 'inline-block';
+    // 1. הסתרת כל מה ששייך למשתמש מחובר (סיידבאר, כותרות ופקדים)
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.style.display = 'none';
 
-    document.querySelector('.sidebar').style.display = 'none';
-    document.querySelector('.list-header').style.display = 'none';
-    document.getElementById('listNav').innerHTML = '';
+    const listHeader = document.querySelector('.list-header');
+    if (listHeader) listHeader.style.display = 'none';
 
-    if (document.getElementById('notifArea')) {
-        document.getElementById('notifArea').classList.add('hidden');
+    const commentsSec = document.getElementById('indexCommentsSection');
+    if (commentsSec) commentsSec.classList.add('hidden');
+
+    const authModal = document.getElementById('authModal');
+
+    // 2. איפוס כפתור הלוגין בנאב
+    if (authBtn) {
+        authBtn.textContent = "Login";
+        authBtn.style.display = 'inline-block';
     }
 
+    // 3. הזרקת דף הנחיתה לתוך הגריד הראשי
     const grid = document.getElementById('characterGrid');
-
     grid.innerHTML = `
         <div style="grid-column: 1/-1; padding-bottom: 50px;">
             
             <!-- 1. Hero Section -->
-            <div style="text-align: center; padding: 40px 15px;">
+            <div style="text-align: center; padding: 60px 20px;">
                 <h1 class="hero-title">MyCharacterList</h1>
                 <p class="hero-subtitle">Your ultimate hub to rank, share, and discover characters!</p>
-                <p style="font-size: 1rem; color: var(--text-muted); margin-bottom: 30px;">Create a new account or log in to start</p>
-                <button onclick="document.getElementById('authModal').classList.remove('hidden')" class="btn-primary" style="padding: 12px 35px; font-size: 1.1rem; border-radius: 30px; width: auto; box-shadow: 0 4px 15px rgba(187, 134, 252, 0.3);">
+                <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 40px;">Create a new account or log in to start</p>
+                <button onclick="document.getElementById('authModal').classList.remove('hidden')" class="btn-primary" style="padding: 15px 45px; font-size: 1.2rem; border-radius: 30px; width: auto; box-shadow: 0 4px 15px rgba(187, 134, 252, 0.3);">
                     <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i> Login / Register
                 </button>
             </div>
 
-            <!-- 2. Random Community Lists -->
-            <div style="text-align: center; margin-top: 10px;">
-                <h3 style="font-size: 1.6rem; margin-bottom: 20px; color: var(--text-main);"><i class="fas fa-compass" style="color: var(--accent);"></i> Explore Community Lists</h3>
-                <!-- כאן הכנסנו את הקלאס שמסדר אותם בזוגות במובייל -->
+            <!-- 2. Community Showcase -->
+            <div style="text-align: center; margin-top: 20px;">
+                <h3 style="font-size: 1.8rem; margin-bottom: 25px; color: var(--text-main);"><i class="fas fa-compass" style="color: var(--accent);"></i> Explore Community Lists</h3>
                 <div id="randomListsContainer" class="random-lists-grid">
                     <p style="color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading community lists...</p>
                 </div>
+                 <div style="margin-top: 30px;">
+                    <button onclick="openCommModalFromLanding()" style="background: none; border: 1px solid var(--accent); color: var(--accent); padding: 10px 25px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.2s;" onmouseover="this.style.background='rgba(187, 134, 252, 0.1)'" onmouseout="this.style.background='transparent'">
+                        See more of our commuinity...
+                    </button>
+                </div>
             </div>
 
-            <!-- 3. What is MyCharacterList? + Screenshot -->
-            <div style="margin-top: 60px; background: var(--card-bg); padding: 40px 20px; border-radius: 20px; border: 1px solid var(--border); text-align: center;">
-                <h2 style="font-size: 2rem; color: var(--accent); margin-bottom: 20px;">What is MyCharacterList?</h2>
-                <p style="font-size: 1.1rem; line-height: 1.6; color: var(--text-muted); max-width: 800px; margin: 0 auto 30px auto;">
+            <!-- 3. About Section -->
+            <div style="margin-top: 80px; background: var(--card-bg); padding: 50px 20px; border-radius: 20px; border: 1px solid var(--border); text-align: center;">
+                <h2 style="font-size: 2.2rem; color: var(--accent); margin-bottom: 25px;">What is MyCharacterList?</h2>
+                <p style="font-size: 1.15rem; line-height: 1.8; color: var(--text-muted); max-width: 800px; margin: 0 auto 40px auto; word-break: break-word;">
                     MyCharacterList is the ultimate platform to build your own tier lists and rankings for your favorite characters across Anime, Video Games, Movies, Visual Novels, and Books. Join our growing community, share your opinions, discover new media, and see who makes it to the top of the Global Leaderboard!
                 </p>
                 
-                <img src="Screenshot_42.jpg" alt="MyCharacterList Screenshot" style="width: 100%; max-width: 900px; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.6); border: 1px solid var(--border);">
+                <img src="Screenshot_42.jpg" alt="Screenshot" style="width: 100%; max-width: 900px; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.6); border: 1px solid var(--border);">
             </div>
 
         </div>
     `;
 
-    // בקשת הרשימות מהשרת והצגתן במסך
+    // 4. משיכת רשימות אקראיות
     try {
         const res = await fetch('/api/public/random-lists');
         const container = document.getElementById('randomListsContainer');
-
         if (res.ok) {
             const lists = await res.json();
             if (lists.length === 0) {
-                container.innerHTML = '<p style="color:var(--text-muted);">No public lists available yet.</p>';
+                container.innerHTML = '<p style="color:var(--text-muted);">No public lists yet.</p>';
             } else {
                 container.innerHTML = lists.map(l => `
                     <div class="landing-list-card" onclick="window.location.href='/share.html?id=${l._id}'">
                         <img src="${l.thumbnail}" onerror="this.src='https://placehold.co/200x300/252525/bb86fc?text=No+Image'">
                         <div class="landing-list-info">
                             <h4>${l.name}</h4>
-                            <span><i class="fas fa-layer-group"></i> ${l.itemCount} Characters</span>
+                            <span><i class="fas fa-layer-group"></i> ${l.itemCount} Items</span>
                         </div>
                     </div>
                 `).join('');
             }
-        } else {
-            container.innerHTML = '<p style="color:#ff4444;">Failed to load lists.</p>';
         }
     } catch (e) {
-        document.getElementById('randomListsContainer').innerHTML = '<p style="color:#ff4444;">Server connection error.</p>';
+        console.log("Failed to load random lists");
     }
 }
 
@@ -2337,6 +2337,23 @@ window.addEventListener('click', (e) => {
         }
     }
 });
+
+window.openCommModalFromLanding = function () {
+    const modal = document.getElementById('communityModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        // מוודא שהטאבים והחיפוש מוצגים נכון
+        const tabs = document.getElementById('commTabsContainer');
+        const backBtn = document.getElementById('commBackBtn');
+        if (tabs) tabs.classList.remove('hidden');
+        if (backBtn) backBtn.classList.add('hidden');
+
+        // טוען את המשתמשים
+        if (typeof switchCommTab === 'function') {
+            switchCommTab('users');
+        }
+    }
+};
 
 
 init();
