@@ -224,16 +224,15 @@ app.post('/api/lists/:id/duplicate', verifyToken, async (req, res) => {
 });
 
 // --- GLOBAL LEADERBOARD (OPTIMIZED & LIGHTWEIGHT WITH SORTING) ---
+// --- GLOBAL LEADERBOARD (BAYESIAN WEIGHTED RATING) ---
 app.get('/api/leaderboard', async (req, res) => {
   try {
-    // 1. בודק איך ביקשנו למיין
     const sortParam = req.query.sort;
-    const sortStage = sortParam === 'popularity'
-      ? { rankedByCount: -1, avgRating: -1 } // קודם כמות מדרגים, אח"כ ציון
-      : { avgRating: -1, rankedByCount: -1 }; // קודם ציון, אח"כ כמות מדרגים
+
+    // הגדרות למערכת השקלול
+    const m = 2; // מינימום הצבעות ל"אמון" מלא בציון (מותאם לאתר קטן)
 
     const pipeline = [
-      // { $match: { isPrivate: { $ne: true } } },
       { $project: { userId: 1, items: 1 } },
       { $unwind: "$items" },
       {
@@ -243,12 +242,9 @@ app.get('/api/leaderboard', async (req, res) => {
           "items.entityType": { $ne: "series" }
         }
       },
+      { $addFields: { charId: { $toString: "$items.apiId" } } },
       {
-        $addFields: {
-          charId: { $toString: "$items.apiId" }
-        }
-      },
-      {
+        // קיבוץ לפי משתמש ודמות (מניעת כפילויות של אותו יוזר)
         $group: {
           _id: { userId: "$userId", charId: "$charId" },
           maxRating: { $max: "$items.rating" },
@@ -259,41 +255,81 @@ app.get('/api/leaderboard', async (req, res) => {
         }
       },
       {
+        // קיבוץ גלובלי לפי דמות
         $group: {
           _id: "$_id.charId",
           characterName: { $first: "$characterName" },
           sourceTitle: { $first: "$sourceTitle" },
           sourceType: { $first: "$sourceType" },
           image: { $max: "$image" },
-          avgRating: { $avg: "$maxRating" },
-          rankedByCount: { $sum: 1 }
+          avgRating: { $avg: "$maxRating" }, // R בנמוסחה
+          v: { $sum: 1 }, // v בנוסחה
+          userIds: { $push: "$_id.userId" }
         }
       },
-      { $match: { rankedByCount: { $gte: 2 } } },
-      { $sort: sortStage }, // <--- הזרקת המיון שבחרנו כאן!
-      { $limit: 200 }
+      {
+        // שלב חישוב הממוצע הכללי של האתר (C)
+        $group: {
+          _id: null,
+          allChars: { $push: "$$ROOT" },
+          C: { $avg: "$avgRating" } // הממוצע הכללי של כל הדמויות באתר
+        }
+      },
+      { $unwind: "$allChars" },
+      {
+        // החלת נוסחת Bayesian Weighted Rating
+        $addFields: {
+          weightedRating: {
+            $add: [
+              { $multiply: [{ $divide: ["$allChars.v", { $add: ["$allChars.v", m] }] }, "$allChars.avgRating"] },
+              { $multiply: [{ $divide: [m, { $add: ["$allChars.v", m] }] }, "$C"] }
+            ]
+          }
+        }
+      },
+      {
+        // עיצוב מחדש של האובייקט
+        $project: {
+          _id: "$allChars._id",
+          characterName: "$allChars.characterName",
+          sourceTitle: "$allChars.sourceTitle",
+          sourceType: "$allChars.sourceType",
+          image: "$allChars.image",
+          rawAvg: "$allChars.avgRating",
+          avgRating: "$weightedRating", // מעכשיו זה הציון הקובע למיון
+          rankedByCount: "$allChars.v"
+        }
+      },
+      { $match: { rankedByCount: { $gte: 2 } } }, // מינימום 2 מדרגים לכניסה
+      {
+        $sort: sortParam === 'popularity'
+          ? { rankedByCount: -1, avgRating: -1 }
+          : { avgRating: -1, rankedByCount: -1 }
+      },
+      { $limit: 150 }
     ];
 
     const leaderboardRaw = await List.aggregate(pipeline);
 
+    // החלת Overrides (באנים ושינויי אדמין)
     const overrides = await LeaderboardOverride.find({});
     const overrideMap = {};
     overrides.forEach(o => { overrideMap[o.charId] = o; });
 
-    // סינון והחלת שינויי אדמין
     const finalLeaderboard = leaderboardRaw.map(item => {
       const override = overrideMap[item._id];
       if (override) {
-        if (override.isHidden) return null; // דמות בבאן
+        if (override.isHidden) return null;
         item.characterName = override.characterName || item.characterName;
         item.sourceTitle = override.sourceTitle || item.sourceTitle;
         item.sourceType = override.sourceType || item.sourceType;
         item.image = override.image || item.image;
       }
+      // עיגול לספרה אחת
       item.avgRating = parseFloat(item.avgRating.toFixed(1));
       return item;
     })
-      .filter(item => item !== null) 
+      .filter(item => item !== null)
       .slice(0, 100);
 
     res.json(finalLeaderboard);

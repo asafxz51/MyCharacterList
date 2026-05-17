@@ -21,19 +21,19 @@
     <a href="/" style="text-decoration: none;">
       <div class="logo">MyCharacterList</div>
     </a>
-  
+
     <!-- לחיצה על השם לוקחת אותך לעמוד הפרופיל שלך -->
 
-  
+
     <div class="nav-controls">
       <button id="authBtnNav">Login</button>
-    
+
       <!-- הנה כפתור השיתוף שחזר למקומו! -->
       <button id="shareBtn" class="hidden" title="Share List"
         style="background: none; border: 1px solid var(--border); color: var(--text-main); height: 38px; padding: 0 12px; border-radius: 6px; cursor: pointer;">
         <i class="fas fa-share-alt"></i>
       </button>
-    
+
       <div id="notifArea" class="hidden" style="position: relative; display: inline-block;">
         <button id="notifBtn" title="Notifications"><i class="fas fa-bell"></i></button>
         <span id="notifBadge" class="hidden"
@@ -53,26 +53,26 @@
     <aside class="sidebar">
       <div
         style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid var(--border);">
-      <button id="sidebarProfileBtn" class="btn-primary hidden"
-        style="background: #333 !important; color: var(--text-main) !important; border: 1px solid var(--border) !important; display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px; box-shadow: none !important;">
-        <i class="fas fa-user" style="color: var(--accent);"></i> My Profile
-      </button>
-        
-          <button id="communityBtn" class="btn-primary"
-            style="background: #333; color: white; border: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px;">
-            <i class="fas fa-users" style="color: var(--accent);"></i> Community
-          </button>
-          <!-- כפתור חדש שיפתח את הלידרבורד ישירות -->
-          <button id="openLeaderboardBtn" class="btn-primary"
-            style="background: #333; color: white; border: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px;">
-            <i class="fas fa-trophy" style="color: gold;"></i> Leaderboard
-          </button>
-          <!-- כפתור אדמין -->
-          <button id="adminBtn" class="btn-primary hidden"
-            style="background: rgba(255, 215, 0, 0.1); color: gold; border: 1px solid gold; display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px;">
-            <i class="fas fa-crown"></i> Admin Panel
-          </button>
-        </div>
+        <button id="sidebarProfileBtn" class="btn-primary hidden"
+          style="background: #333 !important; color: var(--text-main) !important; border: 1px solid var(--border) !important; display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px; box-shadow: none !important;">
+          <i class="fas fa-user" style="color: var(--accent);"></i> My Profile
+        </button>
+
+        <button onclick="forceOpenTab('users')" class="btn-primary"
+          style="background: #333; color: white; border: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px;">
+          <i class="fas fa-users" style="color: var(--accent);"></i> Community
+        </button>
+        <!-- כפתור חדש שיפתח את הלידרבורד ישירות -->
+        <button onclick="forceOpenTab('leaderboard')" class="btn-primary"
+          style="background: #333; color: white; border: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px;">
+          <i class="fas fa-trophy" style="color: gold;"></i> Leaderboard
+        </button>
+        <!-- כפתור אדמין -->
+        <button id="adminBtn" class="btn-primary hidden"
+          style="background: rgba(255, 215, 0, 0.1); color: gold; border: 1px solid gold; display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px;">
+          <i class="fas fa-crown"></i> Admin Panel
+        </button>
+      </div>
       <div class="sidebar-header">
         <h3>My Lists</h3>
         <button id="createListBtn"><i class="fas fa-plus"></i></button>
@@ -92,12 +92,12 @@
                 <i class="fas fa-heart"></i> <span id="indexLikesNumber">0</span>
               </div>
             </div>
-          <p id="currentListDescription"
-            style="color: var(--text-muted); font-size: 0.95rem; margin-top: 8px; max-width: 1000px; display: none; line-height: 1.5; word-break: break-word; overflow-wrap: break-word;">
-          </p>
+            <p id="currentListDescription"
+              style="color: var(--text-muted); font-size: 0.95rem; margin-top: 8px; max-width: 1000px; display: none; line-height: 1.5; word-break: break-word; overflow-wrap: break-word;">
+            </p>
           </div>
         </div>
-      
+
         <div class="controls-row">
           <div class="controls-left">
             <div class="unified-filter">
@@ -116,22 +116,24 @@
               </select>
             </div>
           </div>
-      
+
           <div class="controls-right">
             <!-- הוספת דמויות וניהול (בצד ימין) -->
             <div class="search-bar-container">
               <input type="text" id="searchInput" placeholder="➕ Add Character...">
               <div id="searchResults" class="search-dropdown hidden"></div>
             </div>
-      
+
             <div class="action-buttons">
-                <button id="addCustomCharBtn" class="btn-primary" style="background: #ff9800;"><i class="fas fa-user-plus"></i>
-                  Custom</button>
+              <button id="addCustomCharBtn" class="btn-primary" style="background: #ff9800;"><i
+                  class="fas fa-user-plus"></i>
+                Custom</button>
               <button id="reorderBtn" class="btn-primary"><i class="fas fa-sort"></i> Reorder</button>
-            
-              <button id="saveOrderBtn" class="btn-primary hidden" style="background: #4CAF50;"><i class="fas fa-save"></i>
+
+              <button id="saveOrderBtn" class="btn-primary hidden" style="background: #4CAF50;"><i
+                  class="fas fa-save"></i>
                 Save</button>
-        
+
             </div>
           </div>
         </div>
@@ -139,13 +141,13 @@
       <div id="characterGrid" class="grid"></div>
       <div id="indexCommentsSection" class="comments-container hidden">
         <h3 style="margin-bottom: 20px; color: var(--accent);"><i class="fas fa-comments"></i> Comments</h3>
-      
+
         <div id="indexCommentInputArea" style="margin-bottom: 30px; display: flex; gap: 10px;">
           <input type="text" id="indexCommentText" placeholder="Write a reply..."
             style="flex: 1; height: 45px; padding: 0 15px; background: var(--bg-color); border: 1px solid var(--border); color: var(--text-main); border-radius: 10px;">
           <button id="submitIndexComment" class="btn-primary" style="width: auto; padding: 0 25px;">Post</button>
         </div>
-      
+
         <div id="indexCommentsList"></div>
         <div id="indexLoadMoreCommentsContainer" style="text-align: center; margin-top: 20px; display: none;">
           <button id="loadMoreIndexCommentsBtn" class="btn-primary"
@@ -181,15 +183,15 @@
       <span class="close-modal">&times;</span>
       <div class="modal-body">
         <img id="modalImg" src="" alt="Source">
-  
+
         <div class="modal-info">
           <div id="castSelector"></div>
-  
+
           <div class="form-group">
             <label>Character Name:</label>
             <input type="text" id="charNameInput" placeholder="e.g., Walter White" maxlength="36">
           </div>
-  
+
           <div class="row-group">
             <div class="form-group" style="flex: 2;">
               <label>Source Title:</label>
@@ -210,18 +212,19 @@
               </select>
             </div>
           </div>
-  
+
           <div class="form-group">
             <label>Custom Image URL (Optional):</label>
             <input type="text" id="customImgInput" placeholder="Paste image link...">
           </div>
-  
+
           <div class="form-group">
             <label>Personal Notes (Optional):</label>
-            <textarea id="charNotesInput" placeholder="Why did you rank them here? (Max 700 chars)" maxlength="700" rows="3"
+            <textarea id="charNotesInput" placeholder="Why did you rank them here? (Max 700 chars)" maxlength="700"
+              rows="3"
               style="width: 100%; padding: 8px; background: var(--bg-color); border: 1px solid var(--border); color: var(--text-main); border-radius: 4px; resize: vertical;"></textarea>
           </div>
-  
+
           <div class="form-group">
             <label>Rating:</label>
             <input type="number" id="ratingInput" min="0" max="10" step="0.5" value="0">
@@ -239,11 +242,11 @@
               <option value="0">No Grade</option>
             </select>
           </div>
-  
+
           <!-- הכפתור חזר פנימה לתוך ה-modal-info -->
           <button id="saveCharBtn" class="btn-primary">Add to List</button>
         </div>
-  
+
       </div>
     </div>
   </div>
@@ -255,8 +258,8 @@
 
       <input type="text" id="newListName" placeholder="List Name" maxlength="40">
 
-      <textarea id="listDescriptionInput" placeholder="List Description (Optional, up to 1000 characters)" maxlength="1000"
-        rows="3"
+      <textarea id="listDescriptionInput" placeholder="List Description (Optional, up to 1000 characters)"
+        maxlength="1000" rows="3"
         style="width: 100%; margin-top: 10px; padding: 10px; background: var(--bg-color); border: 1px solid var(--border); color: var(--text-main); border-radius: 4px; resize: vertical;"></textarea>
 
       <div style="margin-top: 10px; text-align: left;">
@@ -329,14 +332,14 @@
   <div id="communityModal" class="modal hidden">
     <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
       <span class="close-modal" id="closeCommModal">&times;</span>
-  
+
       <h3 id="communityTitle" style="text-align: center; margin-bottom: 15px;">Community</h3>
-  
+
       <!-- כפתור חזור כשאנחנו בתוך פרופיל של מישהו -->
       <button id="commBackBtn" class="btn-primary hidden" style="margin-bottom:15px; width:auto; background:#555;">
         <i class="fas fa-arrow-left"></i> Back
       </button>
-  
+
       <!-- הטאבים החדשים: משתמשים מול לידרבורד -->
       <div id="commTabsContainer" style="display: flex; gap: 10px; margin-bottom: 15px;">
         <button id="tabUsers" class="btn-primary active-tab" style="flex:1;">Users</button>
@@ -344,7 +347,7 @@
           <i class="fas fa-trophy" style="color:gold;"></i> Leaderboard
         </button>
       </div>
-  
+
       <!-- שורת חיפוש המשתמשים -->
       <div id="commControls">
         <input type="text" id="userSearchInput" placeholder="Search for users..."
@@ -359,73 +362,73 @@
           <option value="popularity">Most Popular</option>
         </select>
       </div>
-  
+
       <!-- הגריד שבו ירונדרו המשתמשים או הלידרבורד -->
       <div id="communityGrid" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
       </div>
     </div>
   </div>
 
-<!-- ADMIN MODAL -->
-<div id="adminModal" class="modal hidden">
-  <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
-    <span class="close-modal">&times;</span>
-    <h3 style="text-align: center; margin-bottom: 20px; color: gold;"><i class="fas fa-crown"></i> Admin Panel</h3>
+  <!-- ADMIN MODAL -->
+  <div id="adminModal" class="modal hidden">
+    <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+      <span class="close-modal">&times;</span>
+      <h3 style="text-align: center; margin-bottom: 20px; color: gold;"><i class="fas fa-crown"></i> Admin Panel</h3>
 
-    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-      <button id="adminTabUsers" class="btn-primary active-tab" style="flex:1;">Users & Lists</button>
-      <button id="adminTabLogs" class="btn-primary inactive-tab" style="flex:1;">Activity Logs</button>
-    </div>
+      <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <button id="adminTabUsers" class="btn-primary active-tab" style="flex:1;">Users & Lists</button>
+        <button id="adminTabLogs" class="btn-primary inactive-tab" style="flex:1;">Activity Logs</button>
+      </div>
 
-    <div id="adminUsersSection">
-      <div id="adminUsersGrid" style="display: flex; flex-direction: column; gap: 10px;"></div>
-    </div>
+      <div id="adminUsersSection">
+        <div id="adminUsersGrid" style="display: flex; flex-direction: column; gap: 10px;"></div>
+      </div>
 
-    <div id="adminListsSection" class="hidden">
-      <button id="adminBackToUsersBtn" class="btn-primary" style="margin-bottom:15px; width:auto; background:#555;">
-        <i class="fas fa-arrow-left"></i> Back to Users
-      </button>
-      <h4 id="adminUserListsTitle" style="margin-bottom:15px; color:var(--accent);"></h4>
-      <div id="adminListsGrid" style="display: flex; flex-direction: column; gap: 10px;"></div>
-    </div>
-
-    <div id="adminLogsSection" class="hidden">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h4 style="color: var(--accent); margin: 0;">Recent Activity Log</h4>
-        <button id="refreshLogsBtn" class="btn-primary" style="width: auto; padding: 5px 15px; background: #2196F3;">
-          <i class="fas fa-sync-alt"></i> Refresh
+      <div id="adminListsSection" class="hidden">
+        <button id="adminBackToUsersBtn" class="btn-primary" style="margin-bottom:15px; width:auto; background:#555;">
+          <i class="fas fa-arrow-left"></i> Back to Users
         </button>
+        <h4 id="adminUserListsTitle" style="margin-bottom:15px; color:var(--accent);"></h4>
+        <div id="adminListsGrid" style="display: flex; flex-direction: column; gap: 10px;"></div>
       </div>
-      <div id="adminLogsList"
-        style="display: flex; flex-direction: column; gap: 8px; max-height: 500px; overflow-y: auto; font-size: 0.85rem; border: 1px solid var(--border); padding: 5px; border-radius: 4px;">
-      </div>
-    </div>
 
+      <div id="adminLogsSection" class="hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h4 style="color: var(--accent); margin: 0;">Recent Activity Log</h4>
+          <button id="refreshLogsBtn" class="btn-primary" style="width: auto; padding: 5px 15px; background: #2196F3;">
+            <i class="fas fa-sync-alt"></i> Refresh
+          </button>
+        </div>
+        <div id="adminLogsList"
+          style="display: flex; flex-direction: column; gap: 8px; max-height: 500px; overflow-y: auto; font-size: 0.85rem; border: 1px solid var(--border); padding: 5px; border-radius: 4px;">
+        </div>
+      </div>
+
+    </div>
   </div>
-</div>
 
   <div id="profileModal" class="modal hidden">
     <div class="modal-content small-modal">
       <span class="close-modal" onclick="closeModal('profileModal')">&times;</span>
       <h3 style="margin-bottom: 20px;">Change Profile Picture</h3>
-  
+
       <div style="text-align: center; margin-bottom: 20px; position: relative; display: inline-block; width: 100%;">
         <!-- תמונת תצוגה מקדימה עם פלייסהולדר אם היא ריקה -->
         <img id="profilePreviewImg" src="https://via.placeholder.com/100?text=Avatar"
           style="width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 4px solid var(--accent); background: var(--bg-color);">
       </div>
-  
+
       <div class="form-group" style="text-align: left;">
         <label style="font-size: 0.85rem; color: var(--text-muted);">Paste Image URL:</label>
         <input type="text" id="avatarUrlInput" placeholder="https://..." style="margin-top: 5px;">
       </div>
-  
+
       <div style="margin: 15px 0; display: flex; align-items: center; gap: 10px;">
         <hr style="flex: 1; border: 0; border-top: 1px solid var(--border);">
         <span style="font-size: 0.8rem; color: #888;">OR</span>
         <hr style="flex: 1; border: 0; border-top: 1px solid var(--border);">
       </div>
-  
+
       <div class="form-group">
         <label for="avatarFileInput" class="btn-primary"
           style="background: transparent; border: 1px solid var(--accent); color: var(--accent); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; height: 45px; width: 100%;">
@@ -433,7 +436,7 @@
         </label>
         <input type="file" id="avatarFileInput" accept="image/*" style="display: none;">
       </div>
-  
+
       <button id="saveAvatarBtn" class="btn-primary" style="margin-top: 15px; width: 100%;">Save Changes</button>
     </div>
   </div>
@@ -443,9 +446,9 @@
       <span class="close-modal"
         onclick="document.getElementById('adminCharEditModal').classList.add('hidden')">&times;</span>
       <h3 style="margin-bottom: 15px; color: gold;"><i class="fas fa-edit"></i> Edit Leaderboard Character</h3>
-  
+
       <input type="hidden" id="adminEditCharId">
-  
+
       <div class="form-group">
         <label>Character Name (Global Display):</label>
         <input type="text" id="adminEditCharName">
@@ -472,14 +475,14 @@
         <label>Image URL:</label>
         <input type="text" id="adminEditCharImage">
       </div>
-  
+
       <div class="form-group"
         style="display:flex; align-items:center; gap:10px; margin-top: 15px; background: rgba(255, 68, 68, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(255, 68, 68, 0.3);">
         <input type="checkbox" id="adminEditIsHidden" style="width: auto; transform: scale(1.2);">
         <label for="adminEditIsHidden" style="color: #ff4444; font-weight: bold; cursor: pointer;">Hide from Leaderboard
           (Ban Item)</label>
       </div>
-  
+
       <button onclick="saveGlobalCharacter()" class="btn-primary" style="margin-top: 20px;">Save Changes</button>
     </div>
   </div>
@@ -488,7 +491,8 @@
   <div id="votersModal" class="modal hidden">
     <div class="modal-content small-modal">
       <span class="close-modal" onclick="document.getElementById('votersModal').classList.add('hidden')">&times;</span>
-      <h3 id="votersModalTitle" style="margin-bottom: 15px; color: var(--accent);"><i class="fas fa-users"></i> Ranked By
+      <h3 id="votersModalTitle" style="margin-bottom: 15px; color: var(--accent);"><i class="fas fa-users"></i> Ranked
+        By
       </h3>
       <div id="votersList"
         style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
@@ -496,7 +500,7 @@
       </div>
     </div>
   </div>
-  
+
 
   <script src="app.js?v=3"></script>
 </body>

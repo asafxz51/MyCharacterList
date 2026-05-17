@@ -53,7 +53,7 @@ async function checkLoginStatus() {
             // --- טיפול באווטאר בנאב-בר ---
             // const navAvatar = document.getElementById('navAvatar');
             // const defaultIcon = document.getElementById('navDefaultIcon');
-           
+
             // // אם יש לינק תקין (לא ריק ולא שבור)
             // if (data.avatar && data.avatar.trim() !== "") {
             //     navAvatar.src = data.avatar;
@@ -76,7 +76,7 @@ async function checkLoginStatus() {
             // document.getElementById('myProfileLink').onclick = () => {
             //     window.location.href = `/profile.html?user=${data.username}`;
             // };
-        
+
 
             if (authBtn) {
                 authBtn.textContent = "Logout";
@@ -97,7 +97,7 @@ async function checkLoginStatus() {
             if (document.getElementById('notifArea')) {
                 document.getElementById('notifArea').classList.remove('hidden');
             }
-          
+
             if (document.getElementById('shareBtn')) document.getElementById('shareBtn').classList.remove('hidden');
 
             fetchNotifications();
@@ -212,11 +212,11 @@ function toggleNotifDropdown(e) {
 
     if (isHidden) {
         // --- התיקון כאן: מאתחלים ל-5 בכל פעם שפותחים את התפריט ---
-        visibleNotifsLimit = 5; 
+        visibleNotifsLimit = 5;
         renderNotifDropdownUI(); // מעדכנים את התצוגה שתציג רק 5
-        
+
         drop.classList.remove('hidden');
-        
+
         // סימון כנקרא
         fetch('/api/notifications/read', { method: 'POST' });
         const badge = document.getElementById('notifBadge');
@@ -707,8 +707,11 @@ function renderCurrentList() {
 }
 
 // אל תשכח להוסיף את המאזינים בסוף הקוד ב-setupEvents או בסוף הקובץ:
-document.getElementById('listFilterInput').addEventListener('input', renderCurrentList);
-document.getElementById('filterSelect').addEventListener('change', renderCurrentList);
+const listFilterInput = document.getElementById('listFilterInput');
+if (listFilterInput) listFilterInput.addEventListener('input', renderCurrentList);
+
+const filterSelect = document.getElementById('filterSelect');
+if (filterSelect) filterSelect.addEventListener('change', renderCurrentList);
 
 window.editItem = function (index) {
     state.tempSearchItem = null;
@@ -1093,18 +1096,18 @@ function normalizeType(apiType) {
 }
 
 let isRegisterMode = false;
-document.getElementById('authBtnNav').addEventListener('click', async () => {
-    if (state.user) {
-        await fetch('/api/auth/logout', { method: 'POST' });
-
-        sessionStorage.removeItem('entryLogged');
-
-        window.location.reload();
-    }
-    else {
-        document.getElementById('authModal').classList.remove('hidden');
-    }
-});
+const authBtnNav = document.getElementById('authBtnNav');
+if (authBtnNav) {
+    authBtnNav.addEventListener('click', async () => {
+        if (state.user) {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            sessionStorage.removeItem('entryLogged');
+            window.location.reload();
+        } else {
+            document.getElementById('authModal').classList.remove('hidden');
+        }
+    });
+}
 
 // פונקציית שליחה מאוחדת
 async function handleAuthAction() {
@@ -1202,7 +1205,7 @@ document.getElementById('editListTitleBtn').addEventListener('click', () => {
     document.getElementById('listModal').classList.remove('hidden');
 
     document.getElementById('newListName').value = list.name;
-    document.getElementById('listDescriptionInput').value = list.listDescription || ''; 
+    document.getElementById('listDescriptionInput').value = list.listDescription || '';
 });
 
 document.getElementById('saveListBtn').addEventListener('click', async () => {
@@ -1288,29 +1291,34 @@ document.querySelectorAll('.close-modal').forEach(btn => {
 });
 
 function setupEvents() {
-   
-    document.getElementById('reorderBtn').addEventListener('click', toggleReorderMode);
-    document.getElementById('saveOrderBtn').addEventListener('click', saveOrder);
-    document.getElementById('addCustomCharBtn').addEventListener('click', openCustomCharModal);
+    const reorderBtn = document.getElementById('reorderBtn');
+    if (reorderBtn) reorderBtn.addEventListener('click', toggleReorderMode);
 
-    document.getElementById('refreshLogsBtn').addEventListener('click', () => {
-        loadAdminLogs(false);
-    });
+    const saveOrderBtn = document.getElementById('saveOrderBtn');
+    if (saveOrderBtn) saveOrderBtn.addEventListener('click', saveOrder);
+
+    const addCustomCharBtn = document.getElementById('addCustomCharBtn');
+    if (addCustomCharBtn) addCustomCharBtn.addEventListener('click', openCustomCharModal);
+
+    const refreshLogsBtn = document.getElementById('refreshLogsBtn');
+    if (refreshLogsBtn) {
+        refreshLogsBtn.addEventListener('click', () => {
+            loadAdminLogs(false);
+        });
+    }
 
     // --- לוגיקת המובייל המדויקת ---
     const menuBtn = document.getElementById('mobileMenuBtn');
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.getElementById('mobileOverlay');
 
-    if (menuBtn) {
+    if (menuBtn && sidebar && overlay) {
         menuBtn.onclick = (e) => {
-            e.stopPropagation(); // מונע בעיות של אירועים כפולים
+            e.stopPropagation();
             sidebar.classList.add('open');
             overlay.classList.remove('hidden');
         };
-    }
 
-    if (overlay) {
         overlay.onclick = () => {
             sidebar.classList.remove('open');
             overlay.classList.add('hidden');
@@ -1388,19 +1396,21 @@ document.getElementById('filterSelect').addEventListener('change', renderCurrent
 let currentCommTab = 'users';
 
 // פתיחת מודאל הקהילה
-document.getElementById('communityBtn').onclick = () => {
-    document.getElementById('communityModal').classList.remove('hidden');
-    document.getElementById('commTabsContainer').classList.remove('hidden'); 
-    document.getElementById('commBackBtn').classList.add('hidden');
-    switchCommTab(currentCommTab); 
-};
+// פתיחת מודאל הקהילה
+const communityBtn = document.getElementById('communityBtn');
+if (communityBtn) {
+    communityBtn.onclick = () => {
+        window.forceOpenTab('users');
+    };
+}
 
-document.getElementById('openLeaderboardBtn').onclick = () => {
-    document.getElementById('communityModal').classList.remove('hidden');
-    document.getElementById('commTabsContainer').classList.remove('hidden');
-    document.getElementById('commBackBtn').classList.add('hidden');
-    switchCommTab('leaderboard'); 
-};
+// כפתור לידרבורד ישיר מהסיידבאר
+const openLeaderboardBtn = document.getElementById('openLeaderboardBtn');
+if (openLeaderboardBtn) {
+    openLeaderboardBtn.onclick = () => {
+        window.forceOpenTab('leaderboard');
+    };
+}
 
 document.getElementById('closeCommModal').onclick = () => document.getElementById('communityModal').classList.add('hidden');
 
@@ -1851,6 +1861,7 @@ async function loadAdminUsers() {
     grid.innerHTML = 'Loading users...';
     const res = await fetch('/api/admin/users');
     const users = await res.json();
+    if (currentCommTab !== 'leaderboard') return;
     grid.innerHTML = '';
 
     users.forEach(u => {
@@ -1990,14 +2001,14 @@ function renderIndexComments(comments, ownerId) {
             
             <div style="margin-left: 54px; border-left: 2px solid var(--border); padding-left: 15px;">
                 ${c.replies ? c.replies.map(r => {
-                    const hasLikedR = r.likes && state.userId && r.likes.map(id => id.toString()).includes(state.userId.toString());
+            const hasLikedR = r.likes && state.userId && r.likes.map(id => id.toString()).includes(state.userId.toString());
 
-                    // --- הוספת תג אדמין מוזהב בריפליי (חדש) ---
-                    const rAdminTag = r.role === 'admin' ? '<span style="color:#FFD700; font-weight:bold; font-size:0.75rem; margin-left:5px;">(Admin)</span>' : '';
+            // --- הוספת תג אדמין מוזהב בריפליי (חדש) ---
+            const rAdminTag = r.role === 'admin' ? '<span style="color:#FFD700; font-weight:bold; font-size:0.75rem; margin-left:5px;">(Admin)</span>' : '';
 
-                    const rAvatar = (r.avatar && r.avatar.trim() !== "") ? `<img src="${r.avatar}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); padding: 1px; margin-right: 10px; background: var(--bg-color); flex-shrink: 0;">` : `<i class="fas fa-user-circle" style="font-size: 28px; margin-right: 10px; color: var(--text-muted); flex-shrink: 0;"></i>`;
+            const rAvatar = (r.avatar && r.avatar.trim() !== "") ? `<img src="${r.avatar}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); padding: 1px; margin-right: 10px; background: var(--bg-color); flex-shrink: 0;">` : `<i class="fas fa-user-circle" style="font-size: 28px; margin-right: 10px; color: var(--text-muted); flex-shrink: 0;"></i>`;
 
-                    return `
+            return `
     <div style="margin-bottom:10px; font-size:0.85rem; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; position:relative;">
         <div style="display:flex; align-items:center; margin-bottom:8px;">
             ${rAvatar}
@@ -2013,7 +2024,7 @@ function renderIndexComments(comments, ownerId) {
              <button onclick="deleteReplyIndex('${c._id}', '${r._id}')" style="background:none; border:none; color:#ff4444; cursor:pointer; font-size:0.7rem;"><i class="fas fa-trash"></i></button>
         </div>
     </div>`;
-                }).join('') : ''}
+        }).join('') : ''}
             </div>
 
             <div id="index-reply-box-${c._id}" class="hidden" style="margin-top:15px; margin-left:54px; display:flex; gap:10px;">
@@ -2363,6 +2374,20 @@ window.openCommModalFromLanding = function () {
         if (typeof switchCommTab === 'function') {
             switchCommTab('users');
         }
+    }
+};
+
+window.forceOpenTab = function (tabName) {
+    // 1. פתיחת המודאל
+    const modal = document.getElementById('communityModal');
+    if (modal) modal.classList.remove('hidden');
+
+    // 2. עדכון המשתנה הגלובלי מיד (כדי לחסום בקשות ישנות שחוזרות מהשרת)
+    currentCommTab = tabName;
+
+    // 3. הפעלת הטאב הנכון
+    if (typeof switchCommTab === 'function') {
+        switchCommTab(tabName);
     }
 };
 

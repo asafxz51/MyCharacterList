@@ -139,23 +139,26 @@
         }
 
         @media (max-width: 768px) {
+
             /* מבטל את הדחיפה הצידית של הסיידבאר */
             #appContainer {
-                display: block !important; 
+                display: block !important;
             }
 
             .sidebar {
                 position: fixed !important;
                 top: 0;
-                left: -280px !important; /* יוצא לגמרי מהמסך שמאלה */
+                left: -280px !important;
+                /* יוצא לגמרי מהמסך שמאלה */
                 width: 260px !important;
                 height: 100vh !important;
                 z-index: 9999 !important;
                 transition: left 0.3s ease !important;
                 background: var(--sidebar-bg) !important;
-                display: flex !important; /* הופך לפלקס רק כשצריך */
+                display: flex !important;
+                /* הופך לפלקס רק כשצריך */
                 flex-direction: column;
-                box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+                box-shadow: 5px 0 15px rgba(0, 0, 0, 0.5);
             }
 
             /* כשמוסיפים את הקלאס open דרך ה-JS */
@@ -182,10 +185,20 @@
                 height: auto;
                 padding: 10px;
             }
-            
-            .share-wrapper { padding: 0 5px 40px 5px; margin-top: 20px; }
-            .grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
-            .char-card img { height: 160px !important; }
+
+            .share-wrapper {
+                padding: 0 5px 40px 5px;
+                margin-top: 20px;
+            }
+
+            .grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 8px;
+            }
+
+            .char-card img {
+                height: 160px !important;
+            }
         }
 
         .nav-identity {
@@ -336,81 +349,86 @@
         }
 
         /* נעילת הגריד - מונע מתוכן להרחיב את הטורים */
-#grid {
-    display: grid;
-    /* הקטנו את המינימום מ-200 ל-180 כדי שיכנסו יותר בשורה והגובה יירד */
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
-    gap: 20px;
-    width: 100%;
-}
+        #grid {
+            display: grid;
+            /* הקטנו את המינימום מ-200 ל-180 כדי שיכנסו יותר בשורה והגובה יירד */
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+            width: 100%;
+        }
 
-.char-card {
-    width: 100% !important;
-    overflow: visible !important; 
-    display: flex;
-    flex-direction: column;
-    position: relative; 
-    margin-top: 10px; /* צמצמנו את המרווח העליון */
-}
+        .char-card {
+            width: 100% !important;
+            overflow: visible !important;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            margin-top: 10px;
+            /* צמצמנו את המרווח העליון */
+        }
 
-.char-card-img {
-    width: 100%;
-    object-fit: cover;
-    display: block;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    background: #111;
-    
-    /* ברירת מחדל למחשב: יותר נמוך */
-    aspect-ratio: 1 / 1.2 !important; 
-}
+        .char-card-img {
+            width: 100%;
+            object-fit: cover;
+            display: block;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            background: #111;
 
-    @media (max-width: 768px) {
-    /* נעילת הגריד ל-2 טורים שווים ב-100% */
-    #grid {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr !important; /* הכרחי: מחלק את המסך בדיוק לחצי */
-        gap: 10px !important;
-        width: 100% !important;
-        padding: 0 !important;
-    }
+            /* ברירת מחדל למחשב: יותר נמוך */
+            aspect-ratio: 1 / 1.2 !important;
+        }
 
-    /* וידוא שהכרטיסייה לא גדולה יותר מהטור שלה */
-    .char-card {
-        width: 100% !important;
-        max-width: 100% !important;
-        min-width: 0 !important; /* מאפשר לטקסט בפנים להיחתך במקום להרחיב את הקארד */
-        margin: 0 !important;
-    }
+        @media (max-width: 768px) {
 
-    .char-card-img {
-        aspect-ratio: 1 / 1.5 !important; /* גובה פוסטר במובייל */
-    }
+            /* נעילת הגריד ל-2 טורים שווים ב-100% */
+            #grid {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                /* הכרחי: מחלק את המסך בדיוק לחצי */
+                gap: 10px !important;
+                width: 100% !important;
+                padding: 0 !important;
+            }
 
-    /* הקטנה קלה של הטקסט במובייל כדי שיכנס יותר מידע */
-    .char-info {
-        padding: 8px !important;
-    }
+            /* וידוא שהכרטיסייה לא גדולה יותר מהטור שלה */
+            .char-card {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                /* מאפשר לטקסט בפנים להיחתך במקום להרחיב את הקארד */
+                margin: 0 !important;
+            }
 
-    .char-name {
-        font-size: 0.9rem !important;
-    }
+            .char-card-img {
+                aspect-ratio: 1 / 1.5 !important;
+                /* גובה פוסטר במובייל */
+            }
 
-       #otherListsContainer {
-        flex-direction: column !important;
-        gap: 8px !important;
-        align-items: center !important;
-        text-align: center;
-    }
+            /* הקטנה קלה של הטקסט במובייל כדי שיכנס יותר מידע */
+            .char-info {
+                padding: 8px !important;
+            }
 
-    /* מגדיל את הדרופדאון שיהיה נוח ללחיצה בטלפון */
-    #userListsDropdown {
-        width: 100% !important;
-        max-width: 280px;
-        margin: 0 auto;
-    }
+            .char-name {
+                font-size: 0.9rem !important;
+            }
 
-}
+            #otherListsContainer {
+                flex-direction: column !important;
+                gap: 8px !important;
+                align-items: center !important;
+                text-align: center;
+            }
+
+            /* מגדיל את הדרופדאון שיהיה נוח ללחיצה בטלפון */
+            #userListsDropdown {
+                width: 100% !important;
+                max-width: 280px;
+                margin: 0 auto;
+            }
+
+        }
 
         @media (max-width: 768px) {
             .share-wrapper {
@@ -468,7 +486,10 @@
 
     <div id="mobileOverlay" class="mobile-overlay hidden"></div>
 
-<div id="mobileOverlay" class="mobile-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 4000;"></div>    <div class="container" id="appContainer">
+    <div id="mobileOverlay" class="mobile-overlay hidden"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 4000;">
+    </div>
+    <div class="container" id="appContainer">
 
         <!-- הסיידבאר (מוסתר כברירת מחדל לאורחים) -->
         <aside class="sidebar" style="display: none;">
@@ -486,7 +507,7 @@
                     style="background: transparent !important; color: var(--text-main) !important; border: 1px solid var(--border) !important; display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px; box-shadow: none !important;">
                     <i class="fas fa-trophy" style="color: gold;"></i> Leaderboard
                 </button>
-               
+
             </div>
 
             <div class="sidebar-header">
@@ -866,7 +887,7 @@
                     if (sidebarEl) {
                         // במחשב זה יציג את הסיידבאר, במובייל ה-CSS שכתבנו למעלה ינצח וישאיר אותו מוחבא בשמאל
                         sidebarEl.style.setProperty('display', 'flex', 'important');
-                    }                    const mobileBtn = document.getElementById('mobileMenuBtn');
+                    } const mobileBtn = document.getElementById('mobileMenuBtn');
                     if (mobileBtn) mobileBtn.classList.remove('hidden');
 
                     const sidebarProfileBtn = document.getElementById('sidebarProfileBtn');
@@ -1003,16 +1024,16 @@
         }
 
         function renderList() {
-                const grid = document.getElementById('grid');
-                grid.innerHTML = '';
-                const s = document.getElementById('listFilterInput').value.toLowerCase();
-                const cat = document.getElementById('filterSelect').value;
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            const s = document.getElementById('listFilterInput').value.toLowerCase();
+            const cat = document.getElementById('filterSelect').value;
 
-                const filtered = allItems.filter(i => (cat === 'all' || i.sourceType === cat) && (i.characterName.toLowerCase().includes(s) || i.sourceTitle.toLowerCase().includes(s)));
+            const filtered = allItems.filter(i => (cat === 'all' || i.sourceType === cat) && (i.characterName.toLowerCase().includes(s) || i.sourceTitle.toLowerCase().includes(s)));
 
-                if (!isFreeOrder) filtered.sort((a, b) => b.rating - a.rating);
+            if (!isFreeOrder) filtered.sort((a, b) => b.rating - a.rating);
 
-                filtered.forEach((item, index) => {
+            filtered.forEach((item, index) => {
                 const div = document.createElement('div');
                 div.className = 'char-card';
 
@@ -1059,7 +1080,7 @@
 
                 grid.appendChild(div);
             });
-            }
+        }
 
         function renderComments(comments, ownerId) {
             const area = document.getElementById('commentsList');
@@ -1530,7 +1551,7 @@
                     const clickAction = isClickable ? `onclick="window.location.href='/profile.html?user=${v.username.replace(/'/g, "\\'")}'"` : '';
 
                     // תוספת לאדמין: סימון מנעול אם ההצבעה היא מרשימה פרטית
-                      const privateTag = v.isPrivateVote ? `<span style="color:#c3c3c3 font-size:0.7rem; margin-left:8px; padding:1px 4px; border-radius:4px;"><i class="fas fa-lock"></i></span>` : '';
+                    const privateTag = v.isPrivateVote ? `<span style="color:#c3c3c3 font-size:0.7rem; margin-left:8px; padding:1px 4px; border-radius:4px;"><i class="fas fa-lock"></i></span>` : '';
 
                     listDiv.innerHTML += `
                 <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
@@ -1925,38 +1946,38 @@
         }
 
         // פונקציית יצירת רשימה מתוך עמוד השייר
-            async function createNewListFromProfile() {
-                const name = document.getElementById('newListName').value.trim();
-                if (!name) return alert("Please enter a list name.");
+        async function createNewListFromProfile() {
+            const name = document.getElementById('newListName').value.trim();
+            if (!name) return alert("Please enter a list name.");
 
-                const payload = {
-                    name: name,
-                    listDescription: document.getElementById('listDescriptionInput').value,
-                    rankingType: document.getElementById('rankingTypeSelect').value,
-                    isPrivate: document.getElementById('isPrivateInput').checked,
-                    isFreeOrder: document.getElementById('isFreeOrderInput').checked,
-                    allowComments: document.getElementById('allowCommentsInput').checked,
-                    items: new Array()
-                };
+            const payload = {
+                name: name,
+                listDescription: document.getElementById('listDescriptionInput').value,
+                rankingType: document.getElementById('rankingTypeSelect').value,
+                isPrivate: document.getElementById('isPrivateInput').checked,
+                isFreeOrder: document.getElementById('isFreeOrderInput').checked,
+                allowComments: document.getElementById('allowCommentsInput').checked,
+                items: new Array()
+            };
 
-                try {
-                    const res = await fetch('/api/lists', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
+            try {
+                const res = await fetch('/api/lists', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-                    if (res.ok) {
-                        const newList = await res.json();
-                        // אחרי היצירה, עוברים לאינדקס כדי לערוך את הרשימה החדשה
-                        window.location.href = `/?id=${newList._id}`;
-                    }
-                } catch (e) { console.error(e); }
-            }
+                if (res.ok) {
+                    const newList = await res.json();
+                    // אחרי היצירה, עוברים לאינדקס כדי לערוך את הרשימה החדשה
+                    window.location.href = `/?id=${newList._id}`;
+                }
+            } catch (e) { console.error(e); }
+        }
 
 
 
-    
+
         initPage();
     </script>
 </body>
