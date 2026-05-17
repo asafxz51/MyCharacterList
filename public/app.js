@@ -870,46 +870,49 @@ async function doSearch(query) {
 async function openCharModal(item) {
     state.tempSearchItem = item;
     state.editingIndex = -1;
-    document.getElementById('searchResults').classList.add('hidden');
-    document.getElementById('searchInput').value = '';
 
-    document.getElementById('modalImg').src = item.image || 'https://via.placeholder.com/200';
+    const resultsDiv = document.getElementById('searchResults');
+    if (resultsDiv) resultsDiv.classList.add('hidden');
+
+    const searchInp = document.getElementById('searchInput');
+    if (searchInp) searchInp.value = '';
+
+    document.getElementById('modalImg').src = item.image || 'https://placehold.co/200x300/252525/bb86fc?text=No+Image';
     document.getElementById('modalImg').classList.remove('hidden');
     document.getElementById('customImgInput').value = '';
-    document.getElementById('ratingInput').value = 5;
     document.getElementById('saveCharBtn').textContent = "Add to List";
-    document.getElementById('charNotesInput').value = '';
+    document.getElementById('charNotesInput').value = item.notes || '';
 
-    if (item.type === 'character' || item.type === 'game_character') {
-        document.getElementById('charNameInput').value = item.title;
-    } else {
-        document.getElementById('charNameInput').value = '';
-    }
+    // מילוי שם הדמות
+    document.getElementById('charNameInput').value = item.title || item.characterName || '';
 
     const list = state.lists.find(l => l._id === state.activeListId);
     const isLetters = list && list.rankingType === 'letters';
-
     const numInput = document.getElementById('ratingInput');
     const letInput = document.getElementById('ratingLetterInput');
     const titleInput = document.getElementById('sourceTitleInput');
     const typeInput = document.getElementById('sourceTypeInput');
     const castDiv = document.getElementById('castSelector');
-    castDiv.innerHTML = '';
+    if (castDiv) castDiv.innerHTML = '';
 
     if (isLetters) {
         numInput.classList.add('hidden');
         letInput.classList.remove('hidden');
-        // If editing, set the value
-        letInput.value = 0;
+        letInput.value = item.rating || "0";
     } else {
         numInput.classList.remove('hidden');
         letInput.classList.add('hidden');
-        numInput.value = 0;
+        numInput.value = item.rating || 0;
     }
 
-    if (item.type === 'character') {
+    // --- התיקון הקריטי: אם המידע כבר קיים (מהלידרבורד או עריכה), לא עושים Fetch ---
+    if (item.sourceTitle) {
+        titleInput.value = item.sourceTitle;
+        typeInput.value = normalizeType(item.type || item.sourceType);
+    }
+    // רק אם זה חיפוש גולמי (בלי סורס), הולכים להביא פרטים מה-API
+    else if (item.type === 'character') {
         titleInput.value = "Fetching info...";
-        typeInput.value = 'Anime';
         try {
             const res = await fetch(`/api/jikan/details/${item.id}`);
             const data = await res.json();
@@ -919,57 +922,16 @@ async function openCharModal(item) {
     }
     else if (item.type === 'game_character') {
         titleInput.value = "Fetching game...";
-        typeInput.value = 'Game';
-
         try {
             const res = await fetch(`/api/igdb/details/${item.id}`);
             const data = await res.json();
             titleInput.value = data.sourceTitle || "";
-        } catch (e) {
-            titleInput.value = "";
-            titleInput.placeholder = "Type game name...";
-        }
+            typeInput.value = "Game";
+        } catch (e) { titleInput.value = ""; }
     }
-
-    else if (item.type === 'wiki_character') {
-        document.getElementById('charNameInput').value = item.title;
-
-        if (item.sourceTitle && item.sourceTitle.length > 0) {
-            document.getElementById('sourceTitleInput').value = item.sourceTitle;
-        } else {
-            document.getElementById('sourceTitleInput').value = "";
-            document.getElementById('sourceTitleInput').placeholder = "Type Source (e.g. Breaking Bad)";
-        }
-        document.getElementById('sourceTypeInput').value = "TV Show";
-    }
-
     else {
-        titleInput.value = item.title;
+        titleInput.value = "";
         typeInput.value = normalizeType(item.type);
-    }
-
-    if (item.type === 'movie' || item.type === 'tv') {
-        castDiv.innerHTML = '<p>Loading Cast...</p>';
-        try {
-            const res = await fetch(`/api/tmdb/credits?type=${item.type}&id=${item.id}`);
-            const cast = await res.json();
-            if (cast.length > 0) {
-                castDiv.innerHTML = '<p>Select Character:</p><div class="cast-grid"></div>';
-                const grid = castDiv.querySelector('.cast-grid');
-                cast.forEach(c => {
-                    if (!c.image) return;
-                    const img = document.createElement('img');
-                    img.src = c.image;
-                    img.title = c.characterName;
-                    img.onclick = () => {
-                        document.getElementById('charNameInput').value = c.characterName;
-                        document.getElementById('modalImg').src = c.image;
-                        document.getElementById('customImgInput').value = c.image;
-                    };
-                    grid.appendChild(img);
-                });
-            } else { castDiv.innerHTML = ''; }
-        } catch (e) { castDiv.innerHTML = ''; }
     }
 
     document.getElementById('charModal').classList.remove('hidden');
@@ -1562,9 +1524,15 @@ async function loadLeaderboard() {
                 adminGearHtml = `<button onclick="openGlobalEdit('${item._id}', '${safeName}', '${safeSource}', '${item.sourceType}', '${item.image}')" style="background:none; border:none; color: var(--accent); cursor: pointer; font-size: 1.1rem; margin-left: 10px;" title="Admin Edit"><i class="fas fa-cog"></i></button>`;
             }
 
+            const isUserLoggedIn = (typeof state !== 'undefined' && state.user) || (typeof loggedInUser !== 'undefined' && loggedInUser);
+            const quickAddBtn = isUserLoggedIn ? `<button class="lb-add-btn" onclick="openQuickAddSelector('${item._id}', '${item.characterName.replace(/'/g, "\\'")}', '${item.sourceTitle.replace(/'/g, "\\'")}', '${item.sourceType}', '${item.image}')" title="Add to my list"><i class="fas fa-plus"></i></button>` : '';
+
             div.innerHTML = `
                 <div class="leaderboard-rank ${rankClass}">${rankText}</div>
-                <img src="${validImg}" class="leaderboard-img" onerror="this.src='https://placehold.co/60x60/252525/bb86fc?text=?'">
+                   <div class="leaderboard-img-container">
+        ${quickAddBtn}
+        <img src="${validImg}" class="leaderboard-img" onerror="this.src='https://placehold.co/60x60/252525/bb86fc?text=?'">
+    </div>
                 
                 <div class="leaderboard-content-wrapper">
                     <div class="leaderboard-info">
@@ -1790,8 +1758,12 @@ function handleSidebarDragEnd(e) {
 const adminBtn = document.getElementById('adminBtn');
 if (adminBtn) {
     adminBtn.addEventListener('click', () => {
-        document.getElementById('adminModal').classList.remove('hidden');
-        switchAdminTab('users');
+        const modal = document.getElementById('adminModal');
+        if (modal) {
+            modal.style.display = 'flex'; // <--- התיקון פה
+            modal.classList.remove('hidden');
+            switchAdminTab('users');
+        }
     });
 }
 
@@ -2348,11 +2320,10 @@ window.saveGlobalCharacter = async function () {
 
 // --- סגירת מודאלים בלחיצה על הרקע (מחוץ לחלון) ---
 window.addEventListener('click', (e) => {
-    // בודק אם האלמנט שלחצו עליו הוא הרקע השחור של המודאל עצמו
     if (e.target.classList.contains('modal')) {
         e.target.classList.add('hidden');
+        e.target.style.display = 'none'; // <--- סגירה מוחלטת
 
-        // עצירת ריענון הלוגים במקרה שיצאנו ממודאל האדמין (רלוונטי רק ל-app.js)
         if (e.target.id === 'adminModal' && typeof logsAutoRefreshInterval !== 'undefined' && logsAutoRefreshInterval) {
             clearInterval(logsAutoRefreshInterval);
             logsAutoRefreshInterval = null;
@@ -2378,18 +2349,134 @@ window.openCommModalFromLanding = function () {
 };
 
 window.forceOpenTab = function (tabName) {
-    // 1. פתיחת המודאל
     const modal = document.getElementById('communityModal');
-    if (modal) modal.classList.remove('hidden');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+    }
 
-    // 2. עדכון המשתנה הגלובלי מיד (כדי לחסום בקשות ישנות שחוזרות מהשרת)
     currentCommTab = tabName;
 
-    // 3. הפעלת הטאב הנכון
     if (typeof switchCommTab === 'function') {
         switchCommTab(tabName);
     }
 };
+
+window.openQuickAddSelector = async function (apiId, name, source, type, image) {
+    const modal = document.getElementById('quickAddModal');
+    const optionsContainer = document.getElementById('quickAddListOptions');
+    const charNameLabel = document.getElementById('quickAddCharName');
+
+    charNameLabel.textContent = name;
+    optionsContainer.innerHTML = '<p style="text-align:center; color:#888;">Loading your lists...</p>';
+    modal.classList.remove('hidden');
+
+    try {
+        const res = await fetch('/api/lists');
+        const lists = await res.json();
+
+        if (lists.length === 0) {
+            optionsContainer.innerHTML = '<p style="text-align:center; padding:10px;">You have no lists! Create one first.</p>';
+            return;
+        }
+
+        optionsContainer.innerHTML = '';
+        lists.forEach(list => {
+            const btn = document.createElement('div');
+            btn.className = 'quick-add-option';
+            const lockIcon = list.isPrivate ? 'fa-lock' : 'fa-list';
+
+            btn.innerHTML = `
+                <i class="fas ${lockIcon}"></i>
+                <span style="flex:1;">${list.name}</span>
+                <small style="color:#777;">${list.items.length} items</small>
+            `;
+
+            btn.onclick = () => {
+                // 1. מעדכנים את ה-ID הפעיל לליסט שנבחר (כדי שהשמירה תדע לאן ללכת)
+                state.activeListId = list._id;
+
+                // 2. מעדכנים את הסיידבאר והכותרת (רק אם אנחנו בדף הבית)
+                if (typeof renderSidebar === 'function') renderSidebar();
+                if (typeof renderCurrentList === 'function') {
+                    // עדכון כותרת זמני כדי שהמשתמש יראה לאיזה ליסט הוא מוסיף
+                    const titleEl = document.getElementById('currentListTitle');
+                    if (titleEl) titleEl.textContent = list.name;
+                }
+
+                // 3. מכינים אובייקט דמוי "תוצאת חיפוש" עבור המודאל של הדמות
+                const tempItem = {
+                    id: apiId,
+                    title: name,
+                    image: image,
+                    type: type, // למשל 'character' או 'game_character'
+                    sourceTitle: source
+                };
+
+                // 4. סוגרים את מודאל בחירת הליסט ופותחים את מודאל עריכת הדמות
+                modal.classList.add('hidden'); // סוגר את חלון בחירת הליסט
+
+                // אנחנו מנסים לסגור את שני המזהים האפשריים (לידרבורד או קומיוניטי)
+                ['leaderboardModal', 'communityModal'].forEach(id => {
+                    const m = document.getElementById(id);
+                    if (m) {
+                        m.classList.add('hidden');
+                        m.style.display = 'none'; // מכריח סגירה גם אם ה-CSS מתנגד
+                    }
+                });
+
+                // פתיחת מודאל הדמות
+                if (typeof openCharModal === 'function') {
+                    openCharModal(tempItem);
+                } else {
+                    window.location.href = `/?id=${list._id}`;
+                }
+
+            };
+            optionsContainer.appendChild(btn);
+        });
+
+    } catch (e) {
+        optionsContainer.innerHTML = '<p style="color:red; text-align:center;">Please login to add characters.</p>';
+    }
+};
+
+// בדיקה אם המשתמש הגיע מ-Quick Add מדף אחר
+// בדיקה אם המשתמש הגיע מ-Quick Add מדף אחר (גרסה מתוקנת)
+const urlParamsForQuickAdd = new URLSearchParams(window.location.search);
+const quickAddAction = urlParamsForQuickAdd.get('action');
+const pendingData = sessionStorage.getItem('pendingQuickAdd');
+
+if (quickAddAction === 'quickAdd' && pendingData) {
+    try {
+        const data = JSON.parse(pendingData);
+        sessionStorage.removeItem('pendingQuickAdd'); // מנקים מיד
+
+        // הגדרת הליסט הפעיל לזה שנבחר ב-Quick Add
+        if (data.targetListId) {
+            state.activeListId = data.targetListId;
+        }
+
+        // מייצרים אובייקט דמוי תוצאת חיפוש עבור המודאל
+        const tempItem = {
+            id: data.apiId,
+            title: data.name,
+            image: data.image,
+            type: data.type,
+            sourceTitle: data.source
+        };
+
+        // פותחים את מודאל העריכה - נותנים לטעינת הרשימות שנייה לסיים
+        setTimeout(() => {
+            if (typeof openCharModal === 'function') {
+                openCharModal(tempItem);
+            }
+        }, 500);
+
+    } catch (e) {
+        console.error("Quick Add Parse Error", e);
+    }
+}
 
 
 init();

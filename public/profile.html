@@ -425,12 +425,11 @@
                     <i class="fas fa-user" style="color: var(--accent);"></i> My Profile
                 </button>
 
-                <button onclick="openCommModal('users')" class="btn-primary"
+                <button onclick="forceOpenTab('users')" class="btn-primary"
                     style="background: #333 !important; color: var(--text-main) !important; border: 1px solid var(--border) !important; display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px; box-shadow: none !important;">
                     <i class="fas fa-users" style="color: var(--accent);"></i> Community
                 </button>
-
-                <button onclick="openCommModal('leaderboard')" class="btn-primary"
+                <button onclick="forceOpenTab('leaderboard')" class="btn-primary"
                     style="background: #333 !important; color: var(--text-main) !important; border: 1px solid var(--border) !important; display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 15px; box-shadow: none !important;">
                     <i class="fas fa-trophy" style="color: gold;"></i> Leaderboard
                 </button>
@@ -745,6 +744,20 @@
                 <div id="adminLogsList"
                     style="display: flex; flex-direction: column; gap: 8px; max-height: 500px; overflow-y: auto; font-size: 0.85rem; border: 1px solid var(--border); padding: 5px; border-radius: 4px;">
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="quickAddModal" class="modal hidden">
+        <div class="modal-content small-modal">
+            <span class="close-modal"
+                onclick="document.getElementById('quickAddModal').classList.add('hidden')">&times;</span>
+            <h3 id="quickAddTitle" style="color: var(--accent); margin-bottom: 20px; font-size: 1.3rem;">
+                <i class="fas fa-plus-circle"></i> Add to List
+            </h3>
+            <p id="quickAddCharName" style="margin-bottom: 20px; font-weight: bold; font-size: 1.1rem;"></p>
+            <div id="quickAddListOptions"
+                style="display: flex; flex-direction: column; gap: 10px; max-height: 350px; overflow-y: auto; padding-right: 5px;">
             </div>
         </div>
     </div>
@@ -1272,9 +1285,18 @@
                     const displayType = item.sourceType === 'TV Show' ? 'TV' : (item.sourceType || 'Other');
                     let validImg = item.image && !item.image.includes('via.placeholder.com') ? item.image : 'https://placehold.co/60x60/252525/bb86fc?text=?';
 
+                    const isUserLoggedIn = (typeof state !== 'undefined' && state.user) || (typeof loggedInUser !== 'undefined' && loggedInUser);
+                    const quickAddBtn = isUserLoggedIn ? `<button class="lb-add-btn" onclick="openQuickAddSelector('${item._id}', '${item.characterName.replace(/'/g, "\\'")}', '${item.sourceTitle.replace(/'/g, "\\'")}', '${item.sourceType}', '${item.image}')" title="Add to my list"><i class="fas fa-plus"></i></button>` : '';
+
                     div.innerHTML = `
-                        <div class="leaderboard-rank ${rankClass}">${rankText}</div>
-                        <img src="${validImg}" class="leaderboard-img" onerror="this.src='https://placehold.co/60x60/252525/bb86fc?text=?'">
+                <div class="leaderboard-rank ${rankClass}">${rankText}</div>
+                   <div class="leaderboard-img-container">
+        ${quickAddBtn}
+        <div class="leaderboard-img-container">
+                    <button class="lb-add-btn" onclick="openQuickAddSelector('${item._id}', '${item.characterName.replace(/'/g, "\\'")}', '${item.sourceTitle.replace(/'/g, "\\'")}', '${item.sourceType}', '${item.image}')" title="Add to my list"><i class="fas fa-plus"></i></button>
+                    <img src="${validImg}" class="leaderboard-img" onerror="this.src='https://placehold.co/60x60/252525/bb86fc?text=?'">
+                </div>
+    </div>
                         <div class="leaderboard-content-wrapper">
                             <div class="leaderboard-info">
                                 <div class="leaderboard-name">${item.characterName}</div>
@@ -1473,12 +1495,23 @@
         // ADMIN PANEL LOGIC (FIXED)
         // ==========================================
         window.openAdminPanel = function () {
-            const modal = document.getElementById('adminModal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                window.switchAdminTab('users');
-            }
-        };
+                const modal = document.getElementById('adminModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    modal.classList.remove('hidden');
+                    switchAdminTab('users');
+                }
+            };
+
+            window.forceOpenTab = function (tabName) {
+                const modal = document.getElementById('communityModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    modal.classList.remove('hidden');
+                }
+                currentCommTab = tabName;
+                if (typeof switchCommTab === 'function') switchCommTab(tabName);
+            };
 
         window.switchAdminTab = function (tab) {
             const usersSec = document.getElementById('adminUsersSection');
@@ -1630,6 +1663,40 @@
             if (res.ok) alert("Password changed successfully!");
             else alert("Error changing password.");
         };
+
+        window.openQuickAddSelector = async function (apiId, name, source, type, image) {
+                const modal = document.getElementById('quickAddModal');
+                const optionsContainer = document.getElementById('quickAddListOptions');
+                const charNameLabel = document.getElementById('quickAddCharName');
+
+                if (!loggedInUser) return alert("Please Login to add characters.");
+
+                charNameLabel.textContent = name;
+                optionsContainer.innerHTML = '<p style="text-align:center; color:#888;">Loading your lists...</p>';
+                modal.style.display = 'flex';
+                modal.classList.remove('hidden');
+
+                try {
+                    const res = await fetch('/api/lists');
+                    const lists = await res.json();
+                    optionsContainer.innerHTML = '';
+
+                    lists.forEach(list => {
+                        const btn = document.createElement('div');
+                        btn.className = 'quick-add-option';
+                        btn.innerHTML = `<i class="fas ${list.isPrivate ? 'fa-lock' : 'fa-list'}"></i> <span style="flex:1;">${list.name}</span> <small style="color:#777;">${list.items.length} items</small>`;
+
+                        btn.onclick = () => {
+                            // בגלל שאנחנו לא בדף הבית, אנחנו לא יכולים לפתוח את מודאל העריכה.
+                            // לכן, אנחנו שומרים את המידע זמנית ב-Session ומעבירים לדף הבית עם בקשה להוספה.
+                            const quickAddData = { apiId, name, source, type, image, targetListId: list._id };
+                            sessionStorage.setItem('pendingQuickAdd', JSON.stringify(quickAddData));
+                            window.location.href = `/?id=${list._id}&action=quickAdd`;
+                        };
+                        optionsContainer.appendChild(btn);
+                    });
+                } catch (e) { optionsContainer.innerHTML = 'Error loading lists.'; }
+            };
 
         initProfile();
 

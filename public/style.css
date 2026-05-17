@@ -1449,6 +1449,68 @@ select {
   border: 2px solid var(--border);
 }
 
+/* מיכל התמונה בלידרבורד כדי שהכפתור יצוף בתוכו */
+.leaderboard-img-container {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+}
+
+/* כפתור ההוספה המהירה */
+.lb-add-btn {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(187, 134, 252, 0.7);
+  /* סגול שקוף */
+  color: white;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  opacity: 0;
+  /* מוסתר כברירת מחדל */
+  transition: opacity 0.2s;
+  z-index: 5;
+}
+
+/* הצגת הכפתור ב-Hover */
+.leaderboard-img-container:hover .lb-add-btn {
+  opacity: 1;
+}
+
+.quick-add-option {
+  background: var(--bg-color);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  padding: 12px 15px;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+}
+
+.quick-add-option:hover {
+  border-color: var(--accent);
+  background: rgba(187, 134, 252, 0.1);
+  transform: translateX(5px);
+}
+
+.quick-add-option i {
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
 .leaderboard-info {
   flex: 1;
   display: flex;

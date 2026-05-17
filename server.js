@@ -223,7 +223,6 @@ app.post('/api/lists/:id/duplicate', verifyToken, async (req, res) => {
   res.json(newList);
 });
 
-// --- GLOBAL LEADERBOARD (OPTIMIZED & LIGHTWEIGHT WITH SORTING) ---
 // --- GLOBAL LEADERBOARD (BAYESIAN WEIGHTED RATING) ---
 app.get('/api/leaderboard', async (req, res) => {
   try {
