@@ -1517,6 +1517,12 @@ async function loadCommunityUsers() {
         if (currentCommTab !== 'users') return;
 
 
+
+        users.sort((a, b) => {
+            if (a.isFollowing === b.isFollowing) return 0;
+            return a.isFollowing ? -1 : 1; // אמת (עוקב) קופץ למעלה
+        });
+
         grid.innerHTML = users.length ? '' : '<p style="grid-column: 1/-1; text-align:center;">No users found.</p>';
 
         users.forEach(u => {
