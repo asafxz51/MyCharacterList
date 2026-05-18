@@ -792,6 +792,45 @@
             if (loggedInUser) window.location.href = '/profile.html?user=' + loggedInUser.username;
         }
 
+      function getOptimizedImg(url, width = 300, height = null) {
+            // 1. הגנה: אם אין URL, או שזה בסיס 64, או שזה פלייסהולדר - אל תיגע
+            if (!url || url.includes('data:image') || url.includes('placehold.co') || url.includes('placeholder')) return url;
+
+            // 2. מניעת כפילות: אם הלינק כבר מכיל את הפרוקסי של wsrv.nl, תחזיר אותו כמו שהוא
+            if (url.includes('wsrv.nl')) return url;
+
+            // 3. רשימת אתרים שחוסמים פרוקסי או שהם כבר אופטימליים
+            const bypassDomains = [
+                'myanimelist.net',
+                'anilist.co',
+                'tmdb.org',
+                'igdb.com',
+                'zerochan.net', // הוספנו את זירוצ'אן לרשימה הלבנה
+                'pixiv.net',
+                'i0.wp.com',
+                'discordapp.com',
+                'pinimg.com',
+                'fbcdn.net',
+                'i2.wp.com',
+                'i1.wp.com'
+
+
+            ];
+
+            const shouldBypass = bypassDomains.some(domain => url.includes(domain));
+
+            if (shouldBypass) {
+                return url; // מחזיר את הלינק המקורי ללא שינוי
+            }
+
+            // 4. אופטימיזציה לכל השאר (Custom Links)
+            // הוספנו את הפרמטר &n=-1 שעוזר לעקוף חלק מהחסימות של אתרים חיצוניים
+            let optimizedUrl = `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${width}&output=webp&n=-1`;
+            if (height) optimizedUrl += `&h=${height}&fit=cover`;
+
+            return optimizedUrl;
+        }
+
         // פונקציית עזר להמרת ציונים לאותיות
         function getLetterRating(rating) {
             if (rating >= 10) return 'SSS';
@@ -914,8 +953,33 @@
             document.getElementById('statLikes').textContent = profileData.totalLikes;
             document.getElementById('statRanked').textContent = profileData.totalRanked;
 
-            if (profileData.avatar) document.getElementById('avatarImg').src = profileData.avatar;
-            if (profileData.banner) document.getElementById('bannerImg').style.backgroundImage = `url('${profileData.banner}')`;
+          if (profileData.avatar) {
+                const avatarEl = document.getElementById('avatarImg');
+                avatarEl.src = getOptimizedImg(profileData.avatar, 300, 300);
+                avatarEl.dataset.original = profileData.avatar;
+                avatarEl.onerror = function () {
+                    if (this.src.includes('wsrv.nl')) {
+                        this.src = this.dataset.original; // חזרה למקור
+                    } else {
+                        this.src = 'https://placehold.co/150x150/252525/bb86fc?text=Avatar'; // פלייסהולדר סופי
+                    }
+                };
+            }
+            if (profileData.banner) {
+                const bannerEl = document.getElementById('bannerImg');
+                const originalBanner = profileData.banner;
+                const optimizedBanner = getOptimizedImg(originalBanner, 1200);
+
+                // טריק טעינה מוקדמת לבדיקת תקינות הלינק המכווץ
+                const imgTester = new Image();
+                imgTester.src = optimizedBanner;
+                imgTester.onload = () => {
+                    bannerEl.style.backgroundImage = `url('${optimizedBanner}')`;
+                };
+                imgTester.onerror = () => {
+                    bannerEl.style.backgroundImage = `url('${originalBanner}')`;
+                };
+            }
 
             const actionBtns = document.getElementById('actionButtons');
             if (loggedInUser && loggedInUser.username !== profileData.username) {
@@ -945,7 +1009,10 @@
                 // ביטלנו את ה-Flex בטקסט עצמו והשתמשנו ב-overflow נקי
                 listsGrid.innerHTML += `
                     <div class="comm-list-card" onclick="window.location.href='/share.html?id=${list._id}'" style="background: var(--card-bg); border-radius: 12px; cursor: pointer; border: 1px solid var(--border); transition: 0.2s; overflow: hidden; display: flex; flex-direction: column; padding: 0;">
-                        <img src="${coverImg}" style="width: 100%; height: 180px; object-fit: cover; border-bottom: 1px solid var(--border); display: block;">
+                        <img src="${getOptimizedImg(coverImg, 500, 300)}" 
+     data-original="${coverImg}"
+     onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; }"
+     style="width: 100%; height: 180px; object-fit: cover; border-bottom: 1px solid var(--border); display: block;">
                         
                         <div style="padding: 15px; text-align: center; width: 100%; box-sizing: border-box; overflow: hidden;">
                             <div style="color:var(--accent); margin-bottom: 5px; font-size: 1.05rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${list.name}">${list.name}</div>
@@ -972,7 +1039,10 @@
                     // הוספנו פה display: block ו-min-width 0 לשם הדמות
                     charsHtml += `
                         <div class="featured-char-row" style="display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); min-width: 0; width: 100%;">
-                            <img src="${imgUrl}" class="featured-char-img" style="width: 45px; height: 45px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0;">
+                            <img src="${getOptimizedImg(imgUrl, 100, 100)}" 
+     data-original="${imgUrl}"
+     onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; }"
+     class="featured-char-img">
                             <span class="featured-char-name" title="${item.characterName}" style="font-size: 0.95rem; font-weight: bold; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; display: block;">${item.characterName}</span>
                             <span class="featured-char-rating" style="font-size: 0.85rem; font-weight: bold; color: #FFD700; background: rgba(255,215,0,0.1); padding: 3px 8px; border-radius: 6px; flex-shrink: 0;"><i class="fas fa-star" style="font-size: 0.7rem; margin-right: 3px;"></i>${displayRating}</span>
                         </div>
@@ -1216,7 +1286,10 @@
                     div.className = 'user-card';
 
                     const userImg = (u.avatar && u.avatar.trim() !== "") ?
-                        `<img src="${u.avatar}" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); margin-bottom: 10px;">` :
+                        `<img src="${getOptimizedImg(u.avatar, 100, 100)}" 
+          data-original="${u.avatar}"
+          onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; } else { this.style.display='none'; this.nextElementSibling.style.display='inline-block'; }"
+          style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); margin-bottom: 10px;">` :
                         `<i class="fas fa-user-circle user-icon" style="font-size: 55px; margin-bottom: 10px;"></i>`;
 
                     const isUserLoggedIn = loggedInUser !== null;
@@ -1286,7 +1359,7 @@
                     let validImg = item.image && !item.image.includes('via.placeholder.com') ? item.image : 'https://placehold.co/60x60/252525/bb86fc?text=?';
 
                     const isUserLoggedIn = (typeof state !== 'undefined' && state.user) || (typeof loggedInUser !== 'undefined' && loggedInUser);
-                    const quickAddBtn = isUserLoggedIn ? `<button class="lb-add-btn" onclick="openQuickAddSelector('${item._id}', '${item.characterName.replace(/'/g, "\\'")}', '${item.sourceTitle.replace(/'/g, "\\'")}', '${item.sourceType}', '${item.image}')" title="Add to my list"><i class="fas fa-plus"></i></button>` : '';
+                    const quickAddBtn = isUserLoggedIn ? `<button class="lb-add-btn" onclick="openQuickAddSelector('${item._id}', '${item.characterName.replace(/'/g, "\\'")}', '${item.sourceTitle.replace(/'/g, "\\'")}', '${item.sourceType}', '${item.image}')"  title="Add to my list"><i class="fas fa-plus"></i></button>` : '';
 
                     div.innerHTML = `
                 <div class="leaderboard-rank ${rankClass}">${rankText}</div>
@@ -1294,7 +1367,11 @@
         ${quickAddBtn}
         <div class="leaderboard-img-container">
                     <button class="lb-add-btn" onclick="openQuickAddSelector('${item._id}', '${item.characterName.replace(/'/g, "\\'")}', '${item.sourceTitle.replace(/'/g, "\\'")}', '${item.sourceType}', '${item.image}')" title="Add to my list"><i class="fas fa-plus"></i></button>
-                    <img src="${validImg}" class="leaderboard-img" onerror="this.src='https://placehold.co/60x60/252525/bb86fc?text=?'">
+                    <img src="${getOptimizedImg(validImg, 100, 100)}" 
+     data-original="${validImg}"
+     class="leaderboard-img" 
+     onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; } else { this.src='https://placehold.co/60x60/252525/bb86fc?text=?'; }"
+>
                 </div>
     </div>
                         <div class="leaderboard-content-wrapper">
@@ -1325,6 +1402,8 @@
         }
 
         window.openVotersModal = async function (charId, charName) {
+            const modal = document.getElementById('votersModal');
+            if (modal) modal.style.display = 'flex';
             document.getElementById('votersModalTitle').innerHTML = `<i class="fas fa-users"></i> Ranked By (${charName})`;
             const listDiv = document.getElementById('votersList');
             listDiv.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading users...</div>';
@@ -1342,7 +1421,11 @@
 
                 voters.forEach(v => {
                     const avatarHtml = (v.avatar && v.avatar.trim() !== "") ?
-                        `<img src="${v.avatar}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">` :
+                        `<img src="${getOptimizedImg(v.avatar, 80, 80)}" 
+          data-original="${v.avatar}"
+          onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; } else { this.style.display='none'; this.nextElementSibling.style.display='inline-block'; }"
+          style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">
+     <i class="fas fa-user-circle" style="font-size: 35px; color: var(--text-muted); display: none;"></i>` :
                         `<i class="fas fa-user-circle" style="font-size: 35px; color: var(--text-muted);"></i>`;
 
                     const isClickable = v.userId ? true : false;

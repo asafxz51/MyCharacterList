@@ -32,6 +32,43 @@ async function init() {
     }
 }
 
+function getOptimizedImg(url, width = 300, height = null) {
+    // 1. הגנה: אם אין URL, או שזה בסיס 64, או שזה פלייסהולדר - אל תיגע
+    if (!url || url.includes('data:image') || url.includes('placehold.co') || url.includes('placeholder')) return url;
+
+    // 2. מניעת כפילות: אם הלינק כבר מכיל את הפרוקסי של wsrv.nl, תחזיר אותו כמו שהוא
+    if (url.includes('wsrv.nl')) return url;
+
+    // 3. רשימת אתרים שחוסמים פרוקסי או שהם כבר אופטימליים
+    const bypassDomains = [
+        'myanimelist.net',
+        'anilist.co',
+        'tmdb.org',
+        'igdb.com',
+        'zerochan.net',
+        'pixiv.net',
+        'i0.wp.com',
+        'discordapp.com',
+        'pinimg.com',
+        'fbcdn.net',
+        'i2.wp.com',
+        'i1.wp.com'
+    ];
+
+    const shouldBypass = bypassDomains.some(domain => url.includes(domain));
+
+    if (shouldBypass) {
+        return url; // מחזיר את הלינק המקורי ללא שינוי
+    }
+
+    // 4. אופטימיזציה לכל השאר (Custom Links)
+    // הוספנו את הפרמטר &n=-1 שעוזר לעקוף חלק מהחסימות של אתרים חיצוניים
+    let optimizedUrl = `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${width}&output=webp&n=-1`;
+    if (height) optimizedUrl += `&h=${height}&fit=cover`;
+
+    return optimizedUrl;
+}
+
 async function checkLoginStatus() {
     const userChip = document.getElementById('userDisplay');
     const nameLabel = document.getElementById('usernameLabel');
@@ -670,7 +707,12 @@ function renderCurrentList() {
         div.innerHTML = `
             <div class="rank-badge ${rankClass}">#${index + 1}</div>
             ${ratingHtml}
-            <img src="${validImg}" class="char-img" onerror="this.src='https://placehold.co/200x300/252525/bb86fc?text=No+Image'">
+           <img src="${getOptimizedImg(validImg, 400)}" 
+     data-original="${validImg}"
+     loading="lazy" 
+     class="char-img" 
+     onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; } else { this.src='https://placehold.co/200x300/252525/bb86fc?text=No+Image'; }"
+>
             <div class="char-info" style="display: flex; flex-direction: column;">
                 <div class="char-name" style="margin-bottom: 5px;">${item.characterName}</div>
                 
@@ -714,6 +756,8 @@ const filterSelect = document.getElementById('filterSelect');
 if (filterSelect) filterSelect.addEventListener('change', renderCurrentList);
 
 window.editItem = function (index) {
+    const modal = document.getElementById('charModal');
+    if (modal) modal.style.display = 'flex'; 
     state.tempSearchItem = null;
     const list = state.lists.find(l => l._id === state.activeListId);
     const item = list.items[index];
@@ -868,6 +912,9 @@ async function doSearch(query) {
 }
 
 async function openCharModal(item) {
+    const modal = document.getElementById('charModal');
+    if (modal) modal.style.display = 'flex';
+
     state.tempSearchItem = item;
     state.editingIndex = -1;
 
@@ -938,6 +985,8 @@ async function openCharModal(item) {
 }
 
 function openCustomCharModal() {
+    const modal = document.getElementById('charModal');
+    if (modal) modal.style.display = 'flex';
     if (!state.activeListId) return alert("Please select a list first");
 
     state.tempSearchItem = null;
@@ -1444,7 +1493,10 @@ async function loadCommunityUsers() {
             div.className = 'user-card';
 
             const userImg = (u.avatar && u.avatar.trim() !== "") ?
-                `<img src="${u.avatar}" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); margin-bottom: 10px;">` :
+                `<img src="${getOptimizedImg(u.avatar, 100, 100)}" 
+          data-original="${u.avatar}"
+          onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; } else { this.style.display='none'; this.nextElementSibling.style.display='inline-block'; }"
+          style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); margin-bottom: 10px;">` :
                 `<i class="fas fa-user-circle user-icon" style="font-size: 55px; margin-bottom: 10px;"></i>`;
 
             // בדיקת התחברות חסינה גם לאינדקס (state.user) וגם לשייר (loggedInUser)
@@ -1525,13 +1577,17 @@ async function loadLeaderboard() {
             }
 
             const isUserLoggedIn = (typeof state !== 'undefined' && state.user) || (typeof loggedInUser !== 'undefined' && loggedInUser);
-            const quickAddBtn = isUserLoggedIn ? `<button class="lb-add-btn" onclick="openQuickAddSelector('${item._id}', '${item.characterName.replace(/'/g, "\\'")}', '${item.sourceTitle.replace(/'/g, "\\'")}', '${item.sourceType}', '${item.image}')" title="Add to my list"><i class="fas fa-plus"></i></button>` : '';
+            const quickAddBtn = isUserLoggedIn ? `<button class="lb-add-btn" onclick="openQuickAddSelector('${item._id}', '${item.characterName.replace(/'/g, "\\'")}', '${item.sourceTitle.replace(/'/g, "\\'")}', '${item.sourceType}', '${item.image}')"  title="Add to my list"><i class="fas fa-plus"></i></button>` : '';
 
             div.innerHTML = `
                 <div class="leaderboard-rank ${rankClass}">${rankText}</div>
                    <div class="leaderboard-img-container">
         ${quickAddBtn}
-        <img src="${validImg}" class="leaderboard-img" onerror="this.src='https://placehold.co/60x60/252525/bb86fc?text=?'">
+        <img src="${getOptimizedImg(validImg, 100, 100)}" 
+     data-original="${validImg}"
+     class="leaderboard-img" 
+     onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; } else { this.src='https://placehold.co/60x60/252525/bb86fc?text=?'; }"
+>
     </div>
                 
                 <div class="leaderboard-content-wrapper">
@@ -1569,6 +1625,8 @@ async function loadLeaderboard() {
 
 // פונקציית טעינה עצלה למצביעים (כולל לחיצה על משתמשים)
 window.openVotersModal = async function (charId, charName) {
+    const modal = document.getElementById('votersModal');
+    if (modal) modal.style.display = 'flex';
     document.getElementById('votersModalTitle').innerHTML = `<i class="fas fa-users"></i> Ranked By (${charName})`;
     const listDiv = document.getElementById('votersList');
 
@@ -1588,7 +1646,11 @@ window.openVotersModal = async function (charId, charName) {
 
         voters.forEach(v => {
             const avatarHtml = (v.avatar && v.avatar.trim() !== "") ?
-                `<img src="${v.avatar}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">` :
+                `<img src="${getOptimizedImg(v.avatar, 80, 80)}" 
+          data-original="${v.avatar}"
+          onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; } else { this.style.display='none'; this.nextElementSibling.style.display='inline-block'; }"
+          style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">
+     <i class="fas fa-user-circle" style="font-size: 35px; color: var(--text-muted); display: none;"></i>` :
                 `<i class="fas fa-user-circle" style="font-size: 35px; color: var(--text-muted);"></i>`;
 
             const isClickable = v.userId ? true : false;
@@ -2364,6 +2426,7 @@ window.forceOpenTab = function (tabName) {
 
 window.openQuickAddSelector = async function (apiId, name, source, type, image) {
     const modal = document.getElementById('quickAddModal');
+    if (modal) modal.style.display = 'flex';
     const optionsContainer = document.getElementById('quickAddListOptions');
     const charNameLabel = document.getElementById('quickAddCharName');
 

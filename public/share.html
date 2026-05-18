@@ -788,7 +788,43 @@
         let visibleNotifsLimit = 5, currentNotifsData = [], visibleCommentsLimit = 10;
         let isReg = false; // הגדרת משתנה ההרשמה
 
+   function getOptimizedImg(url, width = 300, height = null) {
+        // 1. הגנה: אם אין URL, או שזה בסיס 64, או שזה פלייסהולדר - אל תיגע
+        if (!url || url.includes('data:image') || url.includes('placehold.co') || url.includes('placeholder')) return url;
 
+        // 2. מניעת כפילות: אם הלינק כבר מכיל את הפרוקסי של wsrv.nl, תחזיר אותו כמו שהוא
+        if (url.includes('wsrv.nl')) return url;
+
+        // 3. רשימת אתרים שחוסמים פרוקסי או שהם כבר אופטימליים
+        const bypassDomains = [
+            'myanimelist.net',
+            'anilist.co',
+            'tmdb.org',
+            'igdb.com',
+            'zerochan.net', // הוספנו את זירוצ'אן לרשימה הלבנה
+            'pixiv.net',
+            'i0.wp.com',
+            'discordapp.com',
+            'pinimg.com',
+            'fbcdn.net',
+            'i2.wp.com',
+            'i1.wp.com'
+
+        ];
+
+        const shouldBypass = bypassDomains.some(domain => url.includes(domain));
+
+        if (shouldBypass) {
+            return url; // מחזיר את הלינק המקורי ללא שינוי
+        }
+
+        // 4. אופטימיזציה לכל השאר (Custom Links)
+        // הוספנו את הפרמטר &n=-1 שעוזר לעקוף חלק מהחסימות של אתרים חיצוניים
+        let optimizedUrl = `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${width}&output=webp&n=-1`;
+        if (height) optimizedUrl += `&h=${height}&fit=cover`;
+
+        return optimizedUrl;
+    }
 
         function getRatingDisplay(rating, type) {
             if (rating === 0) return 'No Grade';
@@ -972,10 +1008,19 @@
                 currentListData = data;
                 document.title = data.name;
                 document.getElementById('listTitle').textContent = data.name;
+                // עדכון SEO דינמי
+                document.title = `${data.name} - MyCharacterList`;
+                let metaDesc = document.querySelector('meta[name="description"]');
+                if (!metaDesc) {
+                    metaDesc = document.createElement('meta');
+                    metaDesc.name = "description";
+                    document.head.appendChild(metaDesc);
+                }
+                metaDesc.content = `Check out this character ranking list: ${data.name}. Created by ${data.author} on MyCharacterList.`;
 
 
                 const avatarHtml = (data.authorAvatar && data.authorAvatar.trim() !== "")
-                    ? `<img src="${data.authorAvatar}" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">
+                    ? `<img src="${getOptimizedImg(data.authorAvatar, 80, 80)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">
                            <i class="fas fa-user-circle" style="font-size: 32px; color: var(--text-muted); display: none;"></i>`
                     : `<i class="fas fa-user-circle" style="font-size: 32px; color: var(--text-muted);"></i>`;
 
@@ -1069,8 +1114,12 @@
             <div class="rank-badge ${index < 3 ? 'rank-' + (index + 1) : 'rank-other'}">#${index + 1}</div>
             ${ratingHtml}
             
-            <!-- שימוש בקלאס החדש שמנהל את הגובה לפי מכשיר -->
-            <img src="${validImg}" class="char-card-img" onerror="this.src='https://placehold.co/200x300/252525/bb86fc?text=No+Image'">
+            <img src="${getOptimizedImg(validImg, 400)}" 
+     data-original="${validImg}"
+     class="char-card-img" 
+     loading="lazy" 
+     onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; } else { this.src='https://placehold.co/200x300/252525/bb86fc?text=No+Image'; }"
+>
             
             <div class="char-info" style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-width: 0;">
                 <div style="width: 100%; overflow: hidden;">
@@ -1416,7 +1465,10 @@
                     div.className = 'user-card';
 
                     const userImg = (u.avatar && u.avatar.trim() !== "") ?
-                        `<img src="${u.avatar}" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); margin-bottom: 10px;">` :
+                        `<img src="${getOptimizedImg(u.avatar, 100, 100)}" 
+          data-original="${u.avatar}"
+          onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; } else { this.style.display='none'; this.nextElementSibling.style.display='inline-block'; }"
+          style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); margin-bottom: 10px;">` :
                         `<i class="fas fa-user-circle user-icon" style="font-size: 55px; margin-bottom: 10px;"></i>`;
 
                     // בדיקת התחברות חסינה גם לאינדקס (state.user) וגם לשייר (loggedInUser)
@@ -1500,7 +1552,7 @@
                     }
 
                     const isUserLoggedIn = (typeof state !== 'undefined' && state.user) || (typeof loggedInUser !== 'undefined' && loggedInUser);
-                    const quickAddBtn = isUserLoggedIn ? `<button class="lb-add-btn" onclick="openQuickAddSelector('${item._id}', '${item.characterName.replace(/'/g, "\\'")}', '${item.sourceTitle.replace(/'/g, "\\'")}', '${item.sourceType}', '${item.image}')" title="Add to my list"><i class="fas fa-plus"></i></button>` : '';
+                    const quickAddBtn = isUserLoggedIn ? `<button class="lb-add-btn" onclick="openQuickAddSelector('${item._id}', '${item.characterName.replace(/'/g, "\\'")}', '${item.sourceTitle.replace(/'/g, "\\'")}', '${item.sourceType}', '${item.image}')"  title="Add to my list"><i class="fas fa-plus"></i></button>` : '';
 
                     div.innerHTML = `
                 <div class="leaderboard-rank ${rankClass}">${rankText}</div>
@@ -1508,7 +1560,11 @@
         ${quickAddBtn}
         <div class="leaderboard-img-container">
                     <button class="lb-add-btn" onclick="openQuickAddSelector('${item._id}', '${item.characterName.replace(/'/g, "\\'")}', '${item.sourceTitle.replace(/'/g, "\\'")}', '${item.sourceType}', '${item.image}')" title="Add to my list"><i class="fas fa-plus"></i></button>
-                    <img src="${validImg}" class="leaderboard-img" onerror="this.src='https://placehold.co/60x60/252525/bb86fc?text=?'">
+                    <img src="${getOptimizedImg(validImg, 100, 100)}" 
+     data-original="${validImg}"
+     class="leaderboard-img" 
+     onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; } else { this.src='https://placehold.co/60x60/252525/bb86fc?text=?'; }"
+>
                 </div>
     </div>
                 
@@ -1547,6 +1603,8 @@
 
         // פונקציית טעינה עצלה למצביעים (כולל לחיצה על משתמשים)
         window.openVotersModal = async function (charId, charName) {
+            const modal = document.getElementById('votersModal');
+            if (modal) modal.style.display = 'flex';
             document.getElementById('votersModalTitle').innerHTML = `<i class="fas fa-users"></i> Ranked By (${charName})`;
             const listDiv = document.getElementById('votersList');
 
@@ -1566,7 +1624,11 @@
 
                 voters.forEach(v => {
                     const avatarHtml = (v.avatar && v.avatar.trim() !== "") ?
-                        `<img src="${v.avatar}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">` :
+                        `<img src="${getOptimizedImg(v.avatar, 80, 80)}" 
+          data-original="${v.avatar}"
+          onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; } else { this.style.display='none'; this.nextElementSibling.style.display='inline-block'; }"
+          style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent);">
+     <i class="fas fa-user-circle" style="font-size: 35px; color: var(--text-muted); display: none;"></i>` :
                         `<i class="fas fa-user-circle" style="font-size: 35px; color: var(--text-muted);"></i>`;
 
                     const isClickable = v.userId ? true : false;
@@ -2004,6 +2066,8 @@
 
         window.openQuickAddSelector = async function (apiId, name, source, type, image) {
                 const modal = document.getElementById('quickAddModal');
+                    if (modal) modal.style.display = 'flex';
+
                 const optionsContainer = document.getElementById('quickAddListOptions');
                 const charNameLabel = document.getElementById('quickAddCharName');
 
