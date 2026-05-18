@@ -85,19 +85,11 @@ async function checkLoginStatus() {
             state.role = data.role;
 
 
-            // --- טיפול באווטאר בנאב-בר ---
-            // const navAvatar = document.getElementById('navAvatar');
-            // const defaultIcon = document.getElementById('navDefaultIcon');
-
-            // // אם יש לינק תקין (לא ריק ולא שבור)
-            // if (data.avatar && data.avatar.trim() !== "") {
-            //     navAvatar.src = data.avatar;
-            //     navAvatar.classList.remove('hidden');
-            //     if (defaultIcon) defaultIcon.classList.add('hidden');
-            // } else {
-            //     navAvatar.classList.add('hidden');
-            //     if (defaultIcon) defaultIcon.classList.remove('hidden');
-            // }
+            const notifArea = document.getElementById('notifArea');
+            if (notifArea) {
+                notifArea.classList.remove('hidden');
+                notifArea.style.display = 'inline-block'; // וידוא תצוגה
+            }
 
             if (menuBtn) menuBtn.classList.remove('hidden');
 
@@ -281,7 +273,9 @@ window.addEventListener('click', (e) => {
 });
 
 async function fetchNotifications() {
-    if (!state.user) return;
+    const user = (typeof state !== 'undefined' && state.user) || loggedInUser;
+    if (!user) return;
+
     try {
         const res = await fetch('/api/notifications');
         if (!res.ok) return;
@@ -295,7 +289,7 @@ function renderNotifDropdownUI() {
     const badge = document.getElementById('notifBadge');
     if (!dropdown) return;
 
-    // מונה התראות שלא נקראו
+    // עדכון המונה האדום
     const unreadCount = currentNotifsData.filter(n => !n.read).length;
     if (badge) {
         badge.textContent = unreadCount;
@@ -309,7 +303,7 @@ function renderNotifDropdownUI() {
         return;
     }
 
-    // מיפוי ההודעות לפי סוג ההתראה (מה שהיה בשלב 3 א)
+    // מפת הודעות מלאה
     const msgMap = {
         'like': `liked your list`,
         'comment': `commented on your list`,
@@ -318,15 +312,12 @@ function renderNotifDropdownUI() {
         'comment_like': `liked your comment`
     };
 
-    // חיתוך המערך לפי המגבלה (5, 10 וכו')
     const notifsToShow = currentNotifsData.slice(0, visibleNotifsLimit);
 
     notifsToShow.forEach(n => {
         const div = document.createElement('div');
-        // עיצוב הפריט (רקע שונה אם לא נקרא)
         div.style = `padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.85rem; cursor: pointer; background: ${n.read ? 'transparent' : 'rgba(187, 134, 252, 0.08)'}`;
 
-        // יצירת תוכן ההודעה בעזרת המפה
         const actionText = msgMap[n.type] || 'interacted with you';
         const listNameText = n.listName ? `: <b>${n.listName}</b>` : '';
 
@@ -335,14 +326,12 @@ function renderNotifDropdownUI() {
             <div style="font-size:0.7rem; color:#666; margin-top:4px;">${new Date(n.timestamp).toLocaleString('he-IL')}</div>
         `;
 
-        // לחיצה על התראה תוביל לרשימה (אם יש כזו)
         div.onclick = () => {
             if (n.listId) window.location.href = `/share.html?id=${n.listId}`;
         };
         dropdown.appendChild(div);
     });
 
-    // כפתור "Show more"
     if (currentNotifsData.length > visibleNotifsLimit) {
         const loadMoreDiv = document.createElement('div');
         loadMoreDiv.style = "padding: 10px; text-align: center; color: var(--accent); cursor: pointer; font-size: 0.85rem; font-weight: bold; border-top: 1px solid var(--border);";

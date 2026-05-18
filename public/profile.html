@@ -14,6 +14,13 @@
             padding: 0 !important;
         }
 
+        #notifArea {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
         .profile-banner {
             width: 100%;
             height: 280px;
@@ -862,6 +869,15 @@
                     // --- טיפול בנתוני התחברות (authData) ---
                     if (authData) {
                         loggedInUser = authData;
+
+                        const notifArea = document.getElementById('notifArea');
+                        if (notifArea) {
+                            notifArea.classList.remove('hidden');
+                            notifArea.style.display = 'inline-block';
+                        }
+
+                        fetchNotifications(); // טוען את ההתראות מהשרת
+                        setInterval(fetchNotifications, 30000);
 
                         document.getElementById('authBtnNav').textContent = "Logout";
                         document.getElementById('authBtnNav').onclick = async () => {
