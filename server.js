@@ -784,14 +784,19 @@ app.post('/api/notifications/read', verifyToken, async (req, res) => {
 app.get('/api/users', optionalToken, async (req, res) => {
   try {
     const { search } = req.query;
-    let query = {};
+
+    // 1. מוצאים רשימות ציבוריות שיש בהן לפחות פריט אחד
+    const activeLists = await List.find({
+      isPrivate: { $ne: true },
+      "items.0": { $exists: true } // מוודא שיש לפחות איבר אחד במערך
+    }).distinct('userId');
+
+    // 2. בונים את השאילתה למשתמשים שנמצאו ברשימות הפעילות
+    let query = { _id: { $in: activeLists } };
     if (search) query.username = { $regex: search, $options: 'i' };
 
-    // מביא רק 50 משתמשים, ורק את השדות שצריך (username, avatar)
-    const users = await User.find(query, 'username avatar following')
-      .limit(50)
-      .lean();
-
+    // 3. שליפת המשתמשים
+    const users = await User.find(query, 'username avatar following').lean();
     const currentUser = req.user ? await User.findById(req.user._id).lean() : null;
 
     const results = users.map(u => ({
@@ -801,10 +806,15 @@ app.get('/api/users', optionalToken, async (req, res) => {
       isFollowing: currentUser ? currentUser.following.map(id => id.toString()).includes(u._id.toString()) : false
     })).filter(u => !currentUser || u.username !== currentUser.username);
 
-    res.json(results);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
+    // 4. מיון: עוקבים למעלה
+    results.sort((a, b) => (a.isFollowing === b.isFollowing ? 0 : a.isFollowing ? -1 : 1));
 
+    res.json(results);
+  } catch (e) {
+    console.error("Users API Error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
 app.post('/api/users/follow/:id', verifyToken, async (req, res) => {
   const targetId = req.params.id;
   const user = await User.findById(req.user._id);
