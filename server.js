@@ -140,7 +140,10 @@ app.post('/api/auth/ping', verifyToken, async (req, res) => {
 // --- LISTS & CHARACTERS ---
 
 app.get('/api/lists', verifyToken, async (req, res) => {
-  const lists = await List.find({ userId: req.user._id }).sort({ order: 1 }).lean();
+  const lists = await List.find({ userId: req.user._id })
+    .select('name order isPrivate')
+    .sort({ order: 1 })
+    .lean();
   res.json(lists);
 });
 
@@ -223,7 +226,14 @@ app.post('/api/lists/:id/duplicate', verifyToken, async (req, res) => {
   res.json(newList);
 });
 
-// --- GLOBAL LEADERBOARD (BAYESIAN WEIGHTED RATING) ---
+app.get('/api/lists/:id', verifyToken, async (req, res) => {
+  try {
+    const list = await List.findOne({ _id: req.params.id, userId: req.user._id }).lean();
+    if (!list) return res.status(404).json({ error: "Not found" });
+    res.json(list);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // --- GLOBAL LEADERBOARD (STABLE & WEIGHTED) ---
 app.get('/api/leaderboard', async (req, res) => {
   try {

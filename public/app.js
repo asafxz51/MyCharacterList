@@ -9,6 +9,7 @@ let currentNotifsData = [];
 let visibleIndexCommentsLimit = 10;
 
 async function init() {
+    fetch('/api/auth/check'); 
     await checkLoginStatus();
     setupEvents();
 
@@ -368,13 +369,15 @@ async function fetchLists() {
 
     if (requestedId && state.lists.some(l => l._id === requestedId)) {
         state.activeListId = requestedId;
-    }
-    else if (state.lists.length > 0 && !state.activeListId) {
+    } else if (state.lists.length > 0 && !state.activeListId) {
         state.activeListId = state.lists[0]._id;
     }
 
     renderSidebar();
-    renderCurrentList();
+
+    if (state.activeListId) {
+        selectList(state.activeListId);
+    }
 }
 
 async function createList(name) {
@@ -488,12 +491,28 @@ function renderSidebar() {
     });
 }
 
-window.selectList = function (id) {
+window.selectList = async function (id) {
     state.activeListId = id;
     renderSidebar();
-    renderCurrentList();
+
+    // מציג Loading קטן בזמן שהדמויות יורדות
+    document.getElementById('characterGrid').innerHTML = '<p style="text-align:center; padding:50px; color:#888;">Loading characters...</p>';
+
+    try {
+        const res = await fetch(`/api/lists/${id}`);
+        const fullList = await res.json();
+
+        // מעדכנים את הרשימה בזיכרון המקומי עם הדמויות החדשות שהגיעו
+        const index = state.lists.findIndex(l => l._id === id);
+        if (index !== -1) {
+            state.lists[index] = fullList;
+        }
+
+        renderCurrentList();
+    } catch (e) { console.error("Error fetching list content"); }
+
     if (window.innerWidth <= 768) closeMobileMenu();
-}
+};
 
 function toggleReorderMode() {
     state.isReordering = !state.isReordering;
@@ -610,6 +629,11 @@ function renderCurrentList() {
 
     // --- מצב רגיל (יש רשימות) ---
     const list = state.lists.find(l => l._id === state.activeListId);
+    // הגנה: אם הרשימה קיימת אבל הדמויות שלה עוד לא נטענו מהשרת
+    if (!list || !list.items) {
+        grid.innerHTML = '<p style="text-align:center; padding:50px; color:#888;"><i class="fas fa-spinner fa-spin"></i> Fetching characters...</p>';
+        return;
+    }
     if (!list) {
         if (header) header.style.display = 'none';
         if (commentsSec) commentsSec.classList.add('hidden');
@@ -1338,18 +1362,36 @@ function setupEvents() {
 }
 
 // תחליף את פונקציית הבחירה כדי שהתפריט ייסגר מיד אחרי שלחצת על ליסט בטלפון
-window.selectList = function (id) {
+window.selectList = async function (id) {
+    if (!id) return;
     state.activeListId = id;
-    renderSidebar();
-    renderCurrentList();
+    renderSidebar(); // מעדכן את הסימון הסגול בסיידבאר
 
-    // סגירה אוטומטית של תפריט צד במובייל לאחר בחירת רשימה
-    const sidebar = document.querySelector('.sidebar');
-    const overlay = document.getElementById('mobileOverlay');
-    if (window.innerWidth <= 768) {
-        if (sidebar) sidebar.classList.remove('open');
-        if (overlay) overlay.classList.add('hidden');
+    // מציג Loading בגריד
+    const grid = document.getElementById('characterGrid');
+    if (grid) grid.innerHTML = '<p style="text-align:center; padding:50px; color:#888;"><i class="fas fa-spinner fa-spin"></i> Loading characters...</p>';
+
+    try {
+        const res = await fetch(`/api/lists/${id}`);
+        if (!res.ok) throw new Error("Failed to fetch");
+
+        const fullList = await res.json();
+
+        // מעדכנים את הרשימה הספציפית בתוך המערך הגלובלי
+        const index = state.lists.findIndex(l => l._id === id);
+        if (index !== -1) {
+            state.lists[index] = fullList;
+        }
+
+        // עכשיו כשיש נתונים - מרנדרים את הכל!
+        renderCurrentList();
+
+    } catch (e) {
+        console.error("Error fetching list content:", e);
+        if (grid) grid.innerHTML = '<p style="text-align:center; color:red;">Error loading list characters.</p>';
     }
+
+    if (window.innerWidth <= 768) closeMobileMenu();
 };
 
 function closeMobileMenu() {
@@ -1894,7 +1936,6 @@ async function loadAdminUsers() {
     grid.innerHTML = 'Loading users...';
     const res = await fetch('/api/admin/users');
     const users = await res.json();
-    if (currentCommTab !== 'leaderboard') return;
     grid.innerHTML = '';
 
     users.forEach(u => {
@@ -1943,11 +1984,10 @@ window.adminManageLists = async function (userId, username) {
             const itemsCount = l.items ? l.items.length : 0;
 
             div.innerHTML = `
-                <div>
+                <div style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                     ${privacyIcon}<strong style="color:var(--accent);">${l.name}</strong> 
-                    <span style="font-size:0.8rem; color:var(--text-muted); margin-left:10px;">(${itemsCount} characters)</span>
                 </div>
-                <div style="display:flex; gap:8px;">
+                <div style="display:flex; gap:8px; flex-shrink: 0; margin-left: 10px;">
                     <button onclick="window.open('/share.html?id=${l._id}', '_blank')" class="btn-primary" style="width:auto; padding:5px 12px; font-size:0.8rem; background:#4CAF50;">View</button>
                     <button onclick="adminDeleteList('${l._id}', '${userId}', '${username}')" class="btn-primary" style="width:auto; padding:5px 12px; font-size:0.8rem; background:#ff4444;">Delete</button>
                 </div>
