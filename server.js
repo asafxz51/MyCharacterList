@@ -684,9 +684,9 @@ app.get('/api/profile/:username', optionalToken, async (req, res) => {
       .lean();
     if (!targetUser) return res.status(404).json({ error: "User not found" });
 
-    // 2. שלוף רק את כותרות הרשימות (בלי ה-items וה-comments הכבדים!)
+    // הגבלת כמות הרשימות שנשלחות לפרופיל (למשל 20 הראשונות)
     const userLists = await List.find({ userId: targetUser._id, isPrivate: { $ne: true } })
-      .select('name _id items.image items.rating items.characterName isFreeOrder rankingType') // מביא רק מידע בסיסי ל-Featured
+      .limit(20)
       .lean();
 
     // חישוב סטטיסטיקות מגניבות לפרופיל!
@@ -829,8 +829,20 @@ app.post('/api/users/follow/:id', verifyToken, async (req, res) => {
 });
 
 app.get('/api/users/:userId/lists', async (req, res) => {
-  const lists = await List.find({ userId: req.params.userId, isPrivate: { $ne: true } });
-  res.json(lists);
+  try {
+    // שליפת רשימות ציבוריות בלבד, ללא הדמויות (Items) כדי לחסוך רוחב פס
+    const lists = await List.find({ userId: req.params.userId, isPrivate: { $ne: true } })
+      .select('name items') 
+      .lean();
+
+    const simplifiedLists = lists.map(l => ({
+      _id: l._id,
+      name: l.name,
+      itemsCount: l.items ? l.items.length : 0 
+    }));
+
+    res.json(simplifiedLists);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // --- ADMIN ---
