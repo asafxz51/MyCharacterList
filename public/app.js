@@ -7,27 +7,14 @@ let logsAutoRefreshInterval = null;
 let visibleNotifsLimit = 5;
 let currentNotifsData = [];
 let visibleIndexCommentsLimit = 10;
+let isInitialized = false;
+
 
 async function init() {
-    // שלב 0: "Ping" מהיר לשרת כדי להעיר אותו מה-Cold Start מיד
-    fetch('/api/auth/check');
-
-    // שלב 1: הרצת בדיקת לוגין וטעינת ליסטים במקביל! (חוסך המון זמן)
-    Promise.all([
-        checkLoginStatus(),
-        fetchLists()
-    ]).then(() => {
-        console.log("Site initialized");
-    });
-
+    if (isInitialized) return; // מונע הרצה כפולה
+    isInitialized = true;
+    await checkLoginStatus();
     setupEvents();
-
-    // קריאת טאבים מהכתובת (נשאר אותו דבר)
-    const params = new URLSearchParams(window.location.search);
-    const tab = params.get('tab');
-    if (tab === 'community') forceOpenTab('users');
-    else if (tab === 'leaderboard') forceOpenTab('leaderboard');
-    else if (tab === 'admin') openAdminPanel();
 }
 
 function getOptimizedImg(url, width = 300, height = null) {

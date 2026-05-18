@@ -119,13 +119,8 @@ app.post('/api/auth/logout', (req, res) => res.clearCookie('token').json({ messa
 
 app.get('/api/auth/check', verifyToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
-    res.json({
-      _id: user._id,
-      username: user.username,
-      role: user.role,
-      avatar: user.avatar || ''
-    });
+    const user = await User.findById(req.user._id).select('username role avatar').lean();
+    res.json(user);
   } catch (e) { res.status(401).json({ error: "Unauthorized" }); }
 });
 
@@ -796,8 +791,12 @@ app.get('/api/users', optionalToken, async (req, res) => {
     if (search) query.username = { $regex: search, $options: 'i' };
 
     // 3. שליפת המשתמשים
-    const users = await User.find(query, 'username avatar following').lean();
-    const currentUser = req.user ? await User.findById(req.user._id).lean() : null;
+    // שימוש ב-.select כדי להביא רק את מה שחייבים!
+    const users = await User.find(query)
+      .select('username avatar') // אל תביא את רשימות המשתמש!
+      .limit(50) // חובה: אל תביא את כל המשתמשים באתר אם יש 1000
+      .lean();   
+       const currentUser = req.user ? await User.findById(req.user._id).lean() : null;
 
     const results = users.map(u => ({
       _id: u._id,
