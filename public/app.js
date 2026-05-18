@@ -13,6 +13,7 @@ let isInitialized = false;
 async function init() {
     if (isInitialized) return; // מונע הרצה כפולה
     isInitialized = true;
+    fetch('/api/auth/check'); 
     await checkLoginStatus();
     setupEvents();
 }

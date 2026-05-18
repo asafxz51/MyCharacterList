@@ -15,11 +15,11 @@
         }
 
         #notifArea {
-    position: relative !important;
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-}
+            position: relative !important;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+        }
 
         .profile-banner {
             width: 100%;
@@ -852,72 +852,72 @@
         }
 
         async function initProfile() {
-                if (!targetUsername) {
-                    document.getElementById('profileUsername').textContent = "User not found.";
-                    return;
+            if (!targetUsername) {
+                document.getElementById('profileUsername').textContent = "User not found.";
+                return;
+            }
+
+            // Ping קטן להעיר את השרת של נטליפי מיד
+            fetch('/api/auth/check');
+
+            // הרצת שתי הבקשות במקביל כדי לחסוך זמן טעינה
+            Promise.all([
+                fetch('/api/auth/check').then(res => res.ok ? res.json() : null).catch(() => null),
+                fetch(`/api/profile/${targetUsername}`).then(res => res.ok ? res.json() : null).catch(() => null)
+            ]).then(([authData, pData]) => {
+
+                // --- טיפול בנתוני התחברות (authData) ---
+                if (authData) {
+                    loggedInUser = authData;
+
+                    const notifArea = document.getElementById('notifArea');
+                    if (notifArea) {
+                        notifArea.classList.remove('hidden');
+                        notifArea.style.display = 'inline-block';
+                    }
+
+                    fetchNotifications(); // טוען את ההתראות מהשרת
+                    setInterval(fetchNotifications, 30000);
+
+                    document.getElementById('authBtnNav').textContent = "Logout";
+                    document.getElementById('authBtnNav').onclick = async () => {
+                        await fetch('/api/auth/logout', { method: 'POST' });
+                        window.location.href = '/';
+                    };
+
+                    if (document.getElementById('mobileMenuBtn')) document.getElementById('mobileMenuBtn').classList.remove('hidden');
+                    if (authData.role === 'admin') document.getElementById('adminBtn').classList.remove('hidden');
+
+                    const sidebarProfileBtn = document.getElementById('sidebarProfileBtn');
+                    if (sidebarProfileBtn) {
+                        sidebarProfileBtn.classList.remove('hidden');
+                        sidebarProfileBtn.onclick = () => window.location.href = `/profile.html?user=${authData.username}`;
+                    }
+
+                    document.getElementById('notifArea').classList.remove('hidden');
+                    document.querySelector('.sidebar').style.display = 'flex';
+                    loadSidebar();
+                    fetchNotifications();
+                } else {
+                    document.querySelector('.sidebar').style.display = 'none';
+                    if (document.getElementById('authBtnNav')) {
+                        document.getElementById('authBtnNav').textContent = "Login";
+                        document.getElementById('authBtnNav').onclick = () => window.location.href = '/';
+                    }
                 }
 
-                // Ping קטן להעיר את השרת של נטליפי מיד
-                fetch('/api/auth/check');
-
-                // הרצת שתי הבקשות במקביל כדי לחסוך זמן טעינה
-                Promise.all([
-                    fetch('/api/auth/check').then(res => res.ok ? res.json() : null).catch(() => null),
-                    fetch(`/api/profile/${targetUsername}`).then(res => res.ok ? res.json() : null).catch(() => null)
-                ]).then(([authData, pData]) => {
-
-                    // --- טיפול בנתוני התחברות (authData) ---
-                    if (authData) {
-                        loggedInUser = authData;
-
-                        const notifArea = document.getElementById('notifArea');
-                        if (notifArea) {
-                            notifArea.classList.remove('hidden');
-                            notifArea.style.display = 'inline-block';
-                        }
-
-                        fetchNotifications(); // טוען את ההתראות מהשרת
-                        setInterval(fetchNotifications, 30000);
-
-                        document.getElementById('authBtnNav').textContent = "Logout";
-                        document.getElementById('authBtnNav').onclick = async () => {
-                            await fetch('/api/auth/logout', { method: 'POST' });
-                            window.location.href = '/';
-                        };
-
-                        if (document.getElementById('mobileMenuBtn')) document.getElementById('mobileMenuBtn').classList.remove('hidden');
-                        if (authData.role === 'admin') document.getElementById('adminBtn').classList.remove('hidden');
-
-                        const sidebarProfileBtn = document.getElementById('sidebarProfileBtn');
-                        if (sidebarProfileBtn) {
-                            sidebarProfileBtn.classList.remove('hidden');
-                            sidebarProfileBtn.onclick = () => window.location.href = `/profile.html?user=${authData.username}`;
-                        }
-
-                        document.getElementById('notifArea').classList.remove('hidden');
-                        document.querySelector('.sidebar').style.display = 'flex';
-                        loadSidebar();
-                        fetchNotifications();
-                    } else {
-                        document.querySelector('.sidebar').style.display = 'none';
-                        if (document.getElementById('authBtnNav')) {
-                            document.getElementById('authBtnNav').textContent = "Login";
-                            document.getElementById('authBtnNav').onclick = () => window.location.href = '/';
-                        }
-                    }
-
-                    // --- טיפול בנתוני הפרופיל (pData) ---
-                    if (pData) {
-                        profileData = pData;
-                        renderProfile();
-                        setupEditPens();
-                    } else {
-                        document.getElementById('profileUsername').textContent = "User not found or private.";
-                    }
-                }).catch(err => {
-                    console.error("Profile Load Error:", err);
-                });
-            }
+                // --- טיפול בנתוני הפרופיל (pData) ---
+                if (pData) {
+                    profileData = pData;
+                    renderProfile();
+                    setupEditPens();
+                } else {
+                    document.getElementById('profileUsername').textContent = "User not found or private.";
+                }
+            }).catch(err => {
+                console.error("Profile Load Error:", err);
+            });
+        }
 
         let pendingDeleteListId = null; // שומר את ה-ID של הרשימה שאנחנו עומדים למחוק
 
@@ -1017,40 +1017,29 @@
                 actionBtns.innerHTML = `<button onclick="toggleFollow('${profileData._id}')" class="btn-primary" style="width: auto !important; padding: 8px 25px; border-radius: 20px; font-size: 0.95rem; background: ${followColor};"><i class="${followClass}"></i> ${followText}</button>`;
             }
 
+           // ציור הרשימות הציבוריות
             const listsGrid = document.getElementById('allListsGrid');
             listsGrid.innerHTML = '';
-            let featuredList = null;
 
-            profileData.lists.forEach(list => {
-                if (list._id === profileData.featuredListId) featuredList = list;
+            if (profileData.lists && Array.isArray(profileData.lists)) {
+                profileData.lists.forEach(list => {
+                    if (list._id === profileData.featuredListId) featuredList = list;
 
-                let sortedItems = [...list.items];
-                if (!list.isFreeOrder) {
-                    sortedItems.sort((a, b) => b.rating - a.rating);
-                }
+                    // פשוט לוקחים את התמונה של הדמות הראשונה אם קיימת
+                    let coverImg = (list.items && list.items.length > 0 && list.items[0].image)
+                        ? list.items[0].image
+                        : 'https://placehold.co/400x200/1a1a1a/bb86fc?text=No+Characters';
 
-                const topCharacter = sortedItems.length > 0 ? sortedItems[0] : null;
-                let coverImg = topCharacter && topCharacter.image && !topCharacter.image.includes('placeholder')
-                    ? topCharacter.image
-                    : 'https://placehold.co/400x200/1a1a1a/bb86fc?text=No+Characters';
-
-                // ביטלנו את ה-Flex בטקסט עצמו והשתמשנו ב-overflow נקי
-                listsGrid.innerHTML += `
-                    <div class="comm-list-card" onclick="window.location.href='/share.html?id=${list._id}'" style="background: var(--card-bg); border-radius: 12px; cursor: pointer; border: 1px solid var(--border); transition: 0.2s; overflow: hidden; display: flex; flex-direction: column; padding: 0;">
-                        <!-- התיקון: שלחנו רק רוחב 400 ל-CDN כדי למנוע חיתוך (זום) כפוי -->
-                        <img src="${getOptimizedImg(coverImg, 400)}" 
-                             data-original="${coverImg}"
-                             onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; }"
-                             style="width: 100%; height: 200px; object-fit: cover; border-bottom: 1px solid var(--border); display: block;">
-                        
-                        <div style="padding: 15px; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center;">
-                            <h4 style="color:var(--accent); margin-bottom: 5px; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${list.name}">${list.name}</h4>
-                            <p style="color:var(--text-muted); font-size: 0.9rem;"><i class="fas fa-layer-group"></i> ${list.itemsCount} items</p>
-
+                    listsGrid.innerHTML += `
+                        <div class="comm-list-card" onclick="window.location.href='/share.html?id=${list._id}'" style="background: var(--card-bg); border-radius: 12px; cursor: pointer; border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; padding: 0;">
+                            <img src="${getOptimizedImg(coverImg, 400)}" style="width: 100%; height: 180px; object-fit: cover; border-bottom: 1px solid var(--border); display: block;">
+                            <div style="padding: 15px; text-align: center;">
+                                <h4 style="color:var(--accent); margin: 0; font-size: 1.05rem;">${list.name}</h4>
+                            </div>
                         </div>
-                    </div>
-                `;
-            });
+                    `;
+                });
+            }
 
             const featuredDisplay = document.getElementById('featuredDisplay');
             if (featuredList) {

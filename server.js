@@ -795,8 +795,8 @@ app.get('/api/users', optionalToken, async (req, res) => {
     const users = await User.find(query)
       .select('username avatar') // אל תביא את רשימות המשתמש!
       .limit(50) // חובה: אל תביא את כל המשתמשים באתר אם יש 1000
-      .lean();   
-       const currentUser = req.user ? await User.findById(req.user._id).lean() : null;
+      .lean();
+    const currentUser = req.user ? await User.findById(req.user._id).lean() : null;
 
     const results = users.map(u => ({
       _id: u._id,
@@ -832,13 +832,13 @@ app.get('/api/users/:userId/lists', async (req, res) => {
   try {
     // שליפת רשימות ציבוריות בלבד, ללא הדמויות (Items) כדי לחסוך רוחב פס
     const lists = await List.find({ userId: req.params.userId, isPrivate: { $ne: true } })
-      .select('name items') 
+      .select('name items')
       .lean();
 
     const simplifiedLists = lists.map(l => ({
       _id: l._id,
       name: l.name,
-      itemsCount: l.items ? l.items.length : 0 
+      itemsCount: l.items ? l.items.length : 0
     }));
 
     res.json(simplifiedLists);
