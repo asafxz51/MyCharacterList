@@ -44,4 +44,8 @@ const ListSchema = new mongoose.Schema({
  }]
 });
 
+ListSchema.index({ userId: 1 });
+ListSchema.index({ isPrivate: 1 });
+ListSchema.index({ "items.apiId": 1 });
+
 module.exports = mongoose.model('List', ListSchema);

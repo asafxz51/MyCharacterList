@@ -140,7 +140,7 @@ app.post('/api/auth/ping', verifyToken, async (req, res) => {
 // --- LISTS & CHARACTERS ---
 
 app.get('/api/lists', verifyToken, async (req, res) => {
-  const lists = await List.find({ userId: req.user._id }).sort({ order: 1 });
+  const lists = await List.find({ userId: req.user._id }).sort({ order: 1 }).lean();
   res.json(lists);
 });
 
@@ -224,15 +224,15 @@ app.post('/api/lists/:id/duplicate', verifyToken, async (req, res) => {
 });
 
 // --- GLOBAL LEADERBOARD (BAYESIAN WEIGHTED RATING) ---
+// --- GLOBAL LEADERBOARD (STABLE & WEIGHTED) ---
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const sortParam = req.query.sort;
-
-    // הגדרות למערכת השקלול
-    const m = 2; // מינימום הצבעות ל"אמון" מלא בציון (מותאם לאתר קטן)
+    const m = 2; // משקל השקלול (הגדרנו 2 כדי שיהיה דינמי ורגיש)
 
     const pipeline = [
-      { $project: { userId: 1, items: 1 } },
+      // שלב 1: הוצאת נתונים בסיסיים בלבד (אופטימיזציה)
+      { $project: { userId: 1, items: 1, isPrivate: 1 } },
       { $unwind: "$items" },
       {
         $match: {
@@ -243,7 +243,7 @@ app.get('/api/leaderboard', async (req, res) => {
       },
       { $addFields: { charId: { $toString: "$items.apiId" } } },
       {
-        // קיבוץ לפי משתמש ודמות (מניעת כפילויות של אותו יוזר)
+        // שלב 2: קיבוץ לפי משתמש ודמות (כדי שכל יוזר ייספר פעם אחת)
         $group: {
           _id: { userId: "$userId", charId: "$charId" },
           maxRating: { $max: "$items.rating" },
@@ -254,29 +254,28 @@ app.get('/api/leaderboard', async (req, res) => {
         }
       },
       {
-        // קיבוץ גלובלי לפי דמות
+        // שלב 3: קיבוץ גלובלי לפי דמות
         $group: {
           _id: "$_id.charId",
           characterName: { $first: "$characterName" },
           sourceTitle: { $first: "$sourceTitle" },
           sourceType: { $first: "$sourceType" },
           image: { $max: "$image" },
-          avgRating: { $avg: "$maxRating" }, // R בנמוסחה
-          v: { $sum: 1 }, // v בנוסחה
-          userIds: { $push: "$_id.userId" }
+          avgRating: { $avg: "$maxRating" },
+          v: { $sum: 1 }
         }
       },
       {
-        // שלב חישוב הממוצע הכללי של האתר (C)
+        // שלב 4: חישוב ממוצע כללי של האתר (C) עבור הנוסחה
         $group: {
           _id: null,
           allChars: { $push: "$$ROOT" },
-          C: { $avg: "$avgRating" } // הממוצע הכללי של כל הדמויות באתר
+          C: { $avg: "$avgRating" }
         }
       },
       { $unwind: "$allChars" },
       {
-        // החלת נוסחת Bayesian Weighted Rating
+        // שלב 5: החלת נוסחת השקלול הבייסיאני
         $addFields: {
           weightedRating: {
             $add: [
@@ -287,19 +286,17 @@ app.get('/api/leaderboard', async (req, res) => {
         }
       },
       {
-        // עיצוב מחדש של האובייקט
         $project: {
           _id: "$allChars._id",
           characterName: "$allChars.characterName",
           sourceTitle: "$allChars.sourceTitle",
           sourceType: "$allChars.sourceType",
           image: "$allChars.image",
-          rawAvg: "$allChars.avgRating",
-          avgRating: "$weightedRating", // מעכשיו זה הציון הקובע למיון
+          avgRating: "$weightedRating",
           rankedByCount: "$allChars.v"
         }
       },
-      { $match: { rankedByCount: { $gte: 2 } } }, // מינימום 2 מדרגים לכניסה
+      { $match: { rankedByCount: { $gte: 2 } } }, // מינימום 2 מדרגים
       {
         $sort: sortParam === 'popularity'
           ? { rankedByCount: -1, avgRating: -1 }
@@ -324,7 +321,6 @@ app.get('/api/leaderboard', async (req, res) => {
         item.sourceType = override.sourceType || item.sourceType;
         item.image = override.image || item.image;
       }
-      // עיגול לספרה אחת
       item.avgRating = parseFloat(item.avgRating.toFixed(1));
       return item;
     })
@@ -780,8 +776,7 @@ app.get('/api/users', optionalToken, async (req, res) => {
     if (search) query.username = { $regex: search, $options: 'i' };
 
     // 2. שליפת הנתונים - קריטי להוסיף avatar!
-    const users = await User.find(query, 'username avatar');
-
+    const users = await User.find(query, 'username avatar').lean();
     const currentUser = req.user ? await User.findById(req.user._id) : null;
 
     // 3. עיבוד נתונים לשליחה
@@ -856,8 +851,7 @@ app.post('/api/admin/users/:id/reset', verifyToken, verifyAdmin, async (req, res
 });
 
 app.get('/api/admin/logs', verifyToken, verifyAdmin, async (req, res) => {
-  const logs = await Log.find().sort({ timestamp: -1 }).limit(200);
-  res.json(logs);
+  const logs = await Log.find().sort({ timestamp: -1 }).limit(200).lean();  res.json(logs);
 });
 
 app.get('/api/admin/users/:id/lists', verifyToken, verifyAdmin, async (req, res) => {

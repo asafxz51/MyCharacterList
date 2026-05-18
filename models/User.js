@@ -20,4 +20,7 @@ const UserSchema = new mongoose.Schema({
  }]
 });
 
+UserSchema.index({ username: 1 });
+UserSchema.index({ following: 1 });
+
 module.exports = mongoose.model('User', UserSchema);

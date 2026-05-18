@@ -1530,7 +1530,6 @@ async function loadLeaderboard() {
         const sortMethod = document.getElementById('leaderboardSortSelect') ? document.getElementById('leaderboardSortSelect').value : 'rating';
         const res = await fetch(`/api/leaderboard?sort=${sortMethod}`);
         const data = await res.json();
-        if (currentCommTab !== 'leaderboard') return;
 
         // הגנה קריטית! מוודא שקיבלנו רשימה ולא הודעת שגיאה מהשרת
         if (!Array.isArray(data)) {
