@@ -124,7 +124,7 @@ app.get('/api/auth/check', verifyToken, async (req, res) => {
       _id: user._id,
       username: user.username,
       role: user.role,
-      avatar: user.avatar || '' 
+      avatar: user.avatar || ''
     });
   } catch (e) { res.status(401).json({ error: "Unauthorized" }); }
 });
@@ -610,7 +610,7 @@ app.post('/api/lists/:listId/comments/:commentId/like', verifyToken, async (req,
             fromUser: user.username,
             listId: list._id,
             listName: list.name,
-            commentText: comment._id.toString() 
+            commentText: comment._id.toString()
           });
           await author.save();
         }
@@ -683,8 +683,10 @@ app.delete('/api/lists/:listId/comments/:commentId/replies/:replyId', verifyToke
 // קבלת נתונים מלאים לפרופיל
 app.get('/api/profile/:username', optionalToken, async (req, res) => {
   try {
-    const targetUser = await User.findOne({ username: req.params.username }, '-password -notifications');
-    if (!targetUser) return res.status(404).json({ error: "User not found" });
+    const targetUser = await User.findOne({ username: req.params.username })
+      .select('username avatar banner bio featuredListId following role')
+      .lean();
+       if (!targetUser) return res.status(404).json({ error: "User not found" });
 
     // מביא את כל הרשימות הציבוריות של המשתמש
     const userLists = await List.find({ userId: targetUser._id, isPrivate: { $ne: true } });
@@ -861,7 +863,7 @@ app.post('/api/admin/users/:id/reset', verifyToken, verifyAdmin, async (req, res
 });
 
 app.get('/api/admin/logs', verifyToken, verifyAdmin, async (req, res) => {
-  const logs = await Log.find().sort({ timestamp: -1 }).limit(200).lean();  res.json(logs);
+  const logs = await Log.find().sort({ timestamp: -1 }).limit(200).lean(); res.json(logs);
 });
 
 app.get('/api/admin/users/:id/lists', verifyToken, verifyAdmin, async (req, res) => {
@@ -1147,7 +1149,7 @@ app.post('/api/admin/settings/welcome', verifyToken, verifyAdmin, async (req, re
 
 app.get('/api/share/:id', async (req, res) => {
   try {
-    const list = await List.findById(req.params.id);
+    const list = await List.findById(req.params.id).lean();
     if (!list) return res.status(404).json({ error: 'Not found' });
     const user = await User.findById(list.userId);
 
@@ -1155,7 +1157,7 @@ app.get('/api/share/:id', async (req, res) => {
     const dataToSend = {
       ...listObj,
       author: user ? user.username : 'Unknown',
-      authorAvatar: user ? user.avatar : '', 
+      authorAvatar: user ? user.avatar : '',
       likes: listObj.likes || [],
       comments: listObj.comments || [],
       allowComments: listObj.allowComments !== undefined ? listObj.allowComments : true

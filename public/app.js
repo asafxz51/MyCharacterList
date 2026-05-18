@@ -9,28 +9,25 @@ let currentNotifsData = [];
 let visibleIndexCommentsLimit = 10;
 
 async function init() {
-    fetch('/api/auth/check'); 
-    await checkLoginStatus();
+    // שלב 0: "Ping" מהיר לשרת כדי להעיר אותו מה-Cold Start מיד
+    fetch('/api/auth/check');
+
+    // שלב 1: הרצת בדיקת לוגין וטעינת ליסטים במקביל! (חוסך המון זמן)
+    Promise.all([
+        checkLoginStatus(),
+        fetchLists()
+    ]).then(() => {
+        console.log("Site initialized");
+    });
+
     setupEvents();
 
-    // קריאת הכתובת כדי לדעת אם הגענו מהפרופיל ואיזה חלון לפתוח
+    // קריאת טאבים מהכתובת (נשאר אותו דבר)
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
-
-    if (tab === 'community') {
-        document.getElementById('communityModal').classList.remove('hidden');
-        document.getElementById('commTabsContainer').classList.remove('hidden');
-        document.getElementById('commBackBtn').classList.add('hidden');
-        switchCommTab('users');
-    } else if (tab === 'leaderboard') {
-        document.getElementById('communityModal').classList.remove('hidden');
-        document.getElementById('commTabsContainer').classList.remove('hidden');
-        document.getElementById('commBackBtn').classList.add('hidden');
-        switchCommTab('leaderboard');
-    } else if (tab === 'admin') {
-        document.getElementById('adminModal').classList.remove('hidden');
-        switchAdminTab('users');
-    }
+    if (tab === 'community') forceOpenTab('users');
+    else if (tab === 'leaderboard') forceOpenTab('leaderboard');
+    else if (tab === 'admin') openAdminPanel();
 }
 
 function getOptimizedImg(url, width = 300, height = null) {
@@ -376,7 +373,10 @@ async function fetchLists() {
     renderSidebar();
 
     if (state.activeListId) {
-        selectList(state.activeListId);
+        window.selectList(state.activeListId);
+    } else {
+        // אם אין רשימה (למשל משתמש חדש), ננקה את המסך מה-Loading
+        document.getElementById('characterGrid').innerHTML = '';
     }
 }
 
@@ -781,7 +781,7 @@ if (filterSelect) filterSelect.addEventListener('change', renderCurrentList);
 
 window.editItem = function (index) {
     const modal = document.getElementById('charModal');
-    if (modal) modal.style.display = 'flex'; 
+    if (modal) modal.style.display = 'flex';
     state.tempSearchItem = null;
     const list = state.lists.find(l => l._id === state.activeListId);
     const item = list.items[index];

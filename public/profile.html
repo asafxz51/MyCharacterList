@@ -792,7 +792,7 @@
             if (loggedInUser) window.location.href = '/profile.html?user=' + loggedInUser.username;
         }
 
-      function getOptimizedImg(url, width = 300, height = null) {
+        function getOptimizedImg(url, width = 300, height = null) {
             // 1. הגנה: אם אין URL, או שזה בסיס 64, או שזה פלייסהולדר - אל תיגע
             if (!url || url.includes('data:image') || url.includes('placehold.co') || url.includes('placeholder')) return url;
 
@@ -953,7 +953,7 @@
             document.getElementById('statLikes').textContent = profileData.totalLikes;
             document.getElementById('statRanked').textContent = profileData.totalRanked;
 
-          if (profileData.avatar) {
+            if (profileData.avatar) {
                 const avatarEl = document.getElementById('avatarImg');
                 avatarEl.src = getOptimizedImg(profileData.avatar, 300, 300);
                 avatarEl.dataset.original = profileData.avatar;
@@ -1578,23 +1578,23 @@
         // ADMIN PANEL LOGIC (FIXED)
         // ==========================================
         window.openAdminPanel = function () {
-                const modal = document.getElementById('adminModal');
-                if (modal) {
-                    modal.style.display = 'flex';
-                    modal.classList.remove('hidden');
-                    switchAdminTab('users');
-                }
-            };
+            const modal = document.getElementById('adminModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                modal.classList.remove('hidden');
+                switchAdminTab('users');
+            }
+        };
 
-            window.forceOpenTab = function (tabName) {
-                const modal = document.getElementById('communityModal');
-                if (modal) {
-                    modal.style.display = 'flex';
-                    modal.classList.remove('hidden');
-                }
-                currentCommTab = tabName;
-                if (typeof switchCommTab === 'function') switchCommTab(tabName);
-            };
+        window.forceOpenTab = function (tabName) {
+            const modal = document.getElementById('communityModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                modal.classList.remove('hidden');
+            }
+            currentCommTab = tabName;
+            if (typeof switchCommTab === 'function') switchCommTab(tabName);
+        };
 
         window.switchAdminTab = function (tab) {
             const usersSec = document.getElementById('adminUsersSection');
@@ -1672,38 +1672,38 @@
         };
 
         window.adminManageLists = async function (userId, username) {
-                // 1. החלפת תצוגה בתוך המודאל
-                const usersSec = document.getElementById('adminUsersSection');
-                const listsSec = document.getElementById('adminListsSection');
-                const title = document.getElementById('adminUserListsTitle');
-                const grid = document.getElementById('adminListsGrid');
+            // 1. החלפת תצוגה בתוך המודאל
+            const usersSec = document.getElementById('adminUsersSection');
+            const listsSec = document.getElementById('adminListsSection');
+            const title = document.getElementById('adminUserListsTitle');
+            const grid = document.getElementById('adminListsGrid');
 
-                if (usersSec) usersSec.classList.add('hidden');
-                if (listsSec) listsSec.classList.remove('hidden');
-                if (title) title.textContent = `Lists owned by: ${username}`;
+            if (usersSec) usersSec.classList.add('hidden');
+            if (listsSec) listsSec.classList.remove('hidden');
+            if (title) title.textContent = `Lists owned by: ${username}`;
 
-                // 2. טעינת הנתונים
-                grid.innerHTML = '<div style="padding:20px; text-align:center;">Fetching lists...</div>';
+            // 2. טעינת הנתונים
+            grid.innerHTML = '<div style="padding:20px; text-align:center;">Fetching lists...</div>';
 
-                try {
-                    const res = await fetch(`/api/admin/users/${userId}/lists`);
-                    const lists = await res.json();
-                    grid.innerHTML = '';
+            try {
+                const res = await fetch(`/api/admin/users/${userId}/lists`);
+                const lists = await res.json();
+                grid.innerHTML = '';
 
-                    if (!lists || lists.length === 0) {
-                        grid.innerHTML = '<p style="padding:20px; color:#888; text-align:center;">This user has no lists yet.</p>';
-                        return;
-                    }
+                if (!lists || lists.length === 0) {
+                    grid.innerHTML = '<p style="padding:20px; color:#888; text-align:center;">This user has no lists yet.</p>';
+                    return;
+                }
 
-                    // 3. יצירת ה-HTML לכל רשימה
-                    lists.forEach(l => {
-                        const div = document.createElement('div');
-                        div.style = "display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--card-bg); border:1px solid var(--border); border-radius:8px; margin-bottom:8px;";
+                // 3. יצירת ה-HTML לכל רשימה
+                lists.forEach(l => {
+                    const div = document.createElement('div');
+                    div.style = "display:flex; justify-content:space-between; align-items:center; padding:12px; background:var(--card-bg); border:1px solid var(--border); border-radius:8px; margin-bottom:8px;";
 
-                        const privacyIcon = l.isPrivate ? '<i class="fas fa-lock" style="margin-right:8px; font-size:0.8rem; color:#888;" title="Private List"></i>' : '';
-                        const itemsCount = l.items ? l.items.length : 0;
+                    const privacyIcon = l.isPrivate ? '<i class="fas fa-lock" style="margin-right:8px; font-size:0.8rem; color:#888;" title="Private List"></i>' : '';
+                    const itemsCount = l.items ? l.items.length : 0;
 
-                        div.innerHTML = `
+                    div.innerHTML = `
                 <div style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                     ${privacyIcon}<strong style="color:var(--accent);">${l.name}</strong> 
                     <span style="font-size:0.8rem; color:var(--text-muted); margin-left:10px;">(${itemsCount} items)</span>
@@ -1713,12 +1713,12 @@
                     <button onclick="adminDeleteList('${l._id}', '${userId}', '${username}')" class="btn-primary" style="width:auto; padding:5px 12px; font-size:0.8rem; background:#ff4444;">Delete</button>
                 </div>
             `;
-                        grid.appendChild(div);
-                    });
-                } catch (e) {
-                    grid.innerHTML = '<p style="color:red; padding:20px; text-align:center;">Error loading user lists.</p>';
-                }
-            };
+                    grid.appendChild(div);
+                });
+            } catch (e) {
+                grid.innerHTML = '<p style="color:red; padding:20px; text-align:center;">Error loading user lists.</p>';
+            }
+        };
 
         // מחיקת משתמש או רשימה
         window.adminDeleteUser = async function (id) {
@@ -1748,38 +1748,38 @@
         };
 
         window.openQuickAddSelector = async function (apiId, name, source, type, image) {
-                const modal = document.getElementById('quickAddModal');
-                const optionsContainer = document.getElementById('quickAddListOptions');
-                const charNameLabel = document.getElementById('quickAddCharName');
+            const modal = document.getElementById('quickAddModal');
+            const optionsContainer = document.getElementById('quickAddListOptions');
+            const charNameLabel = document.getElementById('quickAddCharName');
 
-                if (!loggedInUser) return alert("Please Login to add characters.");
+            if (!loggedInUser) return alert("Please Login to add characters.");
 
-                charNameLabel.textContent = name;
-                optionsContainer.innerHTML = '<p style="text-align:center; color:#888;">Loading your lists...</p>';
-                modal.style.display = 'flex';
-                modal.classList.remove('hidden');
+            charNameLabel.textContent = name;
+            optionsContainer.innerHTML = '<p style="text-align:center; color:#888;">Loading your lists...</p>';
+            modal.style.display = 'flex';
+            modal.classList.remove('hidden');
 
-                try {
-                    const res = await fetch('/api/lists');
-                    const lists = await res.json();
-                    optionsContainer.innerHTML = '';
+            try {
+                const res = await fetch('/api/lists');
+                const lists = await res.json();
+                optionsContainer.innerHTML = '';
 
-                    lists.forEach(list => {
-                        const btn = document.createElement('div');
-                        btn.className = 'quick-add-option';
-                        btn.innerHTML = `<i class="fas ${list.isPrivate ? 'fa-lock' : 'fa-list'}"></i> <span style="flex:1;">${list.name}</span> <small style="color:#777;">${list.items.length} items</small>`;
+                lists.forEach(list => {
+                    const btn = document.createElement('div');
+                    btn.className = 'quick-add-option';
+                    btn.innerHTML = `<i class="fas ${list.isPrivate ? 'fa-lock' : 'fa-list'}"></i> <span style="flex:1;">${list.name}</span> <small style="color:#777;">${list.items.length} items</small>`;
 
-                        btn.onclick = () => {
-                            // בגלל שאנחנו לא בדף הבית, אנחנו לא יכולים לפתוח את מודאל העריכה.
-                            // לכן, אנחנו שומרים את המידע זמנית ב-Session ומעבירים לדף הבית עם בקשה להוספה.
-                            const quickAddData = { apiId, name, source, type, image, targetListId: list._id };
-                            sessionStorage.setItem('pendingQuickAdd', JSON.stringify(quickAddData));
-                            window.location.href = `/?id=${list._id}&action=quickAdd`;
-                        };
-                        optionsContainer.appendChild(btn);
-                    });
-                } catch (e) { optionsContainer.innerHTML = 'Error loading lists.'; }
-            };
+                    btn.onclick = () => {
+                        // בגלל שאנחנו לא בדף הבית, אנחנו לא יכולים לפתוח את מודאל העריכה.
+                        // לכן, אנחנו שומרים את המידע זמנית ב-Session ומעבירים לדף הבית עם בקשה להוספה.
+                        const quickAddData = { apiId, name, source, type, image, targetListId: list._id };
+                        sessionStorage.setItem('pendingQuickAdd', JSON.stringify(quickAddData));
+                        window.location.href = `/?id=${list._id}&action=quickAdd`;
+                    };
+                    optionsContainer.appendChild(btn);
+                });
+            } catch (e) { optionsContainer.innerHTML = 'Error loading lists.'; }
+        };
 
         initProfile();
 

@@ -788,43 +788,43 @@
         let visibleNotifsLimit = 5, currentNotifsData = [], visibleCommentsLimit = 10;
         let isReg = false; // הגדרת משתנה ההרשמה
 
-   function getOptimizedImg(url, width = 300, height = null) {
-        // 1. הגנה: אם אין URL, או שזה בסיס 64, או שזה פלייסהולדר - אל תיגע
-        if (!url || url.includes('data:image') || url.includes('placehold.co') || url.includes('placeholder')) return url;
+        function getOptimizedImg(url, width = 300, height = null) {
+            // 1. הגנה: אם אין URL, או שזה בסיס 64, או שזה פלייסהולדר - אל תיגע
+            if (!url || url.includes('data:image') || url.includes('placehold.co') || url.includes('placeholder')) return url;
 
-        // 2. מניעת כפילות: אם הלינק כבר מכיל את הפרוקסי של wsrv.nl, תחזיר אותו כמו שהוא
-        if (url.includes('wsrv.nl')) return url;
+            // 2. מניעת כפילות: אם הלינק כבר מכיל את הפרוקסי של wsrv.nl, תחזיר אותו כמו שהוא
+            if (url.includes('wsrv.nl')) return url;
 
-        // 3. רשימת אתרים שחוסמים פרוקסי או שהם כבר אופטימליים
-        const bypassDomains = [
-            'myanimelist.net',
-            'anilist.co',
-            'tmdb.org',
-            'igdb.com',
-            'zerochan.net', // הוספנו את זירוצ'אן לרשימה הלבנה
-            'pixiv.net',
-            'i0.wp.com',
-            'discordapp.com',
-            'pinimg.com',
-            'fbcdn.net',
-            'i2.wp.com',
-            'i1.wp.com'
+            // 3. רשימת אתרים שחוסמים פרוקסי או שהם כבר אופטימליים
+            const bypassDomains = [
+                'myanimelist.net',
+                'anilist.co',
+                'tmdb.org',
+                'igdb.com',
+                'zerochan.net', // הוספנו את זירוצ'אן לרשימה הלבנה
+                'pixiv.net',
+                'i0.wp.com',
+                'discordapp.com',
+                'pinimg.com',
+                'fbcdn.net',
+                'i2.wp.com',
+                'i1.wp.com'
 
-        ];
+            ];
 
-        const shouldBypass = bypassDomains.some(domain => url.includes(domain));
+            const shouldBypass = bypassDomains.some(domain => url.includes(domain));
 
-        if (shouldBypass) {
-            return url; // מחזיר את הלינק המקורי ללא שינוי
+            if (shouldBypass) {
+                return url; // מחזיר את הלינק המקורי ללא שינוי
+            }
+
+            // 4. אופטימיזציה לכל השאר (Custom Links)
+            // הוספנו את הפרמטר &n=-1 שעוזר לעקוף חלק מהחסימות של אתרים חיצוניים
+            let optimizedUrl = `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${width}&output=webp&n=-1`;
+            if (height) optimizedUrl += `&h=${height}&fit=cover`;
+
+            return optimizedUrl;
         }
-
-        // 4. אופטימיזציה לכל השאר (Custom Links)
-        // הוספנו את הפרמטר &n=-1 שעוזר לעקוף חלק מהחסימות של אתרים חיצוניים
-        let optimizedUrl = `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${width}&output=webp&n=-1`;
-        if (height) optimizedUrl += `&h=${height}&fit=cover`;
-
-        return optimizedUrl;
-    }
 
         function getRatingDisplay(rating, type) {
             if (rating === 0) return 'No Grade';
@@ -1928,9 +1928,9 @@
         };
         // --- סגירת מודאלים בלחיצה על הרקע (מחוץ לחלון) ---
         window.addEventListener('click', (e) => {
-                if (e.target.classList.contains('modal')) {
-                    e.target.classList.add('hidden');
-                    e.target.style.display = 'none'; // סגירה מוחלטת
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.add('hidden');
+                e.target.style.display = 'none'; // סגירה מוחלטת
 
                 // עצירת ריענון הלוגים במקרה שיצאנו ממודאל האדמין (רלוונטי רק ל-app.js)
                 if (e.target.id === 'adminModal' && typeof logsAutoRefreshInterval !== 'undefined' && logsAutoRefreshInterval) {
@@ -1961,16 +1961,16 @@
 
         // פתיחת מודאלים מהסיידבאר (קהילה ולידרבורד)
         window.forceOpenTab = function (tabName) {
-                const modal = document.getElementById('communityModal');
-                if (modal) {
-                    modal.style.display = 'flex';
-                    modal.classList.remove('hidden');
-                }
-                currentCommTab = tabName;
-                if (typeof window.switchCommTab === 'function') {
-                    window.switchCommTab(tabName);
-                }
-            };
+            const modal = document.getElementById('communityModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                modal.classList.remove('hidden');
+            }
+            currentCommTab = tabName;
+            if (typeof window.switchCommTab === 'function') {
+                window.switchCommTab(tabName);
+            }
+        };
 
         let pendingDeleteListId = null;
 
@@ -2065,40 +2065,40 @@
         }
 
         window.openQuickAddSelector = async function (apiId, name, source, type, image) {
-                const modal = document.getElementById('quickAddModal');
-                    if (modal) modal.style.display = 'flex';
+            const modal = document.getElementById('quickAddModal');
+            if (modal) modal.style.display = 'flex';
 
-                const optionsContainer = document.getElementById('quickAddListOptions');
-                const charNameLabel = document.getElementById('quickAddCharName');
+            const optionsContainer = document.getElementById('quickAddListOptions');
+            const charNameLabel = document.getElementById('quickAddCharName');
 
-                if (!loggedInUser) return alert("Please Login to add characters.");
+            if (!loggedInUser) return alert("Please Login to add characters.");
 
-                charNameLabel.textContent = name;
-                optionsContainer.innerHTML = '<p style="text-align:center; color:#888;">Loading your lists...</p>';
-                modal.style.display = 'flex';
-                modal.classList.remove('hidden');
+            charNameLabel.textContent = name;
+            optionsContainer.innerHTML = '<p style="text-align:center; color:#888;">Loading your lists...</p>';
+            modal.style.display = 'flex';
+            modal.classList.remove('hidden');
 
-                try {
-                    const res = await fetch('/api/lists');
-                    const lists = await res.json();
-                    optionsContainer.innerHTML = '';
+            try {
+                const res = await fetch('/api/lists');
+                const lists = await res.json();
+                optionsContainer.innerHTML = '';
 
-                    lists.forEach(list => {
-                        const btn = document.createElement('div');
-                        btn.className = 'quick-add-option';
-                        btn.innerHTML = `<i class="fas ${list.isPrivate ? 'fa-lock' : 'fa-list'}"></i> <span style="flex:1;">${list.name}</span> <small style="color:#777;">${list.items.length} items</small>`;
+                lists.forEach(list => {
+                    const btn = document.createElement('div');
+                    btn.className = 'quick-add-option';
+                    btn.innerHTML = `<i class="fas ${list.isPrivate ? 'fa-lock' : 'fa-list'}"></i> <span style="flex:1;">${list.name}</span> <small style="color:#777;">${list.items.length} items</small>`;
 
-                        btn.onclick = () => {
-                            // בגלל שאנחנו לא בדף הבית, אנחנו לא יכולים לפתוח את מודאל העריכה.
-                            // לכן, אנחנו שומרים את המידע זמנית ב-Session ומעבירים לדף הבית עם בקשה להוספה.
-                            const quickAddData = { apiId, name, source, type, image, targetListId: list._id };
-                            sessionStorage.setItem('pendingQuickAdd', JSON.stringify(quickAddData));
-                            window.location.href = `/?id=${list._id}&action=quickAdd`;
-                        };
-                        optionsContainer.appendChild(btn);
-                    });
-                } catch (e) { optionsContainer.innerHTML = 'Error loading lists.'; }
-            };
+                    btn.onclick = () => {
+                        // בגלל שאנחנו לא בדף הבית, אנחנו לא יכולים לפתוח את מודאל העריכה.
+                        // לכן, אנחנו שומרים את המידע זמנית ב-Session ומעבירים לדף הבית עם בקשה להוספה.
+                        const quickAddData = { apiId, name, source, type, image, targetListId: list._id };
+                        sessionStorage.setItem('pendingQuickAdd', JSON.stringify(quickAddData));
+                        window.location.href = `/?id=${list._id}&action=quickAdd`;
+                    };
+                    optionsContainer.appendChild(btn);
+                });
+            } catch (e) { optionsContainer.innerHTML = 'Error loading lists.'; }
+        };
 
 
 
