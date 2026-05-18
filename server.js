@@ -683,13 +683,16 @@ app.delete('/api/lists/:listId/comments/:commentId/replies/:replyId', verifyToke
 // קבלת נתונים מלאים לפרופיל
 app.get('/api/profile/:username', optionalToken, async (req, res) => {
   try {
+    // 1. שלוף פרטי משתמש בסיסיים בלבד
     const targetUser = await User.findOne({ username: req.params.username })
       .select('username avatar banner bio featuredListId following role')
       .lean();
-       if (!targetUser) return res.status(404).json({ error: "User not found" });
+    if (!targetUser) return res.status(404).json({ error: "User not found" });
 
-    // מביא את כל הרשימות הציבוריות של המשתמש
-    const userLists = await List.find({ userId: targetUser._id, isPrivate: { $ne: true } });
+    // 2. שלוף רק את כותרות הרשימות (בלי ה-items וה-comments הכבדים!)
+    const userLists = await List.find({ userId: targetUser._id, isPrivate: { $ne: true } })
+      .select('name _id items.image items.rating items.characterName isFreeOrder rankingType') // מביא רק מידע בסיסי ל-Featured
+      .lean();
 
     // חישוב סטטיסטיקות מגניבות לפרופיל!
     let totalLikes = 0;
@@ -781,26 +784,22 @@ app.post('/api/notifications/read', verifyToken, async (req, res) => {
 app.get('/api/users', optionalToken, async (req, res) => {
   try {
     const { search } = req.query;
-    // 1. מוצאים רק משתמשים שיש להם רשימות (כפי שביקשת קודם)
-    const validUsersIds = await List.distinct('userId', { isPrivate: false, items: { $not: { $size: 0 } } });
-
-    let query = { _id: { $in: validUsersIds } };
+    let query = {};
     if (search) query.username = { $regex: search, $options: 'i' };
 
-    // 2. שליפת הנתונים - קריטי להוסיף avatar!
-    const users = await User.find(query, 'username avatar').lean();
-    const currentUser = req.user ? await User.findById(req.user._id) : null;
+    // מביא רק 50 משתמשים, ורק את השדות שצריך (username, avatar)
+    const users = await User.find(query, 'username avatar following')
+      .limit(50)
+      .lean();
 
-    // 3. עיבוד נתונים לשליחה
+    const currentUser = req.user ? await User.findById(req.user._id).lean() : null;
+
     const results = users.map(u => ({
       _id: u._id,
       username: u.username,
-      avatar: u.avatar || "", // מוודא שאם זה null זה יחזור כמחרוזת ריקה
-      isFollowing: currentUser ? currentUser.following.includes(u._id) : false
-    })).filter(u => !currentUser || u._id.toString() !== currentUser._id.toString());
-
-    // 4. מיון
-    results.sort((a, b) => (a.isFollowing === b.isFollowing ? 0 : a.isFollowing ? -1 : 1));
+      avatar: u.avatar || "",
+      isFollowing: currentUser ? currentUser.following.map(id => id.toString()).includes(u._id.toString()) : false
+    })).filter(u => !currentUser || u.username !== currentUser.username);
 
     res.json(results);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1149,23 +1148,26 @@ app.post('/api/admin/settings/welcome', verifyToken, verifyAdmin, async (req, re
 
 app.get('/api/share/:id', async (req, res) => {
   try {
-    const list = await List.findById(req.params.id).lean();
-    if (!list) return res.status(404).json({ error: 'Not found' });
-    const user = await User.findById(list.userId);
+    // אופטימיזציה: מביאים רק את השדות הנחוצים לתצוגה
+    // lean() הופך את זה לאובייקט JS פשוט ומהיר מאוד
+    const list = await List.findById(req.params.id)
+      .select('name items listDescription rankingType isFreeOrder userId allowComments comments')
+      .lean();
 
-    const listObj = list.toObject();
-    const dataToSend = {
-      ...listObj,
+    if (!list) return res.status(404).json({ error: 'Not found' });
+
+    // מביא רק שם ותמונה של היוצר - בלי שדות כבדים אחרים
+    const user = await User.findById(list.userId).select('username avatar').lean();
+
+    res.json({
+      ...list,
       author: user ? user.username : 'Unknown',
       authorAvatar: user ? user.avatar : '',
-      likes: listObj.likes || [],
-      comments: listObj.comments || [],
-      allowComments: listObj.allowComments !== undefined ? listObj.allowComments : true
-    };
-
-    res.json(dataToSend);
+      likes: list.likes || new Array(),
+      comments: list.comments || new Array()
+    });
   } catch (err) {
-    console.error("Share list error:", err);
+    console.error("Share API Error:", err);
     res.status(404).json({ error: 'Not found' });
   }
 });

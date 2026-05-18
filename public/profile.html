@@ -845,51 +845,63 @@
         }
 
         async function initProfile() {
-            if (!targetUsername) {
-                document.getElementById('profileUsername').textContent = "User not found.";
-                return;
-            }
+                if (!targetUsername) {
+                    document.getElementById('profileUsername').textContent = "User not found.";
+                    return;
+                }
 
-            try {
-                const authRes = await fetch('/api/auth/check');
-                if (authRes.ok) {
-                    const authData = await authRes.json();
-                    loggedInUser = authData;
+                // Ping קטן להעיר את השרת של נטליפי מיד
+                fetch('/api/auth/check');
 
-                    document.getElementById('authBtnNav').textContent = "Logout";
-                    document.getElementById('authBtnNav').onclick = async () => {
-                        await fetch('/api/auth/logout', { method: 'POST' });
-                        window.location.href = '/';
-                    };
+                // הרצת שתי הבקשות במקביל כדי לחסוך זמן טעינה
+                Promise.all([
+                    fetch('/api/auth/check').then(res => res.ok ? res.json() : null).catch(() => null),
+                    fetch(`/api/profile/${targetUsername}`).then(res => res.ok ? res.json() : null).catch(() => null)
+                ]).then(([authData, pData]) => {
 
-                    if (document.getElementById('mobileMenuBtn')) document.getElementById('mobileMenuBtn').classList.remove('hidden');
-                    if (authData.role === 'admin') document.getElementById('adminBtn').classList.remove('hidden');
+                    // --- טיפול בנתוני התחברות (authData) ---
+                    if (authData) {
+                        loggedInUser = authData;
 
-                    const sidebarProfileBtn = document.getElementById('sidebarProfileBtn');
-                    if (sidebarProfileBtn) {
-                        sidebarProfileBtn.classList.remove('hidden');
-                        sidebarProfileBtn.onclick = () => window.location.href = `/profile.html?user=${authData.username}`;
+                        document.getElementById('authBtnNav').textContent = "Logout";
+                        document.getElementById('authBtnNav').onclick = async () => {
+                            await fetch('/api/auth/logout', { method: 'POST' });
+                            window.location.href = '/';
+                        };
+
+                        if (document.getElementById('mobileMenuBtn')) document.getElementById('mobileMenuBtn').classList.remove('hidden');
+                        if (authData.role === 'admin') document.getElementById('adminBtn').classList.remove('hidden');
+
+                        const sidebarProfileBtn = document.getElementById('sidebarProfileBtn');
+                        if (sidebarProfileBtn) {
+                            sidebarProfileBtn.classList.remove('hidden');
+                            sidebarProfileBtn.onclick = () => window.location.href = `/profile.html?user=${authData.username}`;
+                        }
+
+                        document.getElementById('notifArea').classList.remove('hidden');
+                        document.querySelector('.sidebar').style.display = 'flex';
+                        loadSidebar();
+                        fetchNotifications();
+                    } else {
+                        document.querySelector('.sidebar').style.display = 'none';
+                        if (document.getElementById('authBtnNav')) {
+                            document.getElementById('authBtnNav').textContent = "Login";
+                            document.getElementById('authBtnNav').onclick = () => window.location.href = '/';
+                        }
                     }
 
-                    document.getElementById('notifArea').classList.remove('hidden');
-                    document.querySelector('.sidebar').style.display = 'flex';
-                    loadSidebar();
-                    fetchNotifications();
-                } else {
-                    document.querySelector('.sidebar').style.display = 'none';
-                }
-            } catch (e) { document.querySelector('.sidebar').style.display = 'none'; }
-
-            try {
-                const res = await fetch(`/api/profile/${targetUsername}`);
-                if (!res.ok) throw new Error();
-                profileData = await res.json();
-                renderProfile();
-                setupEditPens();
-            } catch (e) {
-                document.getElementById('profileUsername').textContent = "User not found or private.";
+                    // --- טיפול בנתוני הפרופיל (pData) ---
+                    if (pData) {
+                        profileData = pData;
+                        renderProfile();
+                        setupEditPens();
+                    } else {
+                        document.getElementById('profileUsername').textContent = "User not found or private.";
+                    }
+                }).catch(err => {
+                    console.error("Profile Load Error:", err);
+                });
             }
-        }
 
         let pendingDeleteListId = null; // שומר את ה-ID של הרשימה שאנחנו עומדים למחוק
 
@@ -1009,14 +1021,15 @@
                 // ביטלנו את ה-Flex בטקסט עצמו והשתמשנו ב-overflow נקי
                 listsGrid.innerHTML += `
                     <div class="comm-list-card" onclick="window.location.href='/share.html?id=${list._id}'" style="background: var(--card-bg); border-radius: 12px; cursor: pointer; border: 1px solid var(--border); transition: 0.2s; overflow: hidden; display: flex; flex-direction: column; padding: 0;">
-                        <img src="${getOptimizedImg(coverImg, 500, 300)}" 
-     data-original="${coverImg}"
-     onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; }"
-     style="width: 100%; height: 180px; object-fit: cover; border-bottom: 1px solid var(--border); display: block;">
+                        <!-- התיקון: שלחנו רק רוחב 400 ל-CDN כדי למנוע חיתוך (זום) כפוי -->
+                        <img src="${getOptimizedImg(coverImg, 400)}" 
+                             data-original="${coverImg}"
+                             onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; }"
+                             style="width: 100%; height: 200px; object-fit: cover; border-bottom: 1px solid var(--border); display: block;">
                         
-                        <div style="padding: 15px; text-align: center; width: 100%; box-sizing: border-box; overflow: hidden;">
-                            <div style="color:var(--accent); margin-bottom: 5px; font-size: 1.05rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${list.name}">${list.name}</div>
-                            <div style="color:var(--text-muted); font-size: 0.85rem; margin: 0;"><i class="fas fa-layer-group"></i> ${list.items.length} items</div>
+                        <div style="padding: 15px; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center;">
+                            <h4 style="color:var(--accent); margin-bottom: 5px; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${list.name}">${list.name}</h4>
+                            <p style="color:var(--text-muted); font-size: 0.85rem; margin: 0;"><i class="fas fa-layer-group"></i> ${list.items.length} items</p>
                         </div>
                     </div>
                 `;
