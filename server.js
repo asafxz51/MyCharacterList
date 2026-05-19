@@ -688,30 +688,31 @@ app.delete('/api/lists/:listId/comments/:commentId/replies/:replyId', verifyToke
 // קבלת נתונים מלאים לפרופיל
 app.get('/api/profile/:username', optionalToken, async (req, res) => {
   try {
-    // 1. שלוף פרטי משתמש בסיסיים בלבד
     const targetUser = await User.findOne({ username: req.params.username })
       .select('username avatar banner bio featuredListId following role')
       .lean();
     if (!targetUser) return res.status(404).json({ error: "User not found" });
 
-    // הגבלת כמות הרשימות שנשלחות לפרופיל (למשל 20 הראשונות)
+    // אופטימיזציה קריטית: שלוף רק שם, ID, וכמות אייטמים (בלי כל ה-items הכבדים!)
     const userLists = await List.find({ userId: targetUser._id, isPrivate: { $ne: true } })
-      .limit(20)
+      .select('name _id items') // אנחנו צריכים רק את האורך של items
       .lean();
 
-    // חישוב סטטיסטיקות מגניבות לפרופיל!
     let totalLikes = 0;
     let totalRanked = 0;
-    userLists.forEach(list => {
+
+    // מכינים רשימה "רזה" לצד הלקוח
+    const listsSummary = userLists.map(list => {
       totalLikes += (list.likes ? list.likes.length : 0);
       totalRanked += (list.items ? list.items.length : 0);
-    });
+      return {
+        _id: list._id,
+        name: list.name,
+        itemsCount: list.items ? list.items.length : 0, 
+        coverImage: (list.items && list.items.length > 0) ? list.items[0].image : null
 
-    let isFollowing = false;
-    if (req.user) {
-      const viewer = await User.findById(req.user._id);
-      if (viewer && viewer.following.includes(targetUser._id)) isFollowing = true;
-    }
+      };
+    });
 
     res.json({
       _id: targetUser._id,
@@ -723,12 +724,18 @@ app.get('/api/profile/:username', optionalToken, async (req, res) => {
       followersCount: await User.countDocuments({ following: targetUser._id }),
       totalLikes,
       totalRanked,
-      isFollowing,
-      lists: userLists
+      lists: listsSummary // שולחים רשימה רזה מאוד
     });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// הוסף את זה ל-server.js
+app.get('/api/profile/featured/:listId', async (req, res) => {
+  try {
+    const list = await List.findById(req.params.listId).lean();
+    if (!list) return res.status(404).json({ error: "List not found" });
+    res.json(list);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // עדכון נתוני הפרופיל של המשתמש המחובר + רישום בלוגים
