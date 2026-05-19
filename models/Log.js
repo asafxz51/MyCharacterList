@@ -8,4 +8,6 @@ const LogSchema = new mongoose.Schema({
  timestamp: { type: Date, default: Date.now }
 });
 
+LogSchema.index({ timestamp: -1 });
+
 module.exports = mongoose.model('Log', LogSchema);

@@ -883,7 +883,24 @@ app.post('/api/admin/users/:id/reset', verifyToken, verifyAdmin, async (req, res
 });
 
 app.get('/api/admin/logs', verifyToken, verifyAdmin, async (req, res) => {
-  const logs = await Log.find().sort({ timestamp: -1 }).limit(200).lean(); res.json(logs);
+  try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    await Log.deleteMany({ timestamp: { $lt: sevenDaysAgo } });
+
+    const logs = await Log.find().sort({ timestamp: -1 }).limit(100).lean();
+    res.json(logs);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- ADMIN: CLEAN OLD LOGS (KEEP ONLY LAST 7 DAYS) ---
+app.get('/api/admin/logs/cleanup', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const result = await Log.deleteMany({ timestamp: { $lt: sevenDaysAgo } });
+    res.send(`<h1>Logs Cleaned!</h1><p>Deleted ${result.deletedCount} old logs.</p><button onclick="window.location.href='/api/admin/logs'">View Logs</button>`);
+  } catch (e) {
+    res.status(500).send("Error cleaning logs: " + e.message);
+  }
 });
 
 app.get('/api/admin/users/:id/lists', verifyToken, verifyAdmin, async (req, res) => {
