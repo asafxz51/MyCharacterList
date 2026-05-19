@@ -18,11 +18,7 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
-app.use(cors({
-  origin: ['https://mycharacterlist.netlify.app/'], // הכתובת של האתר בנטליפי
-  credentials: true
-}));
-
+app.use(cors());
 app.use(express.static('public'));
 
 const PORT = process.env.PORT || 3000;
@@ -712,7 +708,7 @@ app.get('/api/profile/:username', optionalToken, async (req, res) => {
       return {
         _id: list._id,
         name: list.name,
-        itemsCount: list.items ? list.items.length : 0, 
+        itemsCount: list.items ? list.items.length : 0,
         coverImage: (list.items && list.items.length > 0) ? list.items[0].image : null
 
       };

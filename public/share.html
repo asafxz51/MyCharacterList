@@ -781,7 +781,6 @@
     </div>
 
     <script>
-        const API_BASE = "https://mycharacterlist.onrender.com";
         const params = new URLSearchParams(window.location.search);
         const listId = params.get('id');
         let allItems = [], listRankingType = 'numbers', isFreeOrder = false;
@@ -837,7 +836,7 @@
         async function fetchNotifications() {
             if (!loggedInUser) return;
             try {
-                const res = await fetch(API_BASE + '/api/notifications');
+                const res = await fetch('/api/notifications');
                 if (res.ok) { currentNotifsData = await res.json(); renderNotifDropdownUI(); }
             } catch (e) { }
         }
@@ -926,7 +925,7 @@
                 const authBtnNav = document.getElementById('authBtnNav');
 
                 // 2. בדיקה מול השרת
-                const authRes = await fetch(API_BASE + '/api/auth/check').catch(() => null);
+                const authRes = await fetch('/api/auth/check').catch(() => null);
 
                 if (authRes && authRes.ok) {
                     currentUserData = await authRes.json();
@@ -997,7 +996,7 @@
                 }
 
                 // 3. טעינת תוכן הרשימה (עובד עבור כולם)
-                const listRes = await fetch(API_BASE +`/api/share/${listId}`);
+                const listRes = await fetch(`/api/share/${listId}`);
                 const data = await listRes.json();
 
                 if (data.error) {
@@ -1275,7 +1274,7 @@
 
             try {
                 // שים לב: משתמשים ב-listId כפי שהגדרת בראש הקובץ
-                const res = await fetch(API_BASE +`/api/lists/${listId}/like`, { method: 'POST' });
+                const res = await fetch(`/api/lists/${listId}/like`, { method: 'POST' });
                 const result = await res.json();
 
                 // עדכון המספר על המסך
@@ -1311,7 +1310,7 @@
             if (!text) return;
 
             try {
-                const res = await fetch(API_BASE +`/api/lists/${listId}/comment`, {
+                const res = await fetch(`/api/lists/${listId}/comment`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: text })
@@ -1339,7 +1338,7 @@
         document.getElementById('loadMoreCommentsBtn').onclick = () => { visibleCommentsLimit += 10; renderComments(currentListData.comments, currentListData.userId); };
 
         window.deleteComment = async (cid) => {
-            if (confirm("Delete?") && await fetch(API_BASE +`/api/lists/${listId}/comments/${cid}`, { method: 'DELETE' })) {
+            if (confirm("Delete?") && await fetch(`/api/lists/${listId}/comments/${cid}`, { method: 'DELETE' })) {
                 currentListData.comments = currentListData.comments.filter(c => c._id !== cid); renderComments(currentListData.comments, currentListData.userId);
             }
         };
@@ -1349,13 +1348,13 @@
             if (!u || !p) return;
             const url = isReg ? '/api/auth/register' : '/api/auth/login';
             try {
-                const res = await fetch(API_BASE + url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) });
+                const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) });
                 if (res.ok) window.location.reload(); else alert((await res.json()).error);
             } catch (e) { console.error(e); }
         }
 
         document.getElementById('authBtnNav').onclick = async () => {
-            if (loggedInUser) { await fetch(API_BASE + '/api/auth/logout', { method: 'POST' }); window.location.reload(); }
+            if (loggedInUser) { await fetch('/api/auth/logout', { method: 'POST' }); window.location.reload(); }
             else { document.getElementById('authModal').classList.remove('hidden'); }
         };
         document.getElementById('authSwitch').onclick = () => {
@@ -1388,7 +1387,7 @@
             e.stopPropagation(); const drop = document.getElementById('notifDropdown');
             if (drop.classList.contains('hidden')) {
                 visibleNotifsLimit = 5; renderNotifDropdownUI(); drop.classList.remove('hidden');
-               fetch(API_BASE + '/api/notifications/read', { method: 'POST' });
+                fetch('/api/notifications/read', { method: 'POST' });
             } else drop.classList.add('hidden');
         };
 
@@ -1454,7 +1453,7 @@
 
             try {
                 const query = document.getElementById('userSearchInput')?.value || '';
-                const res = await fetch(API_BASE +`/api/users?search=${query}&t=${Date.now()}`);
+                const res = await fetch(`/api/users?search=${query}&t=${Date.now()}`);
                 const users = await res.json();
                 if (currentCommTab !== 'users') return;
 
@@ -1508,7 +1507,7 @@
 
             try {
                 const sortMethod = document.getElementById('leaderboardSortSelect') ? document.getElementById('leaderboardSortSelect').value : 'rating';
-                const res = await fetch(API_BASE +`/api/leaderboard?sort=${sortMethod}`);
+                const res = await fetch(`/api/leaderboard?sort=${sortMethod}`);
                 const data = await res.json();
                 if (currentCommTab !== 'leaderboard') return;
 
@@ -1618,7 +1617,7 @@
             document.getElementById('votersModal').classList.remove('hidden');
 
             try {
-                const res = await fetch(API_BASE +`/api/leaderboard/voters/${charId}`);
+                const res = await fetch(`/api/leaderboard/voters/${charId}`);
                 const voters = await res.json();
 
                 listDiv.innerHTML = '';
@@ -1702,7 +1701,7 @@
             grid.innerHTML = '<p style="text-align:center; padding: 20px; grid-column: 1/-1;">Loading lists...</p>';
 
             try {
-                const res = await fetch(API_BASE +`/api/users/${userId}/lists`);
+                const res = await fetch(`/api/users/${userId}/lists`);
                 const lists = await res.json();
                 grid.innerHTML = '';
 
@@ -1735,13 +1734,13 @@
             const wasFollowing = btn.classList.contains('fas');
             btn.className = wasFollowing ? 'far fa-star' : 'fas fa-star active';
             try {
-                await fetch(API_BASE +`/api/users/follow/${userId}`, { method: 'POST' });
+                await fetch(`/api/users/follow/${userId}`, { method: 'POST' });
                 loadCommunityUsers();
             } catch (err) { }
         };
 
         async function fetchUserLists(uid, curr) {
-            const lists = await (await fetch(API_BASE +`/api/users/${uid}/lists`)).json();
+            const lists = await (await fetch(`/api/users/${uid}/lists`)).json();
             const drop = document.getElementById('userListsDropdown');
             if (lists.length > 1 && drop) {
                 document.getElementById('otherListsContainer').style.display = 'flex';
@@ -1775,7 +1774,7 @@
             if (!text) return;
 
             try {
-                const res = await fetch(API_BASE +`/api/lists/${listId}/comments/${cid}/reply`, {
+                const res = await fetch(`/api/lists/${listId}/comments/${cid}/reply`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text, replyingTo })
@@ -1798,7 +1797,7 @@
 
         window.likeComment = async function (commentId) {
             if (!loggedInUser) return alert("Please Login to like.");
-            const res = await fetch(API_BASE +`/api/lists/${listId}/comments/${commentId}/like`, { method: 'POST' });
+            const res = await fetch(`/api/lists/${listId}/comments/${commentId}/like`, { method: 'POST' });
             if (res.ok) {
 
                 const updatedComments = await res.json();
@@ -1810,7 +1809,7 @@
         window.likeReply = async function (commentId, replyId) {
             if (!loggedInUser) return alert("Please Login");
             try {
-                const res = await fetch(API_BASE +`/api/lists/${listId}/comments/${commentId}/replies/${replyId}/like`, { method: 'POST' });
+                const res = await fetch(`/api/lists/${listId}/comments/${commentId}/replies/${replyId}/like`, { method: 'POST' });
                 if (res.ok) {
                     // טעינה מחדש של המידע כדי שהלב ייצבע
                     currentListData.comments = await res.json();
@@ -1822,7 +1821,7 @@
         window.deleteReply = async function (commentId, replyId) {
             if (!confirm("Delete this reply?")) return;
             try {
-                const res = await fetch(API_BASE +`/api/lists/${listId}/comments/${commentId}/replies/${replyId}`, { method: 'DELETE' });
+                const res = await fetch(`/api/lists/${listId}/comments/${commentId}/replies/${replyId}`, { method: 'DELETE' });
                 if (res.ok) {
                     const updatedComments = await res.json();
                     currentListData.comments = updatedComments;
@@ -1874,7 +1873,7 @@
             btn.disabled = true; btn.textContent = "Saving...";
 
             try {
-                const res = await fetch(API_BASE + '/api/users/avatar', {
+                const res = await fetch('/api/users/avatar', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ avatar: avatarData })
@@ -1914,7 +1913,7 @@
             if (!name || !source) return alert("Name and Source are required");
 
             try {
-                const res = await fetch(API_BASE + '/api/admin/character/global-edit', {
+                const res = await fetch('/api/admin/character/global-edit', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ oldCharId: id, characterName: name, sourceTitle: source, sourceType: type, image: img, isHidden: isHidden })
@@ -1982,7 +1981,7 @@
 
         async function loadSidebar() {
             try {
-                const res = await fetch(API_BASE + '/api/lists');
+                const res = await fetch('/api/lists');
                 const lists = await res.json();
                 const nav = document.getElementById('listNav');
                 nav.innerHTML = '';
@@ -2025,7 +2024,7 @@
         async function executeDeleteList() {
             if (!pendingDeleteListId) return;
             try {
-                await fetch(API_BASE +`/api/lists/${pendingDeleteListId}`, { method: 'DELETE' });
+                await fetch(`/api/lists/${pendingDeleteListId}`, { method: 'DELETE' });
                 document.getElementById('deleteListModal').classList.add('hidden');
 
                 // אם המשתמש מחק את הרשימה שהוא צופה בה כרגע, נזרוק אותו חזרה הביתה!
@@ -2056,7 +2055,7 @@
             };
 
             try {
-                const res = await fetch(API_BASE + '/api/lists', {
+                const res = await fetch('/api/lists', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -2085,7 +2084,7 @@
             modal.classList.remove('hidden');
 
             try {
-                const res = await fetch(API_BASE + '/api/lists');
+                const res = await fetch('/api/lists');
                 const lists = await res.json();
                 optionsContainer.innerHTML = '';
 

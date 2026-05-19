@@ -3,8 +3,6 @@ let state = {
     pendingDeleteListId: null, isReordering: false, isRenamingList: false
 };
 
-const API_BASE = "https://mycharacterlist.onrender.com";
-
 let logsAutoRefreshInterval = null;
 let visibleNotifsLimit = 5;
 let currentNotifsData = [];
@@ -15,7 +13,7 @@ let isInitialized = false;
 async function init() {
     if (isInitialized) return; // מונע הרצה כפולה
     isInitialized = true;
-    fetch(API_BASE + '/api/auth/check');
+    fetch('/api/auth/check');
     await checkLoginStatus();
     setupEvents();
 }
@@ -67,7 +65,7 @@ async function checkLoginStatus() {
     const listHeader = document.querySelector('.list-header');
 
     try {
-        const res = await fetch(API_BASE + '/api/auth/check');
+        const res = await fetch('/api/auth/check');
         if (res.ok) {
             const data = await res.json();
             state.user = data.username;
@@ -84,7 +82,7 @@ async function checkLoginStatus() {
             if (menuBtn) menuBtn.classList.remove('hidden');
 
             if (!sessionStorage.getItem('entryLogged')) {
-                fetch(API_BASE + '/api/auth/ping', { method: 'POST' });
+                fetch('/api/auth/ping', { method: 'POST' });
                 sessionStorage.setItem('entryLogged', 'true');
             }
 
@@ -196,7 +194,7 @@ async function showLoggedOutState() {
 
     // 4. משיכת רשימות אקראיות
     try {
-        const res = await fetch(API_BASE + '/api/public/random-lists');
+        const res = await fetch('/api/public/random-lists');
         const container = document.getElementById('randomListsContainer');
         if (res.ok) {
             const lists = await res.json();
@@ -235,7 +233,7 @@ function toggleNotifDropdown(e) {
         drop.classList.remove('hidden');
 
         // סימון כנקרא
-        fetch(API_BASE + '/api/notifications/read', { method: 'POST' });
+        fetch('/api/notifications/read', { method: 'POST' });
         const badge = document.getElementById('notifBadge');
         if (badge) badge.classList.add('hidden');
     } else {
@@ -267,7 +265,7 @@ async function fetchNotifications() {
     if (!user) return;
 
     try {
-        const res = await fetch(API_BASE + '/api/notifications');
+        const res = await fetch('/api/notifications');
         if (!res.ok) return;
         currentNotifsData = await res.json();
         renderNotifDropdownUI();
@@ -337,7 +335,7 @@ function renderNotifDropdownUI() {
 
 
 async function fetchLists() {
-    const res = await fetch(API_BASE + '/api/lists');
+    const res = await fetch('/api/lists');
     state.lists = await res.json();
 
     const params = new URLSearchParams(window.location.search);
@@ -376,7 +374,7 @@ async function createList(name) {
         items: new Array() // הנה הטריק שעוקף את הבאג
     };
 
-    const res = await fetch(API_BASE + '/api/lists', {
+    const res = await fetch('/api/lists', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -391,7 +389,7 @@ async function createList(name) {
 }
 
 async function deleteList(id) {
-    await fetch(API_BASE + `/api/lists/${id}`, { method: 'DELETE' });
+    await fetch(`/api/lists/${id}`, { method: 'DELETE' });
     state.lists = state.lists.filter(l => l._id !== id);
     if (state.activeListId === id) state.activeListId = state.lists[0]?._id || null;
     renderSidebar();
@@ -416,7 +414,7 @@ async function updateCurrentList(forceSort = false, logAction = null, logDetails
     }
 
     try {
-        const response = await fetch(API_BASE + '/api/lists', {
+        const response = await fetch('/api/lists', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -478,7 +476,7 @@ window.selectList = async function (id) {
     document.getElementById('characterGrid').innerHTML = '<p style="text-align:center; padding:50px; color:#888;">Loading characters...</p>';
 
     try {
-        const res = await fetch(API_BASE + `/api/lists/${id}`);
+        const res = await fetch(`/api/lists/${id}`);
         const fullList = await res.json();
 
         // מעדכנים את הרשימה בזיכרון המקומי עם הדמויות החדשות שהגיעו
@@ -834,16 +832,16 @@ async function doSearch(query) {
     const resultsDiv = document.getElementById('searchResults');
     resultsDiv.classList.remove('hidden');
     resultsDiv.innerHTML = '<div class="search-item">Searching...</div>';
-    const safeFetch = (url) => fetch(API_BASE + url).then(r => r.ok ? r.json() : []).catch(() => []);
+    const safeFetch = (url) => fetch(url).then(r => r.ok ? r.json() : []).catch(() => []);
 
     const [anime, igdb, tmdb, persons, fandom, rawg, books] = await Promise.all([
-        safefetch(API_BASE + `/api/search/jikan?query=${query}`),
-        safefetch(API_BASE + `/api/search/igdb?query=${query}`),
-        safefetch(API_BASE + `/api/search/tmdb?query=${query}`),
-        safefetch(API_BASE + `/api/search/tmdb/person?query=${query}`),
-        safefetch(API_BASE + `/api/search/fandom?query=${query}`),
-        safefetch(API_BASE + `/api/search/rawg?query=${query}`),
-        safefetch(API_BASE + `/api/search/books?query=${query}`)
+        safeFetch(`/api/search/jikan?query=${query}`),
+        safeFetch(`/api/search/igdb?query=${query}`),
+        safeFetch(`/api/search/tmdb?query=${query}`),
+        safeFetch(`/api/search/tmdb/person?query=${query}`),
+        safeFetch(`/api/search/fandom?query=${query}`),
+        safeFetch(`/api/search/rawg?query=${query}`),
+        safeFetch(`/api/search/books?query=${query}`)
     ]);
 
 
@@ -964,7 +962,7 @@ async function openCharModal(item) {
     else if (item.type === 'character') {
         titleInput.value = "Fetching info...";
         try {
-            const res = await fetch(API_BASE + `/api/jikan/details/${item.id}`);
+            const res = await fetch(`/api/jikan/details/${item.id}`);
             const data = await res.json();
             titleInput.value = data.sourceTitle || "";
             typeInput.value = data.sourceType || "Anime";
@@ -973,7 +971,7 @@ async function openCharModal(item) {
     else if (item.type === 'game_character') {
         titleInput.value = "Fetching game...";
         try {
-            const res = await fetch(API_BASE + `/api/igdb/details/${item.id}`);
+            const res = await fetch(`/api/igdb/details/${item.id}`);
             const data = await res.json();
             titleInput.value = data.sourceTitle || "";
             typeInput.value = "Game";
@@ -1114,7 +1112,7 @@ const authBtnNav = document.getElementById('authBtnNav');
 if (authBtnNav) {
     authBtnNav.addEventListener('click', async () => {
         if (state.user) {
-            await fetch(API_BASE + '/api/auth/logout', { method: 'POST' });
+            await fetch('/api/auth/logout', { method: 'POST' });
             sessionStorage.removeItem('entryLogged');
             window.location.reload();
         } else {
@@ -1134,7 +1132,7 @@ async function handleAuthAction() {
     const url = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
 
     try {
-        const res = await fetch(API_BASE + url, {
+        const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: u, password: p })
@@ -1266,7 +1264,7 @@ document.getElementById('saveListBtn').addEventListener('click', async () => {
 document.getElementById('duplicateListBtn').addEventListener('click', async () => {
     if (!state.activeListId) return;
     try {
-        const res = await fetch(API_BASE + `/api/lists/${state.activeListId}/duplicate`, { method: 'POST' });
+        const res = await fetch(`/api/lists/${state.activeListId}/duplicate`, { method: 'POST' });
         const newList = await res.json();
 
         state.lists.push(newList);
@@ -1351,7 +1349,7 @@ window.selectList = async function (id) {
     if (grid) grid.innerHTML = '<p style="text-align:center; padding:50px; color:#888;"><i class="fas fa-spinner fa-spin"></i> Loading characters...</p>';
 
     try {
-        const res = await fetch(API_BASE + `/api/lists/${id}`);
+        const res = await fetch(`/api/lists/${id}`);
         if (!res.ok) throw new Error("Failed to fetch");
 
         const fullList = await res.json();
@@ -1504,7 +1502,7 @@ async function loadCommunityUsers() {
 
     try {
         const query = document.getElementById('userSearchInput')?.value || '';
-        const res = await fetch(API_BASE + `/api/users?search=${query}&t=${Date.now()}`);
+        const res = await fetch(`/api/users?search=${query}&t=${Date.now()}`);
         const users = await res.json();
 
         // הגנה: אם עברנו טאב בזמן שהמידע הגיע - לא לצייר
@@ -1549,7 +1547,7 @@ async function loadLeaderboard() {
 
     try {
         const sortMethod = document.getElementById('leaderboardSortSelect') ? document.getElementById('leaderboardSortSelect').value : 'rating';
-        const res = await fetch(API_BASE + `/api/leaderboard?sort=${sortMethod}`);
+        const res = await fetch(`/api/leaderboard?sort=${sortMethod}`);
         const data = await res.json();
 
         // הגנה קריטית! מוודא שקיבלנו רשימה ולא הודעת שגיאה מהשרת
@@ -1654,7 +1652,7 @@ window.openVotersModal = async function (charId, charName) {
     document.getElementById('votersModal').classList.remove('hidden');
 
     try {
-        const res = await fetch(API_BASE + `/api/leaderboard/voters/${charId}`);
+        const res = await fetch(`/api/leaderboard/voters/${charId}`);
         const voters = await res.json();
 
         listDiv.innerHTML = '';
@@ -1738,7 +1736,7 @@ async function showUserLists(userId, username, avatar) {
     grid.innerHTML = '<p style="text-align:center; padding: 20px; grid-column: 1/-1;">Loading lists...</p>';
 
     try {
-        const res = await fetch(API_BASE + `/api/users/${userId}/lists`);
+        const res = await fetch(`/api/users/${userId}/lists`);
         const lists = await res.json();
         grid.innerHTML = '';
 
@@ -1771,7 +1769,7 @@ window.toggleFollow = async function (e, userId) {
     const wasFollowing = btn.classList.contains('fas');
     btn.className = wasFollowing ? 'far fa-star' : 'fas fa-star active';
     try {
-        await fetch(API_BASE + `/api/users/follow/${userId}`, { method: 'POST' });
+        await fetch(`/api/users/follow/${userId}`, { method: 'POST' });
         loadCommunityUsers();
     } catch (err) { }
 };
@@ -1820,7 +1818,7 @@ async function handleSidebarDrop(e) {
 
         const orderedIds = state.lists.map(l => l._id);
         try {
-            await fetch(API_BASE + '/api/lists/reorder', {
+            await fetch('/api/lists/reorder', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ orderedIds })
@@ -1886,7 +1884,7 @@ async function loadAdminLogs(silent = false) {
     if (!silent) list.innerHTML = '<div style="text-align:center; padding:20px;">Updating...</div>';
 
     try {
-        const res = await fetch(API_BASE + API_BASE + '/api/admin/logs');
+        const res = await fetch('/api/admin/logs');
         const logs = await res.json();
         const html = logs.map(log => {
             const date = new Date(log.timestamp).toLocaleString('he-IL');
@@ -1913,7 +1911,7 @@ async function loadAdminLogs(silent = false) {
 async function loadAdminUsers() {
     const grid = document.getElementById('adminUsersGrid');
     grid.innerHTML = 'Loading users...';
-    const res = await fetch(API_BASE + API_BASE + '/api/admin/users');
+    const res = await fetch('/api/admin/users');
     const users = await res.json();
     grid.innerHTML = '';
 
@@ -1945,7 +1943,7 @@ window.adminManageLists = async function (userId, username) {
     grid.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted);">Fetching lists...</div>';
 
     try {
-        const res = await fetch(API_BASE + API_BASE + `/api/admin/users/${userId}/lists`);
+        const res = await fetch(`/api/admin/users/${userId}/lists`);
         if (!res.ok) throw new Error("Failed to fetch lists");
         const lists = await res.json();
 
@@ -1983,7 +1981,7 @@ window.adminResetPass = async function (id) {
     const newPass = prompt("Enter new password for this user (Min 3 characters):");
     if (!newPass) return;
 
-    const res = await fetch(API_BASE + API_BASE + `/api/admin/users/${id}/reset`, {
+    const res = await fetch(`/api/admin/users/${id}/reset`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newPassword: newPass })
@@ -1995,13 +1993,13 @@ window.adminResetPass = async function (id) {
 
 window.adminDeleteUser = async function (id) {
     if (!confirm("DELETE USER AND ALL THEIR LISTS? This cannot be undone.")) return;
-    await fetch(API_BASE + API_BASE + `/api/admin/users/${id}`, { method: 'DELETE' });
+    await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
     loadAdminUsers();
 }
 
 window.adminDeleteList = async function (listId, userId, username) {
     if (!confirm("Delete this list?")) return;
-    await fetch(API_BASE + API_BASE + `/api/admin/lists/${listId}`, { method: 'DELETE' });
+    await fetch(`/api/admin/lists/${listId}`, { method: 'DELETE' });
     adminManageLists(userId, username);
 }
 
@@ -2094,7 +2092,7 @@ document.getElementById('submitIndexComment').onclick = async () => {
     const text = input.value.trim();
     if (!text || !state.activeListId) return;
 
-    const res = await fetch(API_BASE + API_BASE + `/api/lists/${state.activeListId}/comment`, {
+    const res = await fetch(`/api/lists/${state.activeListId}/comment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text })
@@ -2114,7 +2112,7 @@ document.getElementById('submitIndexComment').onclick = async () => {
 
 window.deleteIndexComment = async function (commentId) {
     if (!confirm("Delete this community comment?")) return;
-    const res = await fetch(API_BASE + API_BASE + `/api/lists/${state.activeListId}/comments/${commentId}`, { method: 'DELETE' });
+    const res = await fetch(`/api/lists/${state.activeListId}/comments/${commentId}`, { method: 'DELETE' });
     if (res.ok) {
         const currentList = state.lists.find(l => l._id === state.activeListId);
         currentList.comments = currentList.comments.filter(c => c._id !== commentId);
@@ -2153,7 +2151,7 @@ window.sendReplyIndex = async function (cid) {
     if (!text || !state.activeListId) return;
 
     try {
-        const res = await fetch(API_BASE + API_BASE + `/api/lists/${state.activeListId}/comments/${cid}/reply`, {
+        const res = await fetch(`/api/lists/${state.activeListId}/comments/${cid}/reply`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text, replyingTo })
@@ -2179,7 +2177,7 @@ window.sendReplyIndex = async function (cid) {
 window.likeCommentIndex = async function (commentId) {
     if (!state.activeListId) return;
     try {
-        const res = await fetch(API_BASE + API_BASE + `/api/lists/${state.activeListId}/comments/${commentId}/like`, {
+        const res = await fetch(`/api/lists/${state.activeListId}/comments/${commentId}/like`, {
             method: 'POST'
         });
 
@@ -2198,7 +2196,7 @@ window.likeCommentIndex = async function (commentId) {
 window.likeReplyIndex = async function (commentId, replyId) {
     if (!state.activeListId) return;
     try {
-        const res = await fetch(API_BASE + API_BASE + `/api/lists/${state.activeListId}/comments/${commentId}/replies/${replyId}/like`, { method: 'POST' });
+        const res = await fetch(`/api/lists/${state.activeListId}/comments/${commentId}/replies/${replyId}/like`, { method: 'POST' });
         if (res.ok) {
             const data = await res.json();
             const currentList = state.lists.find(l => l._id === state.activeListId);
@@ -2211,7 +2209,7 @@ window.likeReplyIndex = async function (commentId, replyId) {
 window.deleteReplyIndex = async function (commentId, replyId) {
     if (!confirm("Delete this reply?")) return;
     try {
-        const res = await fetch(API_BASE + API_BASE + `/api/lists/${state.activeListId}/comments/${commentId}/replies/${replyId}`, { method: 'DELETE' });
+        const res = await fetch(`/api/lists/${state.activeListId}/comments/${commentId}/replies/${replyId}`, { method: 'DELETE' });
         if (res.ok) {
             const data = await res.json();
             const currentList = state.lists.find(l => l._id === state.activeListId);
@@ -2273,7 +2271,7 @@ document.getElementById('saveAvatarBtn').onclick = async () => {
     btn.textContent = "Saving...";
 
     try {
-        const res = await fetch(API_BASE + API_BASE + '/api/users/avatar', {
+        const res = await fetch('/api/users/avatar', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ avatar: avatarData })
@@ -2308,7 +2306,7 @@ if (leaderboardBtn) {
 
         try {
             const sortMethod = document.getElementById('leaderboardSortSelect') ? document.getElementById('leaderboardSortSelect').value : 'rating';
-            const res = await fetch(API_BASE + API_BASE + `/api/leaderboard?sort=${sortMethod}`);
+            const res = await fetch(`/api/leaderboard?sort=${sortMethod}`);
             const data = await res.json();
 
             grid.innerHTML = '';
@@ -2379,7 +2377,7 @@ window.saveGlobalCharacter = async function () {
     if (!name || !source) return alert("Name and Source are required");
 
     try {
-        const res = await fetch(API_BASE + API_BASE + '/api/admin/character/global-edit', {
+        const res = await fetch('/api/admin/character/global-edit', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ oldCharId: id, characterName: name, sourceTitle: source, sourceType: type, image: img, isHidden: isHidden })
@@ -2453,7 +2451,7 @@ window.openQuickAddSelector = async function (apiId, name, source, type, image) 
     modal.classList.remove('hidden');
 
     try {
-        const res = await fetch(API_BASE + API_BASE + '/api/lists');
+        const res = await fetch('/api/lists');
         const lists = await res.json();
 
         if (lists.length === 0) {
