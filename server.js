@@ -24,6 +24,7 @@ app.use(express.static('public'));
 const PORT = process.env.PORT || 3000;
 
 // Database Connection
+// Database Connection
 let isConnected = false;
 const connectDB = async () => {
   if (isConnected) return;
@@ -31,6 +32,15 @@ const connectDB = async () => {
     await mongoose.connect(process.env.MONGO_URI);
     isConnected = true;
     console.log("MongoDB Connected");
+
+    // --- ניקוי אוטומטי של התראות ישנות (שכבר נקראו) ---
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    await User.updateMany(
+      {},
+      { $pull: { notifications: { read: true, timestamp: { $lt: thirtyDaysAgo } } } }
+    );
+    console.log("Old notifications cleaned.");
+
   } catch (err) { console.error("MongoDB Error:", err); }
 };
 
@@ -780,40 +790,43 @@ app.get('/api/users', optionalToken, async (req, res) => {
   try {
     const { search } = req.query;
 
-    // 1. מוצאים רשימות ציבוריות שיש בהן לפחות פריט אחד
-    const activeLists = await List.find({
-      isPrivate: { $ne: true },
-      "items.0": { $exists: true } // מוודא שיש לפחות איבר אחד במערך
-    }).distinct('userId');
+    // 1. שלב א': מציאת כל המשתמשים שיש להם לפחות רשימה אחת ציבורית עם פריטים
+    // אנחנו משתמשים ב-aggregate כי הוא מהיר מאוד לסינון כזה
+    const activeUsers = await List.aggregate([
+      { $match: { isPrivate: { $ne: true }, "items.0": { $exists: true } } },
+      { $group: { _id: "$userId" } }
+    ]);
+    const activeIds = activeUsers.map(u => u._id);
 
-    // 2. בונים את השאילתה למשתמשים שנמצאו ברשימות הפעילות
-    let query = { _id: { $in: activeLists } };
+    // 2. שלב ב': שליפת המשתמשים עצמם
+    let query = { _id: { $in: activeIds } };
     if (search) query.username = { $regex: search, $options: 'i' };
 
-    // 3. שליפת המשתמשים
-    // שימוש ב-.select כדי להביא רק את מה שחייבים!
     const users = await User.find(query)
-      .select('username avatar') // אל תביא את רשימות המשתמש!
-      .limit(50) // חובה: אל תביא את כל המשתמשים באתר אם יש 1000
+      .select('username avatar following')
+      .limit(50)
       .lean();
-    const currentUser = req.user ? await User.findById(req.user._id).lean() : null;
+
+    // ... המשך הקוד כפי שכתבנו (חישוב isFollowing, מיון, ושליחה ללקוח) ...
+    const currentUser = req.user ? await User.findById(req.user._id).select('following').lean() : null;
+    const followingSet = currentUser ? new Set(currentUser.following.map(id => id.toString())) : new Set();
 
     const results = users.map(u => ({
       _id: u._id,
       username: u.username,
       avatar: u.avatar || "",
-      isFollowing: currentUser ? currentUser.following.map(id => id.toString()).includes(u._id.toString()) : false
+      isFollowing: followingSet.has(u._id.toString())
     })).filter(u => !currentUser || u.username !== currentUser.username);
 
-    // 4. מיון: עוקבים למעלה
     results.sort((a, b) => (a.isFollowing === b.isFollowing ? 0 : a.isFollowing ? -1 : 1));
 
     res.json(results);
   } catch (e) {
-    console.error("Users API Error:", e);
+    console.error(e);
     res.status(500).json({ error: e.message });
   }
 });
+
 app.post('/api/users/follow/:id', verifyToken, async (req, res) => {
   const targetId = req.params.id;
   const user = await User.findById(req.user._id);

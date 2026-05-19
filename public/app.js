@@ -1493,43 +1493,35 @@ document.getElementById('userSearchInput').addEventListener('input', (e) => {
     userSearchDebounce = setTimeout(() => { loadCommunityUsers(); }, 500);
 });
 
-// טעינת משתמשים (הטאב הראשון)
 async function loadCommunityUsers() {
     const grid = document.getElementById('communityGrid');
-    grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Loading users...</p>';
+    if (!grid) return;
+
+    // סימון טעינה
+    grid.innerHTML = '<p style="text-align:center; padding:20px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading...</p>';
 
     try {
         const query = document.getElementById('userSearchInput')?.value || '';
         const res = await fetch(`/api/users?search=${query}&t=${Date.now()}`);
         const users = await res.json();
-        if (currentCommTab !== 'users') return;
 
+        // הגנה: אם עברנו טאב בזמן שהמידע הגיע - לא לצייר
+        if (typeof currentCommTab !== 'undefined' && currentCommTab !== 'users') return;
 
-
-        users.sort((a, b) => {
-            if (a.isFollowing === b.isFollowing) return 0;
-            return a.isFollowing ? -1 : 1; // אמת (עוקב) קופץ למעלה
-        });
-
-        grid.innerHTML = users.length ? '' : '<p style="grid-column: 1/-1; text-align:center;">No users found.</p>';
+        grid.innerHTML = users.length ? '' : '<p style="text-align:center; padding:20px;">No users found.</p>';
 
         users.forEach(u => {
             const div = document.createElement('div');
             div.className = 'user-card';
 
             const userImg = (u.avatar && u.avatar.trim() !== "") ?
-                `<img src="${getOptimizedImg(u.avatar, 100, 100)}" 
-          data-original="${u.avatar}"
-          onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; } else { this.style.display='none'; this.nextElementSibling.style.display='inline-block'; }"
-          style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); margin-bottom: 10px;">` :
+                `<img src="${getOptimizedImg(u.avatar, 100, 100)}" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); margin-bottom: 10px;">` :
                 `<i class="fas fa-user-circle user-icon" style="font-size: 55px; margin-bottom: 10px;"></i>`;
 
-            // בדיקת התחברות חסינה גם לאינדקס (state.user) וגם לשייר (loggedInUser)
-            const isUserLoggedIn = (typeof state !== 'undefined' && state.user) || (typeof loggedInUser !== 'undefined' && loggedInUser);
-            let starHtml = isUserLoggedIn ? `
-                <button class="follow-btn" onclick="toggleFollow(event, '${u._id}')">
+            const starHtml = `
+                <button class="follow-btn" onclick="toggleCommunityFollow(event, '${u._id}')">
                     <i class="${u.isFollowing ? 'fas fa-star active' : 'far fa-star'}"></i>
-                </button>` : '';
+                </button>`;
 
             div.innerHTML = `
                 ${starHtml}
@@ -1542,7 +1534,9 @@ async function loadCommunityUsers() {
             };
             grid.appendChild(div);
         });
-    } catch (e) { grid.innerHTML = '<p style="grid-column: 1/-1;">Error loading.</p>'; }
+    } catch (e) {
+        grid.innerHTML = '<p style="text-align:center; padding:20px; color:red;">Error loading users.</p>';
+    }
 }
 
 let globalLeaderboardData = new Array(); // שומר את הנתונים בזיכרון כדי שהחלון יוכל לקרוא אותם
