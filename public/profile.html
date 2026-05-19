@@ -471,7 +471,8 @@
                 <div class="profile-header-layout">
                     <div class="profile-user-info">
                         <div class="profile-avatar-wrapper">
-                            <img id="avatarImg" class="profile-avatar" src="https://placehold.co/150x150/252525/bb86fc?text=User">
+                            <img id="avatarImg" class="profile-avatar"
+                                src="https://placehold.co/150x150/252525/bb86fc?text=User">
 
                             <button id="penAvatar" class="edit-pen" style="bottom: 5px; right: 5px;"
                                 title="Edit Avatar"><i class="fas fa-pen"></i></button>
@@ -770,6 +771,8 @@
     </div>
 
     <script>
+        const API_BASE = "https://mycharacterlist.onrender.com";
+
         const urlParams = new URLSearchParams(window.location.search);
         const targetUsername = urlParams.get('user');
         let profileData = null;
@@ -858,12 +861,12 @@
             }
 
             // Ping קטן להעיר את השרת של נטליפי מיד
-            fetch('/api/auth/check');
+            fetch(API_BASE + '/api/auth/check');
 
             // הרצת שתי הבקשות במקביל כדי לחסוך זמן טעינה
             Promise.all([
-                fetch('/api/auth/check').then(res => res.ok ? res.json() : null).catch(() => null),
-                fetch(`/api/profile/${targetUsername}`).then(res => res.ok ? res.json() : null).catch(() => null)
+                fetch(API_BASE + '/api/auth/check').then(res => res.ok ? res.json() : null).catch(() => null),
+                fetch(API_BASE + `/api/profile/${targetUsername}`).then(res => res.ok ? res.json() : null).catch(() => null)
             ]).then(([authData, pData]) => {
 
                 // --- טיפול בנתוני התחברות (authData) ---
@@ -881,7 +884,7 @@
 
                     document.getElementById('authBtnNav').textContent = "Logout";
                     document.getElementById('authBtnNav').onclick = async () => {
-                        await fetch('/api/auth/logout', { method: 'POST' });
+                        await fetch(API_BASE + '/api/auth/logout', { method: 'POST' });
                         window.location.href = '/';
                     };
 
@@ -923,7 +926,7 @@
 
         async function loadSidebar() {
             try {
-                const res = await fetch('/api/lists');
+                const res = await fetch(API_BASE + '/api/lists');
                 const lists = await res.json();
                 const nav = document.getElementById('listNav');
                 nav.innerHTML = '';
@@ -963,7 +966,7 @@
         async function executeDeleteList() {
             if (!pendingDeleteListId) return;
             try {
-                await fetch(`/api/lists/${pendingDeleteListId}`, { method: 'DELETE' });
+                await fetch(API_BASE + `/api/lists/${pendingDeleteListId}`, { method: 'DELETE' });
                 document.getElementById('deleteListModal').classList.add('hidden');
                 pendingDeleteListId = null;
                 // מרענן את העמוד כדי שהרשימה תימחק גם מהסיידבאר וגם מאזור "כל הרשימות" בפרופיל
@@ -974,28 +977,28 @@
         }
 
         async function renderProfile() {
-                document.title = `${profileData.username}'s Profile`;
-                document.getElementById('profileUsername').textContent = profileData.username;
-                document.getElementById('profileBio').textContent = profileData.bio || "No bio written yet.";
-                document.getElementById('statFollowers').textContent = profileData.followersCount || 0;
-                document.getElementById('statLikes').textContent = profileData.totalLikes || 0;
-                document.getElementById('statRanked').textContent = profileData.totalRanked || 0;
+            document.title = `${profileData.username}'s Profile`;
+            document.getElementById('profileUsername').textContent = profileData.username;
+            document.getElementById('profileBio').textContent = profileData.bio || "No bio written yet.";
+            document.getElementById('statFollowers').textContent = profileData.followersCount || 0;
+            document.getElementById('statLikes').textContent = profileData.totalLikes || 0;
+            document.getElementById('statRanked').textContent = profileData.totalRanked || 0;
 
-                // תמונה ובאנר
-                if (profileData.avatar) document.getElementById('avatarImg').src = getOptimizedImg(profileData.avatar, 300, 300);
-                if (profileData.banner) document.getElementById('bannerImg').style.backgroundImage = `url('${getOptimizedImg(profileData.banner, 1200)}')`;
+            // תמונה ובאנר
+            if (profileData.avatar) document.getElementById('avatarImg').src = getOptimizedImg(profileData.avatar, 300, 300);
+            if (profileData.banner) document.getElementById('bannerImg').style.backgroundImage = `url('${getOptimizedImg(profileData.banner, 1200)}')`;
 
-                // 1. ציור רשימות רגילות (רזה ומהיר)
-                const listsGrid = document.getElementById('allListsGrid');
-                listsGrid.innerHTML = '';
-                if (Array.isArray(profileData.lists)) {
-                    profileData.lists.forEach(list => {
-                        if (list._id === profileData.featuredListId) featuredList = list;
+            // 1. ציור רשימות רגילות (רזה ומהיר)
+            const listsGrid = document.getElementById('allListsGrid');
+            listsGrid.innerHTML = '';
+            if (Array.isArray(profileData.lists)) {
+                profileData.lists.forEach(list => {
+                    if (list._id === profileData.featuredListId) featuredList = list;
 
-                        // שימוש ב-coverImage שהגיע מהשרת (או פלייסהולדר אם אין)
-                        let coverImg = list.coverImage || 'https://placehold.co/400x200/1a1a1a/bb86fc?text=No+Characters';
+                    // שימוש ב-coverImage שהגיע מהשרת (או פלייסהולדר אם אין)
+                    let coverImg = list.coverImage || 'https://placehold.co/400x200/1a1a1a/bb86fc?text=No+Characters';
 
-                        listsGrid.innerHTML += `
+                    listsGrid.innerHTML += `
                         <div class="comm-list-card" onclick="window.location.href='/share.html?id=${list._id}'" style="background: var(--card-bg); border-radius: 12px; cursor: pointer; border: 1px solid var(--border); transition: 0.2s; overflow: hidden; display: flex; flex-direction: column; padding: 0;">
                             <!-- התמונה עכשיו תקינה ונמשכת מה-coverImage -->
                             <img src="${getOptimizedImg(coverImg, 400)}" 
@@ -1009,45 +1012,45 @@
                             </div>
                         </div>
                     `;
-                    });
-                }
+                });
+            }
 
-                // 2. טעינת ה-Featured List (בנפרד)
-                const featuredDisplay = document.getElementById('featuredDisplay');
-                if (profileData.featuredListId) {
-                    try {
-                        const res = await fetch(`/api/profile/featured/${profileData.featuredListId}`);
-                        const fList = await res.json();
+            // 2. טעינת ה-Featured List (בנפרד)
+            const featuredDisplay = document.getElementById('featuredDisplay');
+            if (profileData.featuredListId) {
+                try {
+                    const res = await fetch(API_BASE + `/api/profile/featured/${profileData.featuredListId}`);
+                    const fList = await res.json();
 
-                        if (fList && fList.items && fList.items.length > 0) {
-                            let sorted = [...fList.items];
-                            if (!fList.isFreeOrder) sorted.sort((a, b) => b.rating - a.rating);
+                    if (fList && fList.items && fList.items.length > 0) {
+                        let sorted = [...fList.items];
+                        if (!fList.isFreeOrder) sorted.sort((a, b) => b.rating - a.rating);
 
-                            const charsHtml = sorted.slice(0, 5).map(item => {
-                                let imgUrl = item.image && !item.image.includes('placeholder') ? item.image : 'https://placehold.co/50x50/252525/bb86fc?text=?';
-                                let rating = fList.rankingType === 'letters' ? getLetterRating(item.rating) : item.rating;
-                                return `
+                        const charsHtml = sorted.slice(0, 5).map(item => {
+                            let imgUrl = item.image && !item.image.includes('placeholder') ? item.image : 'https://placehold.co/50x50/252525/bb86fc?text=?';
+                            let rating = fList.rankingType === 'letters' ? getLetterRating(item.rating) : item.rating;
+                            return `
                                 <div class="featured-char-row">
                                     <img src="${getOptimizedImg(imgUrl, 100, 100)}" class="featured-char-img">
                                     <span class="featured-char-name">${item.characterName}</span>
                                     <span class="featured-char-rating">${rating}</span>
                                 </div>
                             `;
-                            }).join('');
+                        }).join('');
 
-                            featuredDisplay.innerHTML = `
+                        featuredDisplay.innerHTML = `
                             <div style="font-weight: bold; margin-bottom: 15px;">${fList.name}</div>
                             ${charsHtml}
                             <button onclick="window.location.href='/share.html?id=${fList._id}'" class="btn-primary" style="margin-top:15px; width:100%; padding:8px;">View Full List</button>
                         `;
-                        } else {
-                            featuredDisplay.innerHTML = '<p style="color:#888; font-size:0.8rem;">No items.</p>';
-                        }
-                    } catch (e) {
-                        featuredDisplay.innerHTML = '<p style="color:red; font-size:0.8rem;">Error loading featured.</p>';
+                    } else {
+                        featuredDisplay.innerHTML = '<p style="color:#888; font-size:0.8rem;">No items.</p>';
                     }
+                } catch (e) {
+                    featuredDisplay.innerHTML = '<p style="color:red; font-size:0.8rem;">Error loading featured.</p>';
                 }
             }
+        }
 
         function setupEditPens() {
             if (!loggedInUser || loggedInUser.username !== profileData.username) return;
@@ -1107,7 +1110,7 @@
             };
             payload[field] = value;
 
-            const res = await fetch('/api/profile/update', {
+            const res = await fetch(API_BASE + '/api/profile/update', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -1118,7 +1121,7 @@
         }
 
         async function toggleFollow(id) {
-            await fetch(`/api/users/follow/${id}`, { method: 'POST' });
+            await fetch(API_BASE + `/api/users/follow/${id}`, { method: 'POST' });
             window.location.reload();
         }
 
@@ -1126,7 +1129,7 @@
         async function fetchNotifications() {
             if (!loggedInUser) return;
             try {
-                const res = await fetch('/api/notifications');
+                const res = await fetch(API_BASE + '/api/notifications');
                 if (res.ok) {
                     currentNotifsData = await res.json();
                     renderNotifDropdownUI();
@@ -1191,7 +1194,7 @@
                 visibleNotifsLimit = 5;
                 renderNotifDropdownUI();
                 drop.classList.remove('hidden');
-                fetch('/api/notifications/read', { method: 'POST' });
+                fetch(API_BASE + '/api/notifications/read', { method: 'POST' });
                 document.getElementById('notifBadge').classList.add('hidden');
             } else {
                 drop.classList.add('hidden');
@@ -1263,7 +1266,7 @@
             grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Loading users...</p>';
             try {
                 const query = document.getElementById('userSearchInput')?.value || '';
-                const res = await fetch(`/api/users?search=${query}&t=${Date.now()}`);
+                const res = await fetch(API_BASE + `/api/users?search=${query}&t=${Date.now()}`);
                 const users = await res.json();
 
 
@@ -1316,7 +1319,7 @@
             icon.className = wasFollowing ? 'far fa-star' : 'fas fa-star active';
 
             try {
-                await fetch(`/api/users/follow/${userId}`, { method: 'POST' });
+                await fetch(API_BASE + `/api/users/follow/${userId}`, { method: 'POST' });
             } catch (err) {
                 console.error("Follow error", err);
             }
@@ -1327,7 +1330,7 @@
             grid.innerHTML = '<p style="text-align: center; padding: 40px; font-size: 1.1rem; color: var(--text-muted);">Calculating global rankings...</p>';
             try {
                 const sortMethod = document.getElementById('leaderboardSortSelect') ? document.getElementById('leaderboardSortSelect').value : 'rating';
-                const res = await fetch(`/api/leaderboard?sort=${sortMethod}`);
+                const res = await fetch(API_BASE + `/api/leaderboard?sort=${sortMethod}`);
                 const data = await res.json();
 
                 if (currentCommTab !== 'leaderboard') return;
@@ -1403,7 +1406,7 @@
             document.getElementById('votersModal').classList.remove('hidden');
 
             try {
-                const res = await fetch(`/api/leaderboard/voters/${charId}`);
+                const res = await fetch(API_BASE + `/api/leaderboard/voters/${charId}`);
                 const voters = await res.json();
                 listDiv.innerHTML = '';
 
@@ -1467,7 +1470,7 @@
             };
 
             try {
-                const res = await fetch('/api/lists', {
+                const res = await fetch(API_BASE + '/api/lists', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -1626,7 +1629,7 @@
             const grid = document.getElementById('adminUsersGrid');
             grid.innerHTML = '<div style="padding:20px; text-align:center;">Loading users...</div>';
             try {
-                const res = await fetch('/api/admin/users');
+                const res = await fetch(API_BASE + '/api/admin/users');
                 const users = await res.json();
                 grid.innerHTML = '';
                 users.forEach(u => {
@@ -1649,7 +1652,7 @@
             const list = document.getElementById('adminLogsList');
             if (!silent) list.innerHTML = '<div style="padding:20px; text-align:center;">Updating logs...</div>';
             try {
-                const res = await fetch('/api/admin/logs');
+                const res = await fetch(API_BASE + '/api/admin/logs');
                 const logs = await res.json();
                 list.innerHTML = logs.map(log => {
                     const date = new Date(log.timestamp).toLocaleString('he-IL');
@@ -1679,7 +1682,7 @@
             grid.innerHTML = '<div style="padding:20px; text-align:center;">Fetching lists...</div>';
 
             try {
-                const res = await fetch(`/api/admin/users/${userId}/lists`);
+                const res = await fetch(API_BASE + `/api/admin/users/${userId}/lists`);
                 const lists = await res.json();
                 grid.innerHTML = '';
 
@@ -1716,13 +1719,13 @@
         // מחיקת משתמש או רשימה
         window.adminDeleteUser = async function (id) {
             if (!confirm("DELETE USER?")) return;
-            await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+            await fetch(API_BASE + `/api/admin/users/${id}`, { method: 'DELETE' });
             loadAdminUsers();
         };
 
         window.adminDeleteList = async function (listId, userId, username) {
             if (!confirm("Delete list?")) return;
-            await fetch(`/api/admin/lists/${listId}`, { method: 'DELETE' });
+            await fetch(API_BASE + `/api/admin/lists/${listId}`, { method: 'DELETE' });
             adminManageLists(userId, username);
         };
 
@@ -1730,7 +1733,7 @@
             const newPass = prompt("Enter new password for this user (Min 3 characters):");
             if (!newPass) return;
 
-            const res = await fetch(`/api/admin/users/${id}/reset`, {
+            const res = await fetch(API_BASE + `/api/admin/users/${id}/reset`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ newPassword: newPass })
@@ -1753,7 +1756,7 @@
             modal.classList.remove('hidden');
 
             try {
-                const res = await fetch('/api/lists');
+                const res = await fetch(API_BASE + '/api/lists');
                 const lists = await res.json();
                 optionsContainer.innerHTML = '';
 
