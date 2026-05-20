@@ -1493,6 +1493,33 @@ document.getElementById('userSearchInput').addEventListener('input', (e) => {
     userSearchDebounce = setTimeout(() => { loadCommunityUsers(); }, 500);
 });
 
+window.toggleCommunityFollow = async function (e, userId) {
+    e.stopPropagation();
+    const btn = e.currentTarget;
+    const icon = btn.querySelector('i');
+
+    // שליחה לשרת
+    const res = await fetch(`/api/users/follow/${userId}`, { method: 'POST' });
+
+    if (res.ok) {
+        // שינוי ויזואלי מיידי
+        const isNowFollowing = icon.classList.contains('far'); // אם היה far (לא עוקב), עכשיו הוא עוקב
+
+        if (isNowFollowing) {
+            icon.className = 'fas fa-star active'; // שנה ל-Followed
+            btn.style.color = 'var(--accent)';     // אפשר להוסיף עיצוב משלים
+        } else {
+            icon.className = 'far fa-star';        // שנה ל-Follow
+            btn.style.color = '#666';
+        }
+
+        // לא חובה לרענן הכל, זה מספיק
+        console.log("Follow status updated");
+    }
+};
+
+
+
 async function loadCommunityUsers() {
     const grid = document.getElementById('communityGrid');
     if (!grid) return;
@@ -2434,89 +2461,73 @@ window.forceOpenTab = function (tabName) {
     }
 
     currentCommTab = tabName;
-
-    if (typeof switchCommTab === 'function') {
+    if (typeof window.switchCommTab === 'function') {
+        window.switchCommTab(tabName);
+    } else if (typeof switchCommTab === 'function') {
         switchCommTab(tabName);
     }
+
+    // התיקון: סגירת התפריט וההחשכה במובייל מיד אחרי הלחיצה
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('mobileOverlay');
+    if (sidebar) sidebar.classList.remove('open');
+    if (overlay) overlay.classList.add('hidden');
 };
+
+let selectedListIdForAdd = null;
+
 
 window.openQuickAddSelector = async function (apiId, name, source, type, image) {
     const modal = document.getElementById('quickAddModal');
-    if (modal) modal.style.display = 'flex';
+    if (!modal) {
+        console.error("quickAddModal not found in HTML!");
+        return;
+    }
+
+    // בדיקה בטוחה אם משתמש מחובר (תומך גם ב-app.js וגם בשאר העמודים)
+    const isUserLoggedIn = (typeof state !== 'undefined' && state.user) || (typeof loggedInUser !== 'undefined' && loggedInUser);
+    if (!isUserLoggedIn) return alert("Please Login to add characters.");
+
     const optionsContainer = document.getElementById('quickAddListOptions');
     const charNameLabel = document.getElementById('quickAddCharName');
 
     charNameLabel.textContent = name;
     optionsContainer.innerHTML = '<p style="text-align:center; color:#888;">Loading your lists...</p>';
+
+    // סגירת מודאלים אחרים שאולי פתוחים (קהילה/לידרבורד)
+    ['leaderboardModal', 'communityModal'].forEach(id => {
+        const m = document.getElementById(id);
+        if (m) { m.classList.add('hidden'); m.style.display = 'none'; }
+    });
+
+    modal.style.display = 'flex';
     modal.classList.remove('hidden');
 
     try {
         const res = await fetch('/api/lists');
         const lists = await res.json();
+        optionsContainer.innerHTML = '';
 
         if (lists.length === 0) {
-            optionsContainer.innerHTML = '<p style="text-align:center; padding:10px;">You have no lists! Create one first.</p>';
+            optionsContainer.innerHTML = '<p style="text-align:center; color:#888; padding: 20px;">You have no lists. Create one first!</p>';
             return;
         }
 
-        optionsContainer.innerHTML = '';
         lists.forEach(list => {
             const btn = document.createElement('div');
             btn.className = 'quick-add-option';
-            const lockIcon = list.isPrivate ? 'fa-lock' : 'fa-list';
-
-            btn.innerHTML = `
-                <i class="fas ${lockIcon}"></i>
-                <span style="flex:1;">${list.name}</span>
-                <small style="color:#777;">${list.items.length} items</small>
-            `;
+            btn.innerHTML = `<i class="fas ${list.isPrivate ? 'fa-lock' : 'fa-list'}"></i> <span style="flex:1;">${list.name}</span> <small style="color:#777;">${list.items.length} items</small>`;
 
             btn.onclick = () => {
-                // 1. מעדכנים את ה-ID הפעיל לליסט שנבחר (כדי שהשמירה תדע לאן ללכת)
-                state.activeListId = list._id;
-
-                // 2. מעדכנים את הסיידבאר והכותרת (רק אם אנחנו בדף הבית)
-                if (typeof renderSidebar === 'function') renderSidebar();
-                if (typeof renderCurrentList === 'function') {
-                    // עדכון כותרת זמני כדי שהמשתמש יראה לאיזה ליסט הוא מוסיף
-                    const titleEl = document.getElementById('currentListTitle');
-                    if (titleEl) titleEl.textContent = list.name;
-                }
-
-                // 3. מכינים אובייקט דמוי "תוצאת חיפוש" עבור המודאל של הדמות
-                const tempItem = {
-                    id: apiId,
-                    title: name,
-                    image: image,
-                    type: type, // למשל 'character' או 'game_character'
-                    sourceTitle: source
-                };
-
-                // 4. סוגרים את מודאל בחירת הליסט ופותחים את מודאל עריכת הדמות
-                modal.classList.add('hidden'); // סוגר את חלון בחירת הליסט
-
-                // אנחנו מנסים לסגור את שני המזהים האפשריים (לידרבורד או קומיוניטי)
-                ['leaderboardModal', 'communityModal'].forEach(id => {
-                    const m = document.getElementById(id);
-                    if (m) {
-                        m.classList.add('hidden');
-                        m.style.display = 'none'; // מכריח סגירה גם אם ה-CSS מתנגד
-                    }
-                });
-
-                // פתיחת מודאל הדמות
-                if (typeof openCharModal === 'function') {
-                    openCharModal(tempItem);
-                } else {
-                    window.location.href = `/?id=${list._id}`;
-                }
-
+                // שומר את הנתונים ועובר לדף הבית לפתיחת המודאל
+                const quickAddData = { apiId, name, source, type, image, targetListId: list._id };
+                sessionStorage.setItem('pendingQuickAdd', JSON.stringify(quickAddData));
+                window.location.href = `/?id=${list._id}&action=quickAdd`;
             };
             optionsContainer.appendChild(btn);
         });
-
     } catch (e) {
-        optionsContainer.innerHTML = '<p style="color:red; text-align:center;">Please login to add characters.</p>';
+        optionsContainer.innerHTML = '<p style="color:red; text-align:center;">Error loading lists.</p>';
     }
 };
 

@@ -397,7 +397,7 @@
 
     <nav class="navbar">
         <button id="mobileMenuBtn" class="mobile-only hidden"
-            style="background: none; border: none; color: var(--text-main); font-size: 1.5rem; cursor: pointer; margin-right: 15px;">
+            style="background: none; border: none; color: var(--text-main); font-size: 1.5rem; cursor: pointer;">
             <i class="fas fa-bars"></i>
         </button>
         <a href="/" style="text-decoration: none;">
@@ -986,6 +986,24 @@
             if (profileData.avatar) document.getElementById('avatarImg').src = getOptimizedImg(profileData.avatar, 300, 300);
             if (profileData.banner) document.getElementById('bannerImg').style.backgroundImage = `url('${getOptimizedImg(profileData.banner, 1200)}')`;
 
+            const actionBtns = document.getElementById('actionButtons');
+            // בדיקה אם המשתמש מחובר ואם הוא לא צופה בעצמו
+            if (loggedInUser && loggedInUser.username !== profileData.username) {
+                const isFollowing = profileData.isFollowing; // השרת שולח את זה ב-pData
+                const followClass = isFollowing ? 'fas fa-star' : 'far fa-star';
+                const followText = isFollowing ? ' Unfollow' : ' Follow';
+                const followColor = isFollowing ? '#555' : 'var(--accent)';
+
+               actionBtns.innerHTML = `
+    <button onclick="toggleFollow('${profileData._id}')" class="btn-primary" 
+        style="width: auto !important; padding: 8px 25px; border-radius: 20px; font-size: 0.95rem; background: ${followColor};">
+        <i class="${followClass}"></i> ${followText}
+    </button>`;
+
+            } else {
+                actionBtns.innerHTML = ''; // מנקה אם זה הפרופיל שלי או שאני לא מחובר
+            }
+
             // 1. ציור רשימות רגילות (רזה ומהיר)
             const listsGrid = document.getElementById('allListsGrid');
             listsGrid.innerHTML = '';
@@ -1118,10 +1136,33 @@
             else alert("Error updating profile.");
         }
 
-        async function toggleFollow(id) {
-            await fetch(`/api/users/follow/${id}`, { method: 'POST' });
-            window.location.reload();
-        }
+       window.toggleFollow = async function (id) {
+            try {
+                const res = await fetch(`/api/users/follow/${id}`, { method: 'POST' });
+                if (res.ok) {
+                    // תופס את הכפתור בעמוד
+                    const btn = document.querySelector('#actionButtons .btn-primary');
+                    const icon = btn.querySelector('i');
+                    const isFollowing = icon.classList.contains('fas');
+
+                    // משנה את הטקסט, האייקון והצבע מיידית
+                    if (isFollowing) {
+                        btn.innerHTML = `<i class="far fa-star"></i> Follow`;
+                        btn.style.background = 'var(--accent)';
+                    } else {
+                        btn.innerHTML = `<i class="fas fa-star active"></i> Unfollow`;
+                        btn.style.background = '#555';
+                    }
+
+                    // עדכון מונה העוקבים מיידית
+                    const followersEl = document.getElementById('statFollowers');
+                    let count = parseInt(followersEl.textContent);
+                    followersEl.textContent = isFollowing ? (count - 1) : (count + 1);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
 
         let visibleNotifsLimit = 5;
         async function fetchNotifications() {
@@ -1308,20 +1349,32 @@
             } catch (e) { grid.innerHTML = '<p style="grid-column: 1/-1;">Error loading.</p>'; }
         }
 
-        window.toggleCommunityFollow = async function (e, userId) {
+      window.toggleCommunityFollow = async function (e, userId) {
             e.stopPropagation();
+            const btn = e.currentTarget;
+            const icon = btn.querySelector('i');
 
-            const icon = e.currentTarget.querySelector('i');
-            const wasFollowing = icon.classList.contains('fas');
+            // שליחה לשרת
+            const res = await fetch(`/api/users/follow/${userId}`, { method: 'POST' });
 
-            icon.className = wasFollowing ? 'far fa-star' : 'fas fa-star active';
+            if (res.ok) {
+                // שינוי ויזואלי מיידי
+                const isNowFollowing = icon.classList.contains('far'); // אם היה far (לא עוקב), עכשיו הוא עוקב
 
-            try {
-                await fetch(`/api/users/follow/${userId}`, { method: 'POST' });
-            } catch (err) {
-                console.error("Follow error", err);
+                if (isNowFollowing) {
+                    icon.className = 'fas fa-star active'; // שנה ל-Followed
+                    btn.style.color = 'var(--accent)';     // אפשר להוסיף עיצוב משלים
+                } else {
+                    icon.className = 'far fa-star';        // שנה ל-Follow
+                    btn.style.color = '#666';
+                }
+
+                // לא חובה לרענן הכל, זה מספיק
+                console.log("Follow status updated");
             }
         };
+
+
 
         async function loadLeaderboard() {
             const grid = document.getElementById('communityGrid');
@@ -1580,14 +1633,25 @@
             }
         };
 
-        window.forceOpenTab = function (tabName) {
+      window.forceOpenTab = function (tabName) {
             const modal = document.getElementById('communityModal');
             if (modal) {
                 modal.style.display = 'flex';
                 modal.classList.remove('hidden');
             }
+
             currentCommTab = tabName;
-            if (typeof switchCommTab === 'function') switchCommTab(tabName);
+            if (typeof window.switchCommTab === 'function') {
+                window.switchCommTab(tabName);
+            } else if (typeof switchCommTab === 'function') {
+                switchCommTab(tabName);
+            }
+
+            // התיקון: סגירת התפריט וההחשכה במובייל מיד אחרי הלחיצה
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            if (sidebar) sidebar.classList.remove('open');
+            if (overlay) overlay.classList.add('hidden');
         };
 
         window.switchAdminTab = function (tab) {
@@ -1742,38 +1806,58 @@
         };
 
         window.openQuickAddSelector = async function (apiId, name, source, type, image) {
-            const modal = document.getElementById('quickAddModal');
-            const optionsContainer = document.getElementById('quickAddListOptions');
-            const charNameLabel = document.getElementById('quickAddCharName');
+                const modal = document.getElementById('quickAddModal');
+                if (!modal) {
+                    console.error("quickAddModal not found in HTML!");
+                    return;
+                }
 
-            if (!loggedInUser) return alert("Please Login to add characters.");
+                // בדיקה בטוחה אם משתמש מחובר (תומך גם ב-app.js וגם בשאר העמודים)
+                const isUserLoggedIn = (typeof state !== 'undefined' && state.user) || (typeof loggedInUser !== 'undefined' && loggedInUser);
+                if (!isUserLoggedIn) return alert("Please Login to add characters.");
 
-            charNameLabel.textContent = name;
-            optionsContainer.innerHTML = '<p style="text-align:center; color:#888;">Loading your lists...</p>';
-            modal.style.display = 'flex';
-            modal.classList.remove('hidden');
+                const optionsContainer = document.getElementById('quickAddListOptions');
+                const charNameLabel = document.getElementById('quickAddCharName');
 
-            try {
-                const res = await fetch('/api/lists');
-                const lists = await res.json();
-                optionsContainer.innerHTML = '';
+                charNameLabel.textContent = name;
+                optionsContainer.innerHTML = '<p style="text-align:center; color:#888;">Loading your lists...</p>';
 
-                lists.forEach(list => {
-                    const btn = document.createElement('div');
-                    btn.className = 'quick-add-option';
-                    btn.innerHTML = `<i class="fas ${list.isPrivate ? 'fa-lock' : 'fa-list'}"></i> <span style="flex:1;">${list.name}</span> <small style="color:#777;">${list.items.length} items</small>`;
-
-                    btn.onclick = () => {
-                        // בגלל שאנחנו לא בדף הבית, אנחנו לא יכולים לפתוח את מודאל העריכה.
-                        // לכן, אנחנו שומרים את המידע זמנית ב-Session ומעבירים לדף הבית עם בקשה להוספה.
-                        const quickAddData = { apiId, name, source, type, image, targetListId: list._id };
-                        sessionStorage.setItem('pendingQuickAdd', JSON.stringify(quickAddData));
-                        window.location.href = `/?id=${list._id}&action=quickAdd`;
-                    };
-                    optionsContainer.appendChild(btn);
+                // סגירת מודאלים אחרים שאולי פתוחים (קהילה/לידרבורד)
+                ['leaderboardModal', 'communityModal'].forEach(id => {
+                    const m = document.getElementById(id);
+                    if (m) { m.classList.add('hidden'); m.style.display = 'none'; }
                 });
-            } catch (e) { optionsContainer.innerHTML = 'Error loading lists.'; }
-        };
+
+                modal.style.display = 'flex';
+                modal.classList.remove('hidden');
+
+                try {
+                    const res = await fetch('/api/lists');
+                    const lists = await res.json();
+                    optionsContainer.innerHTML = '';
+
+                    if (lists.length === 0) {
+                        optionsContainer.innerHTML = '<p style="text-align:center; color:#888; padding: 20px;">You have no lists. Create one first!</p>';
+                        return;
+                    }
+
+                    lists.forEach(list => {
+                        const btn = document.createElement('div');
+                        btn.className = 'quick-add-option';
+                        btn.innerHTML = `<i class="fas ${list.isPrivate ? 'fa-lock' : 'fa-list'}"></i> <span style="flex:1;">${list.name}</span> <small style="color:#777;">${list.items.length} items</small>`;
+
+                        btn.onclick = () => {
+                            // שומר את הנתונים ועובר לדף הבית לפתיחת המודאל
+                            const quickAddData = { apiId, name, source, type, image, targetListId: list._id };
+                            sessionStorage.setItem('pendingQuickAdd', JSON.stringify(quickAddData));
+                            window.location.href = `/?id=${list._id}&action=quickAdd`;
+                        };
+                        optionsContainer.appendChild(btn);
+                    });
+                } catch (e) {
+                    optionsContainer.innerHTML = '<p style="color:red; text-align:center;">Error loading lists.</p>';
+                }
+            };
 
         initProfile();
 

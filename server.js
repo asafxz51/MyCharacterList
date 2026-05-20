@@ -146,7 +146,7 @@ app.post('/api/auth/ping', verifyToken, async (req, res) => {
 
 app.get('/api/lists', verifyToken, async (req, res) => {
   const lists = await List.find({ userId: req.user._id })
-    .select('name order isPrivate')
+    .select('name order isPrivate items')
     .sort({ order: 1 })
     .lean();
   res.json(lists);
@@ -157,6 +157,12 @@ app.post('/api/lists', verifyToken, async (req, res) => {
   try {
     const data = req.body;
     const user = await User.findById(req.user._id);
+    const listId = data.targetListId || data._id; 
+
+    if (data._id) {
+      const updated = await List.findByIdAndUpdate(data._id, data, { new: true });
+      return res.json(updated);
+    }
 
     const approvedCustoms = await LeaderboardOverride.find({ charId: { $regex: '^custom_' } });
 
@@ -685,7 +691,6 @@ app.delete('/api/lists/:listId/comments/:commentId/replies/:replyId', verifyToke
   }
 });
 
-// קבלת נתונים מלאים לפרופיל
 app.get('/api/profile/:username', optionalToken, async (req, res) => {
   try {
     const targetUser = await User.findOne({ username: req.params.username })
@@ -693,15 +698,13 @@ app.get('/api/profile/:username', optionalToken, async (req, res) => {
       .lean();
     if (!targetUser) return res.status(404).json({ error: "User not found" });
 
-    // אופטימיזציה קריטית: שלוף רק שם, ID, וכמות אייטמים (בלי כל ה-items הכבדים!)
     const userLists = await List.find({ userId: targetUser._id, isPrivate: { $ne: true } })
-      .select('name _id items') // אנחנו צריכים רק את האורך של items
+      .select('name _id items likes')
       .lean();
 
     let totalLikes = 0;
     let totalRanked = 0;
 
-    // מכינים רשימה "רזה" לצד הלקוח
     const listsSummary = userLists.map(list => {
       totalLikes += (list.likes ? list.likes.length : 0);
       totalRanked += (list.items ? list.items.length : 0);
@@ -710,9 +713,18 @@ app.get('/api/profile/:username', optionalToken, async (req, res) => {
         name: list.name,
         itemsCount: list.items ? list.items.length : 0,
         coverImage: (list.items && list.items.length > 0) ? list.items[0].image : null
-
       };
     });
+
+    // התיקון: בדיקה האם המשתמש המחובר עוקב אחרי פרופיל זה
+    let isFollowing = false;
+    if (req.user) {
+      const currentUser = await User.findById(req.user._id).select('following').lean();
+      if (currentUser && currentUser.following) {
+        // ממירים את המזהים לטקסט כדי שההשוואה תעבוד 100% מהזמן
+        isFollowing = currentUser.following.map(id => id.toString()).includes(targetUser._id.toString());
+      }
+    }
 
     res.json({
       _id: targetUser._id,
@@ -724,7 +736,8 @@ app.get('/api/profile/:username', optionalToken, async (req, res) => {
       followersCount: await User.countDocuments({ following: targetUser._id }),
       totalLikes,
       totalRanked,
-      lists: listsSummary // שולחים רשימה רזה מאוד
+      lists: listsSummary,
+      isFollowing // שליחת הסטטוס לדף הפרופיל!
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -823,7 +836,10 @@ app.get('/api/users', optionalToken, async (req, res) => {
       username: u.username,
       avatar: u.avatar || "",
       isFollowing: followingSet.has(u._id.toString())
-    })).filter(u => !currentUser || u.username !== currentUser.username);
+    }))
+      // הוסף את השורה הזו:
+      .filter(u => req.user && u._id.toString() !== req.user._id.toString());
+
 
     results.sort((a, b) => (a.isFollowing === b.isFollowing ? 0 : a.isFollowing ? -1 : 1));
 
@@ -835,17 +851,28 @@ app.get('/api/users', optionalToken, async (req, res) => {
 });
 
 app.post('/api/users/follow/:id', verifyToken, async (req, res) => {
-  const targetId = req.params.id;
-  const user = await User.findById(req.user._id);
-  const targetUser = await User.findById(targetId);
-  const index = user.following.indexOf(targetId);
-  if (index === -1) {
-    user.following.push(targetId);
-    if (targetUser) targetUser.notifications.unshift({ type: 'follow', fromUser: user.username });
-    await targetUser?.save();
-  } else { user.following.splice(index, 1); }
-  await user.save();
-  res.json(user.following);
+  try {
+    const targetId = req.params.id;
+    const user = await User.findById(req.user._id);
+    const targetUser = await User.findById(targetId);
+
+    // ממירים לטקסט כדי למנוע באגים של ObjectId
+    const stringFollowing = user.following.map(id => id.toString());
+    const index = stringFollowing.indexOf(targetId);
+
+    if (index === -1) {
+      user.following.push(targetId);
+      if (targetUser) targetUser.notifications.unshift({ type: 'follow', fromUser: user.username });
+      await targetUser?.save();
+    } else {
+      user.following.splice(index, 1);
+    }
+
+    await user.save();
+    res.json({ success: true, isFollowing: index === -1 });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get('/api/users/:userId/lists', async (req, res) => {
@@ -1206,15 +1233,12 @@ app.post('/api/admin/settings/welcome', verifyToken, verifyAdmin, async (req, re
 
 app.get('/api/share/:id', async (req, res) => {
   try {
-    // אופטימיזציה: מביאים רק את השדות הנחוצים לתצוגה
-    // lean() הופך את זה לאובייקט JS פשוט ומהיר מאוד
     const list = await List.findById(req.params.id)
-      .select('name items listDescription rankingType isFreeOrder userId allowComments comments')
+      .select('name items listDescription rankingType isFreeOrder userId allowComments comments likes')
       .lean();
 
     if (!list) return res.status(404).json({ error: 'Not found' });
 
-    // מביא רק שם ותמונה של היוצר - בלי שדות כבדים אחרים
     const user = await User.findById(list.userId).select('username avatar').lean();
 
     res.json({
@@ -1229,7 +1253,6 @@ app.get('/api/share/:id', async (req, res) => {
     res.status(404).json({ error: 'Not found' });
   }
 });
-
 
 // תגובה לתגובה
 // תגובה לתגובה (Reply) - מתוקן

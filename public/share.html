@@ -463,7 +463,7 @@
     <!-- נאב-בר נקי וזהה לאינדקס -->
     <nav class="navbar">
         <button id="mobileMenuBtn" class="mobile-only hidden"
-            style="background: none; border: none; color: var(--text-main); font-size: 1.5rem; cursor: pointer; margin-right: 15px;">
+            style="background: none; border: none; color: var(--text-main); font-size: 1.5rem; cursor: pointer;">
             <i class="fas fa-bars"></i>
         </button>
         <a href="/" style="text-decoration: none;">
@@ -1046,7 +1046,7 @@
 
                 // לייקים
                 if (document.getElementById('likesCount')) {
-                    document.getElementById('likesCount').textContent = (data.likes || []).length;
+                    document.getElementById('likesCount').textContent = (data.likes && Array.isArray(data.likes)) ? data.likes.length : 0;
                 }
 
                 if (currentUserData && data.likes) {
@@ -1269,38 +1269,28 @@
         document.getElementById('filterSelect').onchange = renderList;
 
         document.getElementById('likeBtn').onclick = async () => {
-            // בודקים אם יש משתמש מחובר (שימוש במשתנה המדויק שלך)
-            if (!loggedInUser) return alert("Please Login to like.");
+                if (!loggedInUser) return alert("Please Login to like.");
 
-            try {
-                // שים לב: משתמשים ב-listId כפי שהגדרת בראש הקובץ
-                const res = await fetch(`/api/lists/${listId}/like`, { method: 'POST' });
-                const result = await res.json();
+                try {
+                    const res = await fetch(`/api/lists/${listId}/like`, { method: 'POST' });
+                    const result = await res.json();
 
-                // עדכון המספר על המסך
-                const likesCountEl = document.getElementById('likesCount');
-                if (likesCountEl) likesCountEl.textContent = result.likesCount;
-
-                // שינוי צבע הלב
-                const icon = document.querySelector('#likeBtn i');
-                if (icon) {
-                    icon.className = result.isLiked ? 'fas fa-heart' : 'far fa-heart';
-                }
-
-                // עדכון הזיכרון המקומי למקרה של רינדור חוזר
-                if (currentListData) {
-                    if (result.isLiked) {
-                        if (!currentListData.likes) currentListData.likes = [];
-                        currentListData.likes.push(currentUserData._id);
-                    } else {
-                        currentListData.likes = currentListData.likes.filter(uid => uid !== currentUserData._id);
+                    // מעדכן את המספר ב-HTML ישירות
+                    const likesCountEl = document.getElementById('likesCount');
+                    if (likesCountEl) {
+                        likesCountEl.textContent = result.likesCount;
                     }
-                }
 
-            } catch (err) {
-                console.error("Like Action Error:", err);
-            }
-        };
+                    // משנה את הלב למלא/ריק
+                    const icon = document.querySelector('#likeBtn i');
+                    if (icon) {
+                        icon.className = result.isLiked ? 'fas fa-heart' : 'far fa-heart';
+                    }
+
+                } catch (err) {
+                    console.error("Like Action Error:", err);
+                }
+            };
 
         document.getElementById('submitComment').onclick = async () => {
             const inp = document.getElementById('commentText');
@@ -1965,16 +1955,25 @@
         }
 
         // פתיחת מודאלים מהסיידבאר (קהילה ולידרבורד)
-        window.forceOpenTab = function (tabName) {
+      window.forceOpenTab = function (tabName) {
             const modal = document.getElementById('communityModal');
             if (modal) {
                 modal.style.display = 'flex';
                 modal.classList.remove('hidden');
             }
+
             currentCommTab = tabName;
             if (typeof window.switchCommTab === 'function') {
                 window.switchCommTab(tabName);
+            } else if (typeof switchCommTab === 'function') {
+                switchCommTab(tabName);
             }
+
+            // התיקון: סגירת התפריט וההחשכה במובייל מיד אחרי הלחיצה
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            if (sidebar) sidebar.classList.remove('open');
+            if (overlay) overlay.classList.add('hidden');
         };
 
         let pendingDeleteListId = null;
@@ -2070,40 +2069,58 @@
         }
 
         window.openQuickAddSelector = async function (apiId, name, source, type, image) {
-            const modal = document.getElementById('quickAddModal');
-            if (modal) modal.style.display = 'flex';
+                const modal = document.getElementById('quickAddModal');
+                if (!modal) {
+                    console.error("quickAddModal not found in HTML!");
+                    return;
+                }
 
-            const optionsContainer = document.getElementById('quickAddListOptions');
-            const charNameLabel = document.getElementById('quickAddCharName');
+                // בדיקה בטוחה אם משתמש מחובר (תומך גם ב-app.js וגם בשאר העמודים)
+                const isUserLoggedIn = (typeof state !== 'undefined' && state.user) || (typeof loggedInUser !== 'undefined' && loggedInUser);
+                if (!isUserLoggedIn) return alert("Please Login to add characters.");
 
-            if (!loggedInUser) return alert("Please Login to add characters.");
+                const optionsContainer = document.getElementById('quickAddListOptions');
+                const charNameLabel = document.getElementById('quickAddCharName');
 
-            charNameLabel.textContent = name;
-            optionsContainer.innerHTML = '<p style="text-align:center; color:#888;">Loading your lists...</p>';
-            modal.style.display = 'flex';
-            modal.classList.remove('hidden');
+                charNameLabel.textContent = name;
+                optionsContainer.innerHTML = '<p style="text-align:center; color:#888;">Loading your lists...</p>';
 
-            try {
-                const res = await fetch('/api/lists');
-                const lists = await res.json();
-                optionsContainer.innerHTML = '';
-
-                lists.forEach(list => {
-                    const btn = document.createElement('div');
-                    btn.className = 'quick-add-option';
-                    btn.innerHTML = `<i class="fas ${list.isPrivate ? 'fa-lock' : 'fa-list'}"></i> <span style="flex:1;">${list.name}</span> <small style="color:#777;">${list.items.length} items</small>`;
-
-                    btn.onclick = () => {
-                        // בגלל שאנחנו לא בדף הבית, אנחנו לא יכולים לפתוח את מודאל העריכה.
-                        // לכן, אנחנו שומרים את המידע זמנית ב-Session ומעבירים לדף הבית עם בקשה להוספה.
-                        const quickAddData = { apiId, name, source, type, image, targetListId: list._id };
-                        sessionStorage.setItem('pendingQuickAdd', JSON.stringify(quickAddData));
-                        window.location.href = `/?id=${list._id}&action=quickAdd`;
-                    };
-                    optionsContainer.appendChild(btn);
+                // סגירת מודאלים אחרים שאולי פתוחים (קהילה/לידרבורד)
+                ['leaderboardModal', 'communityModal'].forEach(id => {
+                    const m = document.getElementById(id);
+                    if (m) { m.classList.add('hidden'); m.style.display = 'none'; }
                 });
-            } catch (e) { optionsContainer.innerHTML = 'Error loading lists.'; }
-        };
+
+                modal.style.display = 'flex';
+                modal.classList.remove('hidden');
+
+                try {
+                    const res = await fetch('/api/lists');
+                    const lists = await res.json();
+                    optionsContainer.innerHTML = '';
+
+                    if (lists.length === 0) {
+                        optionsContainer.innerHTML = '<p style="text-align:center; color:#888; padding: 20px;">You have no lists. Create one first!</p>';
+                        return;
+                    }
+
+                    lists.forEach(list => {
+                        const btn = document.createElement('div');
+                        btn.className = 'quick-add-option';
+                        btn.innerHTML = `<i class="fas ${list.isPrivate ? 'fa-lock' : 'fa-list'}"></i> <span style="flex:1;">${list.name}</span> <small style="color:#777;">${list.items.length} items</small>`;
+
+                        btn.onclick = () => {
+                            // שומר את הנתונים ועובר לדף הבית לפתיחת המודאל
+                            const quickAddData = { apiId, name, source, type, image, targetListId: list._id };
+                            sessionStorage.setItem('pendingQuickAdd', JSON.stringify(quickAddData));
+                            window.location.href = `/?id=${list._id}&action=quickAdd`;
+                        };
+                        optionsContainer.appendChild(btn);
+                    });
+                } catch (e) {
+                    optionsContainer.innerHTML = '<p style="color:red; text-align:center;">Error loading lists.</p>';
+                }
+            };
 
 
 
