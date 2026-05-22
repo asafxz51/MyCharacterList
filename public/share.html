@@ -527,9 +527,9 @@
                     <p id="listAuthor" style="color:var(--text-muted); font-size: 1.1rem; margin-bottom: 15px;"></p>
 
                     <!-- הבלוק החדש של התיאור (מעוצב יפה עם רקע עדין) -->
-                    <p id="listDescriptionDisplay"
-                        style="color: var(--text-main); font-size: 1.05rem; margin-bottom: 20px; line-height: 1.6; display: none; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid var(--border); text-align: center; max-width: 600px; margin-left: auto; margin-right: auto; word-break: break-word; overflow-wrap: break-word;">
-                    </p>
+                <p id="listDescriptionDisplay"
+                    style="color: var(--text-main); font-size: 1.05rem; margin-bottom: 20px; line-height: 1.6; display: none; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid var(--border); text-align: center; max-width: 600px; margin-left: auto; margin-right: auto; word-break: break-word; overflow-wrap: break-word; white-space: pre-wrap;">
+                </p>
 
                     <div id="otherListsContainer"
                         style="display: none; justify-content: center; align-items: center; gap: 10px; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
@@ -1096,6 +1096,9 @@
                 const div = document.createElement('div');
                 div.className = 'char-card';
 
+                const hideRankings = currentListData.hideRankings || false;
+                const rankBadgeHtml = hideRankings ? '' : `<div class="rank-badge ${index < 3 ? 'rank-' + (index + 1) : 'rank-other'}">#${index + 1}</div>`;
+
                 const ratingHtml = item.rating === 0 ? '' : `<div class="char-rating">${getRatingDisplay(item.rating, listRankingType)}</div>`;
                 const displayType = item.sourceType === 'TV Show' ? 'TV' : item.sourceType;
 
@@ -1111,10 +1114,9 @@
         ` : `<span></span>`;
 
                 div.innerHTML = `
-            <div class="rank-badge ${index < 3 ? 'rank-' + (index + 1) : 'rank-other'}">#${index + 1}</div>
-            ${ratingHtml}
-            
-            <img src="${getOptimizedImg(validImg, 400)}" 
+    ${rankBadgeHtml}
+    ${ratingHtml}
+    <img src="${getOptimizedImg(validImg, 400)}" 
      data-original="${validImg}"
      class="char-card-img" 
      loading="lazy" 

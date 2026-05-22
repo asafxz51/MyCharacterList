@@ -1234,7 +1234,7 @@ app.post('/api/admin/settings/welcome', verifyToken, verifyAdmin, async (req, re
 app.get('/api/share/:id', async (req, res) => {
   try {
     const list = await List.findById(req.params.id)
-      .select('name items listDescription rankingType isFreeOrder userId allowComments comments likes')
+      .select('name items listDescription rankingType isFreeOrder hideRankings userId allowComments comments likes')
       .lean();
 
     if (!list) return res.status(404).json({ error: 'Not found' });

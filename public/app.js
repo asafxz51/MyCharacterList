@@ -370,6 +370,7 @@ async function createList(name) {
         rankingType: rType,
         isPrivate: isPrivate,
         isFreeOrder: isFreeOrder,
+        hideRankings: hideRankings,
         allowComments: allowComments,
         items: new Array() // הנה הטריק שעוקף את הבאג
     };
@@ -684,6 +685,7 @@ function renderCurrentList() {
         div.dataset.index = item.originalIndex;
 
         let rankClass = (index === 0) ? 'rank-1' : (index === 1) ? 'rank-2' : (index === 2) ? 'rank-3' : 'rank-other';
+        const rankBadgeHtml = list.hideRankings ? '' : `<div class="rank-badge ${rankClass}">#${index + 1}</div>`;
         const displayRating = getRatingDisplay(item.rating, list.rankingType || 'numbers');
         const ratingHtml = item.rating === 0 ? '' : `<div class="char-rating">${displayRating}</div>`;
 
@@ -706,9 +708,9 @@ function renderCurrentList() {
         ` : '<div></div>';
 
         div.innerHTML = `
-            <div class="rank-badge ${rankClass}">#${index + 1}</div>
-            ${ratingHtml}
-           <img src="${getOptimizedImg(validImg, 400)}" 
+    ${rankBadgeHtml}
+    ${ratingHtml}
+    <img src="${getOptimizedImg(validImg, 400)}"
      data-original="${validImg}"
      loading="lazy" 
      class="char-img" 
@@ -1206,6 +1208,9 @@ document.getElementById('editListTitleBtn').addEventListener('click', () => {
     document.getElementById('newListName').value = list.name;
     document.getElementById('isPrivateInput').checked = list.isPrivate || false;
     document.getElementById('isFreeOrderInput').checked = list.isFreeOrder || false;
+    if (document.getElementById('hideRankingsInput')) {
+        document.getElementById('hideRankingsInput').checked = list.hideRankings || false;
+    }
 
     document.getElementById('allowCommentsInput').checked = list.allowComments !== false;
 
@@ -1226,6 +1231,7 @@ document.getElementById('saveListBtn').addEventListener('click', async () => {
         const rType = document.getElementById('rankingTypeSelect').value;
         const isPrivate = document.getElementById('isPrivateInput').checked;
         const isFreeOrder = document.getElementById('isFreeOrderInput').checked;
+        const hideRankings = document.getElementById('hideRankingsInput')?.checked || false; 
         const allowComments = document.getElementById('allowCommentsInput').checked;
 
         if (!name) {
@@ -1241,6 +1247,7 @@ document.getElementById('saveListBtn').addEventListener('click', async () => {
             list.rankingType = rType;
             list.isPrivate = isPrivate;
             list.isFreeOrder = isFreeOrder;
+            list.hideRankings = hideRankings;
             list.allowComments = allowComments;
             list.listDescription = document.getElementById('listDescriptionInput').value;
 

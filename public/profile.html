@@ -663,6 +663,12 @@
             </div>
 
             <div style="margin-top: 10px; text-align: left; display:flex; align-items:center; gap:10px;">
+                <input type="checkbox" id="hideRankingsInput" style="width:auto; cursor: pointer;">
+                <label for="hideRankingsInput" style="cursor:pointer; font-size: 0.9rem;">Hide Rank Numbers <small
+                        style="color:var(--text-muted)">(Remove #1, #2...)</small></label>
+            </div>
+
+            <div style="margin-top: 10px; text-align: left; display:flex; align-items:center; gap:10px;">
                 <input type="checkbox" id="allowCommentsInput" checked style="width:auto; cursor: pointer;">
                 <label for="allowCommentsInput" style="cursor:pointer; font-size: 0.9rem;">Allow Comments</label>
             </div>
@@ -753,6 +759,58 @@
                     style="display: flex; flex-direction: column; gap: 8px; max-height: 500px; overflow-y: auto; font-size: 0.85rem; border: 1px solid var(--border); padding: 5px; border-radius: 4px;">
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ADMIN CHAR EDIT MODAL -->
+    <div id="adminCharEditModal" class="modal hidden">
+        <div class="modal-content small-modal">
+            <span class="close-modal"
+                onclick="document.getElementById('adminCharEditModal').classList.add('hidden')">&times;</span>
+            <h3 style="margin-bottom: 15px; color: gold;"><i class="fas fa-edit"></i> Edit Leaderboard Character</h3>
+    
+            <input type="hidden" id="adminEditCharId">
+    
+            <div class="form-group" style="text-align: left;">
+                <label>Character Name (Global Display):</label>
+                <input type="text" id="adminEditCharName"
+                    style="width: 100%; padding: 8px; background: var(--bg-color); color: white; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 10px;">
+            </div>
+            <div class="form-group" style="text-align: left;">
+                <label>Source Title:</label>
+                <input type="text" id="adminEditCharSource"
+                    style="width: 100%; padding: 8px; background: var(--bg-color); color: white; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 10px;">
+            </div>
+            <div class="form-group" style="text-align: left;">
+                <label>Source Type:</label>
+                <select id="adminEditCharType"
+                    style="width: 100%; padding: 8px; background: var(--bg-color); color: white; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 10px;">
+                    <option value="Anime">Anime</option>
+                    <option value="Manga">Manga</option>
+                    <option value="VN">Visual Novel</option>
+                    <option value="Game">Game</option>
+                    <option value="TV Show">TV Show</option>
+                    <option value="Movie">Movie</option>
+                    <option value="Book">Book</option>
+                    <option value="Comic">Comic</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-group" style="text-align: left;">
+                <label>Image URL:</label>
+                <input type="text" id="adminEditCharImage"
+                    style="width: 100%; padding: 8px; background: var(--bg-color); color: white; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 10px;">
+            </div>
+    
+            <div class="form-group"
+                style="display:flex; align-items:center; gap:10px; margin-top: 15px; background: rgba(255, 68, 68, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(255, 68, 68, 0.3);">
+                <input type="checkbox" id="adminEditIsHidden" style="width: auto; transform: scale(1.2);">
+                <label for="adminEditIsHidden" style="color: #ff4444; font-weight: bold; cursor: pointer;">Hide from
+                    Leaderboard (Ban Item)</label>
+            </div>
+    
+            <button onclick="saveGlobalCharacter()" class="btn-primary" style="margin-top: 20px; width: 100%;">Save
+                Changes</button>
         </div>
     </div>
 
@@ -1376,15 +1434,22 @@
 
 
 
-        async function loadLeaderboard() {
+       async function loadLeaderboard() {
             const grid = document.getElementById('communityGrid');
             grid.innerHTML = '<p style="text-align: center; padding: 40px; font-size: 1.1rem; color: var(--text-muted);">Calculating global rankings...</p>';
+
             try {
                 const sortMethod = document.getElementById('leaderboardSortSelect') ? document.getElementById('leaderboardSortSelect').value : 'rating';
                 const res = await fetch(`/api/leaderboard?sort=${sortMethod}`);
                 const data = await res.json();
 
                 if (currentCommTab !== 'leaderboard') return;
+
+                if (!Array.isArray(data)) {
+                    grid.innerHTML = '<p style="text-align: center; color: #ff4444; padding: 20px;">Failed to load leaderboard. Server is busy.</p>';
+                    return;
+                }
+
                 grid.innerHTML = '';
 
                 if (data.length === 0) {
@@ -1392,9 +1457,14 @@
                     return;
                 }
 
+                // בדיקה האם יש לך הרשאות אדמין (קריטי להצגת גלגל השיניים)
+                const mainAdminBtn = document.getElementById('adminBtn');
+                const isCurrentUserAdmin = (typeof loggedInUser !== 'undefined' && loggedInUser && loggedInUser.role === 'admin') || (mainAdminBtn && !mainAdminBtn.classList.contains('hidden'));
+
                 data.forEach((item, index) => {
                     const div = document.createElement('div');
                     div.className = 'leaderboard-row';
+
                     let rankClass = 'lb-rank-other';
                     let rankText = `#${index + 1}`;
                     if (index === 0) { rankClass = 'lb-rank-1'; rankText = '<i class="fas fa-crown" style="margin-right: 4px;"></i>1'; }
@@ -1405,48 +1475,101 @@
                     const displayType = item.sourceType === 'TV Show' ? 'TV' : (item.sourceType || 'Other');
                     let validImg = item.image && !item.image.includes('via.placeholder.com') ? item.image : 'https://placehold.co/60x60/252525/bb86fc?text=?';
 
-                    const isUserLoggedIn = (typeof state !== 'undefined' && state.user) || (typeof loggedInUser !== 'undefined' && loggedInUser);
+                    const isUserLoggedIn = (typeof loggedInUser !== 'undefined' && loggedInUser);
                     const quickAddBtn = isUserLoggedIn ? `<button class="lb-add-btn" onclick="openQuickAddSelector('${item._id}', '${item.characterName.replace(/'/g, "\\'")}', '${item.sourceTitle.replace(/'/g, "\\'")}', '${item.sourceType}', '${item.image}')"  title="Add to my list"><i class="fas fa-plus"></i></button>` : '';
+
+                    // יצירת גלגל השיניים של האדמין
+                    let adminGearHtml = '';
+                    if (isCurrentUserAdmin) {
+                        const safeName = item.characterName ? item.characterName.replace(/'/g, "\\'") : '';
+                        const safeSource = item.sourceTitle ? item.sourceTitle.replace(/'/g, "\\'") : '';
+                        adminGearHtml = `<button onclick="openGlobalEdit('${item._id}', '${safeName}', '${safeSource}', '${item.sourceType}', '${item.image}')" style="background:none; border:none; color: var(--accent); cursor: pointer; font-size: 1.1rem; margin-left: 10px;" title="Admin Edit"><i class="fas fa-cog"></i></button>`;
+                    }
 
                     div.innerHTML = `
                 <div class="leaderboard-rank ${rankClass}">${rankText}</div>
-                   <div class="leaderboard-img-container">
-        ${quickAddBtn}
-        <div class="leaderboard-img-container">
-                    <button class="lb-add-btn" onclick="openQuickAddSelector('${item._id}', '${item.characterName.replace(/'/g, "\\'")}', '${item.sourceTitle.replace(/'/g, "\\'")}', '${item.sourceType}', '${item.image}')" title="Add to my list"><i class="fas fa-plus"></i></button>
+                <div class="leaderboard-img-container">
+                    ${quickAddBtn}
                     <img src="${getOptimizedImg(validImg, 100, 100)}" 
-     data-original="${validImg}"
-     class="leaderboard-img" 
-     onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; } else { this.src='https://placehold.co/60x60/252525/bb86fc?text=?'; }"
->
+                         data-original="${validImg}"
+                         class="leaderboard-img" 
+                         onerror="if(this.src.includes('wsrv.nl')){ this.src=this.dataset.original; } else { this.src='https://placehold.co/60x60/252525/bb86fc?text=?'; }"
+                    >
                 </div>
-    </div>
-                        <div class="leaderboard-content-wrapper">
-                            <div class="leaderboard-info">
-                                <div class="leaderboard-name">${item.characterName}</div>
-                                <div class="leaderboard-source">
-                                    <span class="leaderboard-source-text" title="${item.sourceTitle}">${item.sourceTitle}</span>
-                                    <span style="color:var(--accent); font-size:0.75rem; margin-left:5px; font-weight:bold; flex-shrink: 0;">• ${displayType}</span>
-                                </div>
-                            </div>
-                            <div class="leaderboard-stats">
-                                <div class="leaderboard-score">
-                                    <span style="color: #FFD700; font-weight: 900; font-size: 1.1rem; display: flex; align-items: center;">
-                                        <i class="fas fa-star" style="font-size:0.8rem; margin-right:5px;"></i> ${formattedScore}
-                                    </span>
-                                    <span onclick="openVotersModal('${item._id}', '${item.characterName.replace(/'/g, "\\'")}')" style="cursor: pointer; color: var(--text-muted); font-size: 0.8rem; border-left: 1px solid rgba(255,255,255,0.15); margin-left: 10px; padding-left: 10px; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" title="View who ranked this">
-                                        <i class="fas fa-users" style="margin-right:4px;"></i> ${item.rankedByCount}
-                                    </span>
-                                </div>
-                            </div>
+                <div class="leaderboard-content-wrapper">
+                    <div class="leaderboard-info">
+                        <div class="leaderboard-name">${item.characterName}</div>
+                        <div class="leaderboard-source">
+                            <span class="leaderboard-source-text" title="${item.sourceTitle}">${item.sourceTitle}</span>
+                            <span style="color:var(--accent); font-size:0.75rem; margin-left:5px; font-weight:bold; flex-shrink: 0;">• ${displayType}</span>
                         </div>
-                    `;
+                    </div>
+                    <div class="leaderboard-stats">
+                        <div class="leaderboard-score">
+                            <span style="color: #FFD700; font-weight: 900; font-size: 1.1rem; display: flex; align-items: center;">
+                                <i class="fas fa-star" style="font-size:0.8rem; margin-right:5px;"></i> ${formattedScore}
+                            </span>
+                            <span onclick="openVotersModal('${item._id}', '${item.characterName.replace(/'/g, "\\'")}')" style="cursor: pointer; color: var(--text-muted); font-size: 0.8rem; border-left: 1px solid rgba(255,255,255,0.15); margin-left: 10px; padding-left: 10px; display: flex; align-items: center; transition: 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" title="View who ranked this">
+                                <i class="fas fa-users" style="margin-right:4px;"></i> ${item.rankedByCount}
+                            </span>
+                            ${adminGearHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
                     grid.appendChild(div);
                 });
             } catch (e) {
                 grid.innerHTML = '<p style="text-align: center; color: #ff4444; padding: 20px;">Failed to load leaderboard.</p>';
             }
         }
+
+        window.openGlobalEdit = function (id, name, source, type, img) {
+                document.getElementById('adminEditCharId').value = id;
+                document.getElementById('adminEditCharName').value = name;
+                document.getElementById('adminEditCharSource').value = source;
+                document.getElementById('adminEditCharType').value = type;
+                document.getElementById('adminEditCharImage').value = img;
+
+                // ניקוי אוטומטי של צ'קבוקס ההסתרה בכל פתיחה
+                document.getElementById('adminEditIsHidden').checked = false;
+
+                const modal = document.getElementById('adminCharEditModal');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    modal.style.display = 'flex';
+                }
+            };
+
+            window.saveGlobalCharacter = async function () {
+                const id = document.getElementById('adminEditCharId').value;
+                const name = document.getElementById('adminEditCharName').value;
+                const source = document.getElementById('adminEditCharSource').value;
+                const type = document.getElementById('adminEditCharType').value;
+                const img = document.getElementById('adminEditCharImage').value;
+                const isHidden = document.getElementById('adminEditIsHidden').checked;
+
+                if (!name || !source) return alert("Name and Source are required");
+
+                try {
+                    const res = await fetch('/api/admin/character/global-edit', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ oldCharId: id, characterName: name, sourceTitle: source, sourceType: type, image: img, isHidden: isHidden })
+                    });
+
+                    if (res.ok) {
+                        alert("Leaderboard display updated successfully!");
+                        document.getElementById('adminCharEditModal').classList.add('hidden');
+                        loadLeaderboard(); // ירענן את הלידרבורד מיד אחרי השמירה
+                    } else {
+                        alert("Error saving character.");
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert("Server Error");
+                }
+            };
 
         window.openVotersModal = async function (charId, charName) {
             const modal = document.getElementById('votersModal');
@@ -1499,8 +1622,7 @@
             }
         }
 
-        // פונקציית יצירת רשימה מתוך פרופיל
-        async function createNewListFromProfile() {
+       async function createNewListFromProfile() {
             const name = document.getElementById('newListName').value.trim();
             if (!name) return alert("Please enter a list name.");
 
@@ -1510,12 +1632,16 @@
             const allowComments = document.getElementById('allowCommentsInput').checked;
             const listDesc = document.getElementById('listDescriptionInput').value;
 
+            // מושכים את הערך של תיבת הסימון החדשה (אם קיימת)
+            const hideRankings = document.getElementById('hideRankingsInput')?.checked || false;
+
             const payload = {
                 name: name,
                 listDescription: listDesc,
                 rankingType: rType,
                 isPrivate: isPrivate,
                 isFreeOrder: isFreeOrder,
+                hideRankings: hideRankings, // מוסיפים לפיילואוד
                 allowComments: allowComments,
                 items: new Array() // עוקף באג מונגו/טוקנים
             };

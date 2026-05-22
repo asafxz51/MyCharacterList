@@ -93,7 +93,7 @@
               </div>
             </div>
             <p id="currentListDescription"
-              style="color: var(--text-muted); font-size: 0.95rem; margin-top: 8px; max-width: 1000px; display: none; line-height: 1.5; word-break: break-word; overflow-wrap: break-word;">
+              style="color: var(--text-muted); font-size: 0.95rem; margin-top: 8px; max-width: 1000px; display: none; line-height: 1.5; word-break: break-word; overflow-wrap: break-word; white-space: pre-wrap;">
             </p>
           </div>
         </div>
@@ -275,6 +275,12 @@
         <label for="isFreeOrderInput" style="cursor:pointer;">Free Order Mode <small
             style="color:var(--text-muted)">(Ignore
             Score Sorting)</small></label>
+      </div>
+
+      <div style="margin-top: 10px; text-align: left; display:flex; align-items:center; gap:10px;">
+        <input type="checkbox" id="hideRankingsInput" style="width:auto; cursor: pointer;">
+        <label for="hideRankingsInput" style="cursor:pointer;">Hide Rank Numbers <small
+            style="color:var(--text-muted)">(Remove #1, #2...)</small></label>
       </div>
 
       <div style="margin-top: 10px; text-align: left; display:flex; align-items:center; gap:10px;">

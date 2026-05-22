@@ -8,6 +8,7 @@ const ListSchema = new mongoose.Schema({
  rankingType: { type: String, default: 'numbers' },
  isPrivate: { type: Boolean, default: false },
  isFreeOrder: { type: Boolean, default: false },
+ hideRankings: { type: Boolean, default: false },
  allowComments: { type: Boolean, default: true }, 
  scaleUpdated: { type: Boolean, default: false },
  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], 
