@@ -352,8 +352,7 @@ async function fetchLists() {
     if (state.activeListId) {
         window.selectList(state.activeListId);
     } else {
-        // אם אין רשימה (למשל משתמש חדש), ננקה את המסך מה-Loading
-        document.getElementById('characterGrid').innerHTML = '';
+        renderCurrentList();
     }
 }
 
