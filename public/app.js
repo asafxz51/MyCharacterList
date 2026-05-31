@@ -363,15 +363,18 @@ async function createList(name) {
     const allowComments = document.getElementById('allowCommentsInput').checked;
     const listDesc = document.getElementById('listDescriptionInput').value;
 
+    // מושכים את נתון ההסתרה
+    const hideRankings = document.getElementById('hideRankingsInput')?.checked || false;
+
     const payload = {
         name: name,
         listDescription: listDesc,
         rankingType: rType,
         isPrivate: isPrivate,
         isFreeOrder: isFreeOrder,
-        hideRankings: hideRankings,
+        hideRankings: hideRankings, // שמירת הנתון
         allowComments: allowComments,
-        items: new Array() // הנה הטריק שעוקף את הבאג
+        items: new Array()
     };
 
     const res = await fetch('/api/lists', {
@@ -379,6 +382,10 @@ async function createList(name) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     });
+
+    if (!res.ok) {
+        throw new Error("Failed to create list on server");
+    }
 
     const newList = await res.json();
     state.lists.push(newList);
@@ -1230,8 +1237,10 @@ document.getElementById('saveListBtn').addEventListener('click', async () => {
         const rType = document.getElementById('rankingTypeSelect').value;
         const isPrivate = document.getElementById('isPrivateInput').checked;
         const isFreeOrder = document.getElementById('isFreeOrderInput').checked;
-        const hideRankings = document.getElementById('hideRankingsInput')?.checked || false; 
         const allowComments = document.getElementById('allowCommentsInput').checked;
+
+        // מושכים את נתון ההסתרה
+        const hideRankings = document.getElementById('hideRankingsInput')?.checked || false;
 
         if (!name) {
             alert("Please enter a list name.");
@@ -1246,8 +1255,8 @@ document.getElementById('saveListBtn').addEventListener('click', async () => {
             list.rankingType = rType;
             list.isPrivate = isPrivate;
             list.isFreeOrder = isFreeOrder;
-            list.hideRankings = hideRankings;
             list.allowComments = allowComments;
+            list.hideRankings = hideRankings; // עדכון רק במצב עריכה!
             list.listDescription = document.getElementById('listDescriptionInput').value;
 
             await updateCurrentList(true, "Update List Settings", `Changed settings for: ${name}`);
@@ -1255,7 +1264,7 @@ document.getElementById('saveListBtn').addEventListener('click', async () => {
             renderSidebar();
             renderCurrentList();
         } else {
-            await createList(name);
+            await createList(name); // הפעלה של יצירת רשימה חדשה
         }
 
         closeModal('listModal');
