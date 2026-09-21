@@ -977,25 +977,42 @@ app.get('/api/tmdb/credits', async (req, res) => {
 
 app.get('/api/search/jikan', async (req, res) => {
   try {
-    const r = await axios.get(`https://api.jikan.moe/v4/characters`, {
-      params: { q: req.query.query, limit: 12 } // שולף 12 תוצאות
-    });
+    // עברנו להשתמש ב-AniList GraphQL API כי הוא יציב בהרבה מג'יקאן
+    const query = `
+      query ($search: String) {
+        Page (page: 1, perPage: 12) {
+          characters (search: $search) {
+            id
+            name { full }
+            image { large }
+          }
+        }
+      }
+    `;
 
-    if (!r.data || !r.data.data) {
+    const variables = { search: req.query.query };
+
+    const r = await axios.post('https://graphql.anilist.co', {
+      query,
+      variables
+    }, { timeout: 4000 }); // טיימאאוט של 4 שניות
+
+    if (!r.data || !r.data.data || !r.data.data.Page.characters) {
       return res.json([]);
     }
 
-    const results = r.data.data.map(i => ({
-      id: i.mal_id,
-      title: i.name,
-      image: i.images?.jpg?.image_url || null,
+    // ממירים את התשובה של AniList למבנה שהאתר שלך מכיר
+    const results = r.data.data.Page.characters.map(i => ({
+      id: i.id,
+      title: i.name.full,
+      image: i.image.large || null,
       type: 'character',
       description: 'Anime Character'
     }));
 
     res.json(results);
   } catch (e) {
-    console.error("Jikan API Error:", e.message);
+    console.error("AniList Search API Error:", e.message);
     res.json([]);
   }
 });
@@ -1003,33 +1020,41 @@ app.get('/api/search/jikan', async (req, res) => {
 app.get('/api/jikan/details/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    console.log(`Fetching Jikan Details for ID: ${id}...`);
 
-    const response = await axios.get(`https://api.jikan.moe/v4/characters/${id}/full`);
-    const data = response.data.data;
+    // שליפת שם האנימה/מנגה המפורסמת ביותר שהדמות הזו מופיעה בה
+    const query = `
+      query ($id: Int) {
+        Character (id: $id) {
+          media (page: 1, perPage: 1, sort: POPULARITY_DESC) {
+            nodes {
+              title { romaji english }
+              type
+            }
+          }
+        }
+      }
+    `;
 
+    const variables = { id: parseInt(id) };
+
+    const response = await axios.post('https://graphql.anilist.co', {
+      query,
+      variables
+    }, { timeout: 4000 });
+
+    const mediaNode = response.data?.data?.Character?.media?.nodes?.[0];
     let sourceTitle = '';
     let sourceType = 'Anime';
 
-    if (data.anime && data.anime.length > 0) {
-      sourceTitle = data.anime[0]?.anime?.title;
-      sourceType = 'Anime';
+    if (mediaNode) {
+      sourceTitle = mediaNode.title.english || mediaNode.title.romaji || '';
+      sourceType = mediaNode.type === 'MANGA' ? 'Manga' : 'Anime';
     }
 
-    else if (data.manga && data.manga.length > 0) {
-      sourceTitle = data.manga[0]?.manga?.title;
-      sourceType = 'Manga';
-    }
-
-    if (!sourceTitle) {
-      sourceTitle = '';
-    }
-
-    console.log(`Success: ${sourceTitle} (${sourceType})`);
     res.json({ sourceTitle, sourceType });
 
   } catch (e) {
-    console.error("Jikan Error:", e.message);
+    console.error("AniList Details Error:", e.message);
     res.json({ sourceTitle: '', sourceType: 'Anime' });
   }
 });
@@ -1681,7 +1706,7 @@ app.get('/api/admin/auto-match-ids', verifyToken, verifyAdmin, async (req, res) 
     const chunk = Array.from(uniqueChars.entries()).slice(0, 10);
     const remaining = totalUnique - chunk.length;
 
-    const PORT = process.env.PORT || 3000;
+    const PORT = process.env.PORT || 3001;
     const localBaseUrl = `http://127.0.0.1:${PORT}`;
     const safeFetch = async (endpoint) => {
       try {

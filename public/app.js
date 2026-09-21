@@ -38,7 +38,9 @@ function getOptimizedImg(url, width = 300, height = null) {
         'pinimg.com',
         'fbcdn.net',
         'i2.wp.com',
-        'i1.wp.com'
+        'i1.wp.com',
+        'wikia.nocookie.net', // הוספנו את זה!
+        'fandom.com'          // הוספנו את זה!
     ];
 
     const shouldBypass = bypassDomains.some(domain => url.includes(domain));
