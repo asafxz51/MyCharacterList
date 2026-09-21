@@ -977,24 +977,35 @@ app.get('/api/tmdb/credits', async (req, res) => {
 
 app.get('/api/search/jikan', async (req, res) => {
   try {
-    // הגדלנו את ההמתנה לשנייה שלמה - זה פותר המון חסימות של Jikan!
-    await new Promise(r => setTimeout(r, 500));
+    // השהיה של שנייה שלמה - קריטי כדי שג'יקאן לא יחסום אותנו על Rate Limit
+    await new Promise(r => setTimeout(r, 1000));
 
     const r = await axios.get(`https://api.jikan.moe/v4/characters`, {
-      params: { q: req.query.query, limit: 15 }
+      params: { q: req.query.query, limit: 15 },
+      headers: {
+        // ג'יקאן חוסמים בקשות שרת אנונימיות. זה גורם להם לחשוב שאנחנו דפדפן לגיטימי:
+        'User-Agent': 'MyCharacterListApp/1.0 (Contact: admin@mycharacterlist.com)',
+        'Accept': 'application/json'
+      }
     });
 
-    res.json(r.data.data.map(i => ({
+    // הגנה למקרה שהשרת מחזיר תשובה אבל ה-JSON ריק
+    if (!r.data || !r.data.data) {
+      return res.json([]);
+    }
+
+    const results = r.data.data.map(i => ({
       id: i.mal_id,
       title: i.name,
-      image: i.images?.jpg?.image_url,
+      image: i.images?.jpg?.image_url || null,
       type: 'character',
       description: 'Anime Character'
-    })));
+    }));
+
+    res.json(results);
   } catch (e) {
-    // עכשיו השרת ידפיס לך את השגיאה ללוגים כדי שתראה למה Jikan מסרב
-    console.error("Jikan API Error:", e.response ? e.response.status : e.message);
-    res.json([]);
+    console.error("Jikan API Error:", e.message);
+    res.json([]); // במקרה של שגיאה נחזיר מערך ריק כדי לא להקריס את כל החיפוש
   }
 });
 

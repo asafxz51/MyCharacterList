@@ -900,19 +900,22 @@ async function doSearch(query) {
         div.className = 'search-item';
 
         const displayType = typeMap[item.type] || item.type;
-
         let subText = item.sourceTitle ? item.sourceTitle : displayType;
 
         if (item.type === 'movie' || item.type === 'tv') {
             subText = `${displayType} • ${item.year}`;
         }
 
+        // --- התיקון: מעבירים את התמונה בפרוקסי ומוסיפים תמונת גיבוי למקרה שהיא בכל זאת נשברת ---
+        let validImg = item.image ? getOptimizedImg(item.image, 100) : 'https://placehold.co/50x50/252525/bb86fc?text=?';
+
         div.innerHTML = `
-            <img src="${item.image || 'https://via.placeholder.com/50'}" style="width:30px">
-            <div>
-                <strong>${item.title}</strong>
-                <br>
-                <small class="red-type">${subText}</small>
+            <img src="${validImg}" 
+                 onerror="this.src='https://placehold.co/50x50/252525/bb86fc?text=?';" 
+                 style="width:35px; height:50px; object-fit:cover; border-radius:4px;">
+            <div style="flex: 1; min-width: 0; overflow: hidden;">
+                <strong style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">${item.title}</strong>
+                <small class="red-type" style="margin-top: 4px;">${subText}</small>
             </div>
         `;
         div.onclick = () => openCharModal(item);
