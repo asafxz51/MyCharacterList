@@ -977,19 +977,10 @@ app.get('/api/tmdb/credits', async (req, res) => {
 
 app.get('/api/search/jikan', async (req, res) => {
   try {
-    // השהיה של שנייה שלמה - קריטי כדי שג'יקאן לא יחסום אותנו על Rate Limit
-    await new Promise(r => setTimeout(r, 1000));
-
     const r = await axios.get(`https://api.jikan.moe/v4/characters`, {
-      params: { q: req.query.query, limit: 15 },
-      headers: {
-        // ג'יקאן חוסמים בקשות שרת אנונימיות. זה גורם להם לחשוב שאנחנו דפדפן לגיטימי:
-        'User-Agent': 'MyCharacterListApp/1.0 (Contact: admin@mycharacterlist.com)',
-        'Accept': 'application/json'
-      }
+      params: { q: req.query.query, limit: 12 } // שולף 12 תוצאות
     });
 
-    // הגנה למקרה שהשרת מחזיר תשובה אבל ה-JSON ריק
     if (!r.data || !r.data.data) {
       return res.json([]);
     }
@@ -1005,7 +996,7 @@ app.get('/api/search/jikan', async (req, res) => {
     res.json(results);
   } catch (e) {
     console.error("Jikan API Error:", e.message);
-    res.json([]); // במקרה של שגיאה נחזיר מערך ריק כדי לא להקריס את כל החיפוש
+    res.json([]);
   }
 });
 
@@ -1067,7 +1058,7 @@ app.get('/api/search/fandom', async (req, res) => {
       const searchRes = await axios.get(apiUrl, {
         params: { action: 'query', list: 'search', srsearch: query, srlimit: 4, format: 'json' }
       });
-      if (!searchRes.data.query) return [];
+      if (!searchRes.data || !searchRes.data.query) return [];
       const pageIds = searchRes.data.query.search.map(i => i.pageid).join('|');
       if (!pageIds) return [];
 
@@ -1075,11 +1066,8 @@ app.get('/api/search/fandom', async (req, res) => {
         params: {
           action: 'query',
           pageids: pageIds,
-          prop: 'pageimages|extracts|categories',
+          prop: 'pageimages|categories',
           pithumbsize: 600,
-          exchars: 200,
-          exintro: true,
-          explaintext: true,
           cllimit: 20,
           format: 'json'
         }
@@ -1116,19 +1104,19 @@ app.get('/api/search/fandom', async (req, res) => {
         }
 
         let rawImageUrl = p.thumbnail ? p.thumbnail.source : (p.original ? p.original.source : null);
-        let proxyUrl = null;
 
-        if (rawImageUrl) {
-          proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(rawImageUrl)}`;
+        // התיקון הקריטי: חותכים את הזבל מה-URL של פאנדום כדי שהתמונה תעבוד!
+        if (rawImageUrl && rawImageUrl.includes('/revision/')) {
+          rawImageUrl = rawImageUrl.split('/revision/')[0];
         }
 
         return {
           id: p.pageid,
           title: p.title,
-          image: proxyUrl,
+          image: rawImageUrl, // מעבירים נקי, הדפדפן שלך יעשה לזה אופטימיזציה
           type: 'wiki_character',
           sourceTitle: detectedSource,
-          description: p.extract || '',
+          description: '',
           wiki: subdomain
         };
       });
