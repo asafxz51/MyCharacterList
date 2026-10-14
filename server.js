@@ -699,6 +699,7 @@ app.get('/api/profile/:username', optionalToken, async (req, res) => {
     if (!targetUser) return res.status(404).json({ error: "User not found" });
 
     const userLists = await List.find({ userId: targetUser._id, isPrivate: { $ne: true } })
+      .sort({ order: 1 })
       .select('name _id items likes')
       .lean();
 
